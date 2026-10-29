@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0b0f14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<title>Analist</title>
+<style>
+/* ===== Teme: întunecat (implicit) și luminos; „auto” urmează telefonul ===== */
+:root{color-scheme:dark;
+--bg:#0b0f14;--panel:#121820;--panel2:#18202a;--line:#222c38;--ink:#e7edf3;--ink2:#a9b6c4;--mut:#6f7d8c;--acc:#4c9aff;--accInk:#06121f;
+--adauga:#2fbf71;--pastreaza:#8796a8;--nu_adauga:#e0a63a;--asteapta:#5aa0e5;--verifica:#ff6b6b;--reechilibreaza:#b18be8;--opor:#f2c94c;
+--pos:#2fbf71;--neg:#ff6b6b;--warn:#e0a63a;
+--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--grid:#1c2530;--shadow:0 10px 30px rgba(0,0,0,.45)}
+:root[data-theme="light"]{color-scheme:light;
+--bg:#f3f5f8;--panel:#ffffff;--panel2:#eef2f6;--line:#e1e6ed;--ink:#0d1520;--ink2:#3d4a5a;--mut:#6b7787;--acc:#2a78d6;--accInk:#fff;
+--adauga:#128a4c;--pastreaza:#5d6b7c;--nu_adauga:#a86d00;--asteapta:#2a6fb8;--verifica:#c93a3a;--reechilibreaza:#7351c4;--opor:#a87b00;
+--pos:#128a4c;--neg:#c93a3a;--warn:#a86d00;
+--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--grid:#e9edf2;--shadow:0 10px 30px rgba(20,30,50,.15)}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){color-scheme:light;
+--bg:#f3f5f8;--panel:#ffffff;--panel2:#eef2f6;--line:#e1e6ed;--ink:#0d1520;--ink2:#3d4a5a;--mut:#6b7787;--acc:#2a78d6;--accInk:#fff;
+--adauga:#128a4c;--pastreaza:#5d6b7c;--nu_adauga:#a86d00;--asteapta:#2a6fb8;--verifica:#c93a3a;--reechilibreaza:#7351c4;--opor:#a87b00;
+--pos:#128a4c;--neg:#c93a3a;--warn:#a86d00;
+--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--grid:#e9edf2;--shadow:0 10px 30px rgba(20,30,50,.15)}}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:8px}
+/* ===== Antet ===== */
+header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line)}
+.hrow{display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto}
+.brand{font-weight:800;letter-spacing:2.5px;font-size:15px}.brand b{color:var(--acc)}
+.pill{font-size:10.5px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:5px;border:1px solid currentColor}
+.pill{display:none}.pill.off{display:inline-block;color:var(--warn)}
+body.nolive nav,body.nolive #bref{display:none}
+.stamp{color:var(--mut);font-size:12px;margin-left:auto}
+.ib{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer}
+.ib svg{width:18px;height:18px;stroke:var(--ink2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ib.spin svg{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+/* ===== Navigare jos ===== */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+nav .in{display:flex;width:100%;max-width:520px}
+nav button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--mut);font-size:11px;font-weight:600;cursor:pointer;position:relative}
+nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--acc)}nav button.on::before{content:"";position:absolute;top:-7px;width:22px;height:3px;border-radius:0 0 3px 3px;background:var(--acc)}
+nav .dot{position:absolute;top:3px;left:calc(50% + 7px);width:7px;height:7px;border-radius:50%;background:var(--verifica);box-shadow:0 0 0 2px var(--panel)}
+main{padding:14px 14px calc(96px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto}
+/* ===== Componente ===== */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.sec{display:flex;align-items:baseline;justify-content:space-between;margin:22px 2px 9px}
+.sec h2{font-size:11.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--mut);margin:0;font-weight:700}
+.sec a,.link{color:var(--acc);font-size:13px;font-weight:600;cursor:pointer;background:none;border:0;padding:0}
+.lbl{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.hero{font-size:36px;font-weight:750;letter-spacing:-.5px;line-height:1.1;margin:4px 0 2px}
+.hero small{font-size:18px;font-weight:600;color:var(--ink2);margin-left:4px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.mut{color:var(--mut)}.ink2{color:var(--ink2)}
+.sub{color:var(--mut);font-size:12.5px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:7px;white-space:nowrap;background:color-mix(in srgb,currentColor 13%,transparent);border:0;cursor:pointer}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.star{color:var(--opor)}
+/* „Ce fac azi” */
+.todo{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--k,var(--acc)) 45%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,var(--k,var(--acc)) 14%,var(--panel)),var(--panel) 60%)}
+.todo .tag{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--k,var(--acc))}
+.todo h3{font-size:20px;margin:6px 0 4px;line-height:1.25}
+.todo p{margin:0;color:var(--ink2);font-size:14px}
+.todo .acts{display:flex;gap:8px;margin-top:12px}
+.btn{background:var(--acc);color:var(--accInk);border:0;padding:12px 14px;border-radius:12px;font-weight:700;width:100%;cursor:pointer}
+.btn.sm{width:auto;padding:9px 14px;font-size:14px}
+.btn.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}.btn.red{background:var(--verifica);color:#fff}
+.btn+.btn{margin-top:8px}.acts .btn+.btn{margin-top:0}
+/* avertizări */
+.al{display:block;padding:11px 12px;border-radius:12px;background:var(--panel2);margin-bottom:7px;font-size:14px;color:var(--ink2);border-left:3px solid var(--warn)}
+.al.err{border-left-color:var(--verifica)}.al.good{border-left-color:var(--opor)}
+/* listă poziții */
+.list{padding:0;overflow:hidden}
+.pr{display:grid;grid-template-columns:1fr 70px auto;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line);cursor:pointer;animation:rise .35s ease both}
+.pr:last-child{border:0}.pr:active{background:var(--panel2)}
+.pr .s{font-weight:750;font-size:15.5px;letter-spacing:.3px}.pr .n{color:var(--mut);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.wb{width:78px;height:5px;border-radius:3px;background:var(--panel2);position:relative;overflow:visible}
+.wb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--mut)}.wb i.over{background:var(--warn)}
+.wb b{position:absolute;top:-3px;width:2px;height:11px;background:var(--ink);border-radius:1px}
+main.dr{animation:inDr .22s ease}main.st{animation:inSt .22s ease}@keyframes inDr{from{opacity:.4;transform:translateX(18px)}to{opacity:1;transform:none}}@keyframes inSt{from{opacity:.4;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* grafice */
+.chart{position:relative;touch-action:pan-y}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.ro{display:flex;align-items:flex-end;gap:16px;min-height:36px;margin-bottom:8px}.ro .d{color:var(--mut);font-size:11.5px;min-width:46px;padding-bottom:2px}.ro.act .d{color:var(--acc);font-weight:700}
+.ro .v{display:flex;flex-direction:column;gap:1px;min-width:0}.ro .k{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mut);white-space:nowrap}.ro .k i{width:10px;height:3px;border-radius:2px;display:inline-block}.ro b{font-size:15px;color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink2);margin-top:8px}
+.leg span{display:inline-flex;align-items:center;gap:6px}.leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.leg i.d{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)!important;height:2px}
+.stack{display:flex;gap:2px;height:22px;border-radius:6px;overflow:hidden;margin:4px 0 2px}
+.stack div{height:100%;min-width:2px}
+.dv{display:grid;grid-template-columns:62px 1fr 58px;align-items:center;gap:8px;font-size:13px;padding:5px 0}
+.dv .t{position:relative;height:14px}.dv .t::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--line)}
+.dv .t i{position:absolute;top:2px;height:10px;border-radius:3px}
+/* tabele, kv */
+.kv{display:grid;grid-template-columns:1fr auto;gap:7px 12px;font-size:14px}.kv>span:nth-child(odd){color:var(--mut)}.kv>span:nth-child(even){text-align:right}
+table{width:100%;border-collapse:collapse;font-size:13.5px}td,th{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line)}td:first-child,th:first-child{text-align:left}th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.8px}
+ul.m{list-style:none;padding:0;margin:4px 0}ul.m li{padding:5px 0;font-size:14px;color:var(--ink2);border-bottom:1px dashed var(--line)}ul.m li:last-child{border:0}
+.term{background:none;border:0;padding:0;color:inherit;text-decoration:underline dotted color-mix(in srgb,var(--acc) 70%,transparent);text-underline-offset:3px;cursor:help}
+.q{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--line);color:var(--mut);font-size:11px;font-weight:700;margin-left:5px;cursor:help;background:none;padding:0;vertical-align:1px}
+/* segmente */
+.seg{display:flex;gap:4px;background:var(--panel2);border-radius:11px;padding:3px}
+.seg button{flex:1;background:none;border:0;padding:8px 0;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink2);cursor:pointer}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+input,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:11px;border-radius:11px;font:inherit;margin:5px 0 10px}
+/* foi (bottom sheets), două niveluri */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}.veil.on{opacity:1;pointer-events:auto}
+#veil2{z-index:22}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--panel);border-radius:22px 22px 0 0;max-height:90vh;overflow:auto;padding:10px 18px calc(26px + env(safe-area-inset-bottom));transform:translateY(105%);visibility:hidden;transition:transform .3s cubic-bezier(.2,.9,.25,1),visibility 0s .3s;max-width:760px;margin:0 auto;box-shadow:var(--shadow)}
+#sheet2{z-index:23}
+.sheet.on{transform:none;visibility:visible;transition:transform .3s cubic-bezier(.2,.9,.25,1)}
+.grab{width:42px;height:5px;background:var(--line);border-radius:3px;margin:2px auto 14px}
+/* raport */
+.rap h1,.rap h2,.rap h3{letter-spacing:0;color:var(--ink);font-size:17px;margin:20px 0 8px}.rap h1{font-size:22px;margin-top:4px}
+.rap h2{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--acc)}
+.rap p,.rap li{font-size:15px;color:var(--ink2);line-height:1.6}.rap ul{padding-left:18px}.rap b{color:var(--ink)}
+/* diverse */
+.empty{color:var(--mut);text-align:center;padding:36px 14px;font-size:14px}
+.banner{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:11px 13px;border-radius:12px;margin-bottom:12px;background:color-mix(in srgb,var(--asteapta) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--asteapta) 35%,var(--line));color:var(--ink2)}
+.sk{background:linear-gradient(90deg,var(--panel2) 25%,var(--line) 50%,var(--panel2) 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:10px}
+@keyframes sk{to{background-position:-200% 0}}
+#ptr{position:fixed;left:50%;top:calc(60px + env(safe-area-inset-top));z-index:9;transform:translate(-50%,-60px);transition:transform .2s;width:34px;height:34px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--shadow)}
+#ptr svg{width:16px;height:16px;stroke:var(--acc);fill:none;stroke-width:2.2;stroke-linecap:round}
+#toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:all .2s;z-index:30;font-size:14px;font-weight:600;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#upd{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:15;background:var(--acc);color:var(--accInk);border:0;border-radius:12px;padding:12px;font-weight:600;display:none;box-shadow:var(--shadow);cursor:pointer}#upd.on{display:block}
+footer{color:var(--mut);font-size:11.5px;text-align:center;padding:8px 20px 0}
+code{font-size:12.5px;background:var(--panel2);padding:1px 5px;border-radius:5px}
+body.ascuns main,body.ascuns .sheet{visibility:hidden}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header><div class="hrow">
+  <div class="brand">ANAL<b>IST</b></div><span class="pill" id="pill">…</span>
+  <span class="stamp num" id="stare"></span>
+  <button class="ib" id="bref" aria-label="Reîncarcă" onclick="reincarca(true)"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+  <button class="ib" id="blk" aria-label="Blochează" onclick="blocheaza();toast('Blocat.')"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+  <button class="ib" aria-label="Setări" onclick="go('setari')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</div></header>
+<div id="ptr"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></div>
+<main id="v"></main>
+<nav><div class="in">
+  <button data-v="azi" class="on" onclick="go('azi')"><svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Azi</button>
+  <button data-v="plan" onclick="go('plan')"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</button>
+  <button data-v="analiza" onclick="go('analiza')"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Analiză</button>
+</div></nav>
+<div class="veil" id="veil" onclick="closeSheet()"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="veil" id="veil2" onclick="closeSheet()"></div><div class="sheet" id="sheet2" role="dialog" aria-modal="true"></div>
+<div id="toast" role="status"></div>
+<button id="upd">Versiune nouă a aplicației · <b>Reîncarcă</b></button>
+<input type="file" id="fimp" accept="application/json" style="display:none" onchange="importJurnal(this)">
+<script>
+const APP_VER = '0.12.0';
+const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
+const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică teza',reechilibreaza:'Reechilibrează'};
+const ORD = {uita:0,cumpara:1,las:2};
+// Ce vezi pe ecran: 3 stări. Motorul rămâne cu cele 6 semnale; explicația exactă e în fișa acțiunii.
+const SEM = {cumpara:'Cumpără luna asta', las:'Las-o', uita:'Uită-te la ea'};
+const SEMC = {cumpara:'--adauga', las:'--pastreaza', uita:'--verifica'};
+const sumaPlan = () => { const c=Object.keys(SNAP?.planuri||{}).map(Number); return c.includes(S.suma)?S.suma:P().contributieTipica; };
+const inPlan = sym => (SNAP?.planuri?.[sumaPlan()]||[]).find(l=>l.symbol===sym);
+const sem = p => ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
+// Verdictul într-o propoziție, pentru fișa acțiunii.
+function verdict(p){
+  if (p.deVerificat) return `Date de verificat: ${SNAP.paza?.motiv||'mișcare neobișnuită'} Semnalele pentru ea au fost oprite azi.`;
+  const l = inPlan(p.symbol);
+  if (sem(p)==='uita') return p.atentie[0] || 'Verifică dacă motivul pentru care o ții mai e valabil.';
+  const oz = intraValid() ? INTRA.pozitii.find(x=>x.symbol===p.symbol)?.oportunitate : null;
+  if (oz) return `★ Azi: ${oz}${l?` E în planul lunii: ${l.suma} ${de(l.suma)}lei la ${l.broker}.`:''}`;
+  if (l) return `E în planul lunii: ${l.suma} ${de(l.suma)}lei la ${l.broker}.${p.oportunitate?' Prețul e mai mic decât de obicei.':''}`;
+  return ({ adauga:'Ar merita bani noi, dar luna asta au prioritate pozițiile mai departe de țintă.',
+    pastreaza:'Totul e în regulă. Păstrezi ce ai, nu e nimic de făcut.',
+    nu_adauga:p.atentie[0] || 'Are deja destul loc în portofoliu. Banii noi merg în altă parte.',
+    asteapta:p.atentie[0] || 'Momentul nu e bun pentru cumpărat. Revino peste câteva săptămâni.' })[p.semnal] || '';
+}
+const ACT = {cumparat:'Am cumpărat',vandut:'Am vândut',ignorat:'Am ignorat semnalul',altceva:'Notă'};
+const TABS = ['azi','plan','analiza'];
+let LOADED=false;
+let S = {repo:'costi1622/analist-date',suma:null,tema:'auto',cont:'toate',planFacut:'',luniFacute:[],sort:'semnal',privat:false,stiut:false,pasi:{}}, SNAP=null, RAP=null, INTRA=null, IST=null, VIEW='azi', J=[], OFFLINE=false;
+try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY)||'{}')); } catch(e){}
+// Moștenire din versiunile fără parolă: nimic sensibil nu rămâne în clar.
+if (S.token || S.topic) { delete S.token; delete S.topic; localStorage.setItem(KEY, JSON.stringify(S)); }
+['_jurnal','_cache'].forEach(k=>localStorage.removeItem(KEY+k));
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }; // setări fără secrete (temă, sortare, suma)
+const saveJ = () => { if(!V){ toast('Aplicația e blocată.'); return false; } V.jurnal=J; salveazaSeif(); return true; };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = (x, d=2) => x==null||isNaN(x) ? '—' : x.toLocaleString('ro-RO',{minimumFractionDigits:d,maximumFractionDigits:d});
+const de = n => { const a=Math.floor(Math.abs(n)), k=a%100; return a>=20&&(k===0||k>=20)?'de ':''; };
+const lei = (x,d=2) => (S.privat?'•••':nf(x,d))+' lei';
+const sgL = (x,d=2) => S.privat ? '•••' : sg(x,d); // sume cu semn (lei)
+const vib = () => { try { navigator.vibrate?.(8); } catch(e){} };
+const sg = (x,d=2) => x==null||isNaN(x) ? '—' : (x>0?'+':x<0?'−':'')+nf(Math.abs(x),d);
+const cls = x => x>0?'pos':x<0?'neg':'';
+const chip = s => `<button class="chip" style="color:var(${SEMC[s]})" onclick="event.stopPropagation();termen('${s}')">${SEM[s]}</button>`;
+const toast = m => { const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('on'),3000); };
+// ===== Seiful de pe telefon =====
+// Tokenul, cheia de date, cheia privată a raportului, numele ntfy și jurnalul stau criptate cu parola ta
+// (PBKDF2-SHA256, 600.000 de iterații → AES-256-GCM). Fără parolă, nimic nu se poate citi:
+// nici de cineva cu telefonul în mână, nici de alte pagini de pe același domeniu (Nivelo etc.).
+let V = null, VK = null, DK = null, PRIV = null, STARE = null; // seiful deschis, cheia lui, cheia de date, cheia privată
+const ITER = 600000, SEIF = KEY+'_seif';
+const are_seif = () => !!localStorage.getItem(SEIF);
+const live = () => !!(V && V.token);
+const b64e = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+const b64d = s => Uint8Array.from(atob(s), c=>c.charCodeAt(0));
+const b64url = u => b64e(u).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64url = s => b64d(s.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((s.length+3)%4));
+async function cheieParola(pw, sare, iter){
+  const baza = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:sare, iterations:iter, hash:'SHA-256'}, baza, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function salveazaSeif(){
+  const o = JSON.parse(localStorage.getItem(SEIF)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, VK, new TextEncoder().encode(JSON.stringify(V)));
+  localStorage.setItem(SEIF, JSON.stringify({...o, iv:b64e(iv), ct:b64e(ct)}));
+}
+async function creeazaSeif(pw, continut){
+  const sare = crypto.getRandomValues(new Uint8Array(16));
+  VK = await cheieParola(pw, sare, ITER); V = continut;
+  localStorage.setItem(SEIF, JSON.stringify({v:1, iter:ITER, sare:b64e(sare)}));
+  await salveazaSeif(); await pregatesteChei();
+}
+async function deschideSeif(pw){
+  const o = JSON.parse(localStorage.getItem(SEIF));
+  const k = await cheieParola(pw, b64d(o.sare), o.iter);
+  const txt = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, k, b64d(o.ct)); // aruncă eroare la parolă greșită
+  VK = k; V = JSON.parse(new TextDecoder().decode(txt)); J = V.jurnal || []; await pregatesteChei();
+}
+async function pregatesteChei(){
+  DK = await crypto.subtle.importKey('raw', unb64url(V.dataKey), 'AES-GCM', false, ['decrypt']);
+  PRIV = V.priv ? await crypto.subtle.importKey('jwk', V.priv, {name:'RSA-OAEP', hash:'SHA-256'}, false, ['decrypt']) : null;
+}
+async function decDate(t){ if(!t) return null; const o=JSON.parse(t); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, DK, b64d(o.ct))); }
+async function decRaport(t){
+  if(!t||!PRIV) return null; const o=JSON.parse(t);
+  const raw = await crypto.subtle.decrypt({name:'RSA-OAEP'}, PRIV, b64d(o.k));
+  const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, k, b64d(o.ct)));
+}
+async function perecheRaport(){
+  const kp = await crypto.subtle.generateKey({name:'RSA-OAEP', modulusLength:3072, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256'}, true, ['encrypt','decrypt']);
+  const spki = b64e(await crypto.subtle.exportKey('spki', kp.publicKey));
+  return { priv: await crypto.subtle.exportKey('jwk', kp.privateKey), pub: `-----BEGIN PUBLIC KEY-----\n${spki.match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----` };
+}
+function blocheaza(){
+  V=null; VK=null; DK=null; PRIV=null; J=[]; SNAP=null; RAP=null; INTRA=null; IST=null; STARE=null;
+  ['sheet','sheet2'].forEach(id=>$(id).classList.remove('on')); ['veil','veil2'].forEach(id=>$(id).classList.remove('on'));
+  stare(); render();
+}
+// Încercări greșite: după 3, așteptare crescătoare (5 s, 10 s, 20 s… maximum 5 minute).
+async function deblocheaza(){
+  const e = S.esec || {n:0, pana:0}; if (Date.now() < e.pana) { toast(`Așteaptă ${Math.ceil((e.pana-Date.now())/1000)} s.`); return; }
+  const pw = $('pw').value; if (!pw) return;
+  $('bdeb').disabled = true; $('bdeb').textContent = 'Se deschide…';
+  try { await deschideSeif(pw); S.esec={n:0,pana:0}; save(); vib(); dinCacheSync = true; await dinCache(); LOADED=true; stare(); VIEW='azi'; render(); reincarca(); }
+  catch(err) { e.n++; if (e.n>=3) e.pana = Date.now() + Math.min(5000*Math.pow(2,e.n-3), 300000); S.esec=e; save(); vib(); render(); toast(e.n>=3?`Parolă greșită. Următoarea încercare peste ${Math.ceil((e.pana-Date.now())/1000)} s.`:'Parolă greșită.'); }
+}
+let dinCacheSync = false;
+function vBlocat(){
+  const e = S.esec || {n:0}, astept = Date.now() < (e.pana||0);
+  return `<div style="max-width:380px;margin:12vh auto 0;text-align:center">
+    <svg width="54" height="54" viewBox="0 0 24 24" style="stroke:var(--acc);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.4"/></svg>
+    <h3 style="font-size:22px;margin:12px 0 6px">Analist e blocat</h3>
+    <div class="sub" style="margin-bottom:18px">Introdu parola ca să deschizi datele.</div>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Parola" onkeydown="if(event.key==='Enter')deblocheaza()" ${astept?'disabled':''}>
+    <button class="btn" id="bdeb" onclick="deblocheaza()" ${astept?'disabled':''}>${astept?'Prea multe încercări greșite':'Deblochează'}</button>
+    ${e.n?`<div class="sub" style="margin-top:10px">Încercări greșite: ${e.n}</div>`:''}
+    <button class="link" style="margin-top:26px;color:var(--mut);font-size:13px" onclick="uitatParola()">Ai uitat parola?</button></div>`;
+}
+function uitatParola(){
+  openSheet(`<div class="grab"></div><h3 style="margin:0 0 8px">Ai uitat parola?</h3>
+  <div class="sub" style="font-size:14px;line-height:1.6;margin-bottom:12px">Parola nu se poate recupera: nu e salvată nicăieri. Poți șterge seiful de pe acest telefon și reconecta aplicația de la zero.<br><br>Datele din GitHub rămân criptate și nu se pierd. Le recuperezi dacă ai cheia de date salvată (în managerul de parole), la Pornire → „Am deja o cheie de date”. Fără ea, analizele vechi nu mai pot fi citite, dar următoarele rulări pornesc de la zero cu o cheie nouă.</div>
+  <button class="btn red" onclick="stergeSeif()">Șterge seiful de pe telefon</button><button class="btn ghost" onclick="closeSheet()">Renunță</button>`);
+}
+function stergeSeif(){ [SEIF, KEY+'_files', KEY+'_pornire'].forEach(k=>localStorage.removeItem(k)); S.esec={n:0,pana:0}; save(); FIS={}; closeSheet(); blocheaza(); }
+// Blocare automată: după 2 minute în fundal. Conținutul se ascunde imediat, ca să nu apară în lista de aplicații recente.
+let ASCUNS_LA = 0;
+document.addEventListener('visibilitychange',()=>{
+  if (document.hidden) { ASCUNS_LA = Date.now(); document.body.classList.add('ascuns'); }
+  else { document.body.classList.remove('ascuns'); if (V && Date.now()-ASCUNS_LA > 120000) blocheaza(); }
+});
+addEventListener('pagehide',()=>document.body.classList.add('ascuns'));
+const dataRo = iso => iso ? new Date(iso).toLocaleString('ro-RO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+const ziRo = (iso,an=true) => iso ? new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',an?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short'}) : '—';
+const P = () => SNAP?.profil || {tintaETF:60,maxActiune:10,maxTema:25,contributieMin:200,contributieMax:500,contributieTipica:350,orizontAni:10,brokerPreferat:'Trading 212'};
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function aplicaTema(){ const r=document.documentElement; if(S.tema==='auto') delete r.dataset.theme; else r.dataset.theme=S.tema; }
+aplicaTema();
+
+// ===== Glosar: explicații scurte pentru termeni și semnale =====
+const GLOS = {
+  rsi:['RSI','Indice de la 0 la 100 care arată cât de repede s-a mișcat prețul în ultimele ~3 săptămâni. Peste 70: a urcat foarte repede, de obicei urmează o pauză. Sub 30: a scăzut foarte repede. Nu spune nimic despre calitatea companiei.'],
+  m200:['Media de 200 de zile','Prețul mediu pe ultimele 200 de zile de bursă (~10 luni). Când prețul e peste ea, trendul pe termen lung e în sus. E cel mai folosit filtru de trend.'],
+  m50:['Media de 50 de zile','Prețul mediu pe ultimele 50 de zile de bursă (~2,5 luni). Când trece peste media de 200, trendul se întărește. Când coboară sub ea, slăbește.'],
+  macd:['MACD','Compară o medie rapidă a prețului cu una lentă. Când „se întoarce în sus”, impulsul s-a schimbat în bine. E un semnal de termen scurt: doar context, nu motiv să cumperi.'],
+  atr:['Mișcarea zilnică medie (ATR)','Cât urcă sau coboară de obicei acțiunea într-o zi, în procente. O acțiune cu 3% pe zi e de trei ori mai agitată decât una cu 1%. Folosită ca să nu te alarmeze mișcările normale.'],
+  pe:['P/E','Prețul acțiunii împărțit la profitul pe acțiune din ultimul an: cât plătești pentru 1 leu de profit. Peste 60 e scump, sub 15 e ieftin, dar o companie care crește repede poate merita un P/E mare.'],
+  prot:['Nivel de protecție','Maximul ultimelor 6 luni minus cel mai mare dintre 5 mișcări zilnice medii și 15%. Peste el, scăderile sunt zgomot normal. Sub el, merită să verifici dacă motivul pentru care o ții mai e valabil. Nu e un ordin de vânzare.'],
+  pondere:['Pondere și țintă','Ponderea: cât la sută din tot portofoliul (ambele conturi) ocupă poziția. Ținta: cât ar trebui să ocupe după planul tău. Linia albă de pe bară e ținta.'],
+  nucleu:['Nucleu și sateliți','Nucleul (60%) e un ETF global care urmează toată piața: crește constant, cu risc mic de surprize. Sateliții (40%) sunt acțiunile alese de tine: aici ai șansa să bați piața, dar și riscul.'],
+  tema:['Temă','Acțiuni care urcă și scad împreună pentru că depind de aceeași idee, de exemplu investițiile în AI. Zece acțiuni din aceeași temă nu înseamnă diversificare.'],
+  fantoma:['„Totul în VWCE”','Un portofoliu imaginar care primește exact aceleași depuneri ca tine, dar le pune pe toate în VWCE. Dacă al tău e peste, alegerile tale au adăugat valoare. Dacă e sub, varianta simplă ar fi fost mai bună.'],
+  pp:['Puncte procentuale (pp)','Diferența simplă dintre două procente: 12% față de 8% înseamnă 4 pp.'],
+  analisti:['Consensul analiștilor','Ce recomandă analiștii băncilor de investiții care urmăresc compania: cumpărare, păstrare sau vânzare. Util ca termometru, nu ca adevăr.'],
+  impozit:['Impozit 16%','La brokerii străini (Trading 212, eToro) declari singur câștigul net din vânzări în Declarația Unică, până pe 25 mai anul următor, și plătești 16%. Pierderile din același an se scad din câștiguri. Doar vânzările contează, nu ce ții.'],
+  adauga:['Adaugă','Poziția e sub ținta ta și nimic nu spune „așteaptă”. E candidată pentru banii din luna asta. Planul lunar alege dintre acestea.'],
+  pastreaza:['Păstrează','Totul e în regulă: ții ce ai și nu e nevoie să faci nimic.'],
+  nu_adauga:['Nu mai adăuga','Poziția sau tema ei e deja peste plafon. Nu vinzi, doar nu mai pui bani noi aici.'],
+  asteapta:['Așteaptă','Poziția e sub țintă, dar momentul nu e bun: urmează rezultatele trimestriale sau prețul a urcat foarte repede. Revino peste câteva săptămâni.'],
+  verifica:['Verifică teza','Prețul a coborât sub nivelul de protecție sau și trendul, și fundamentalele s-au deteriorat. Nu e un ordin de vânzare: citește știrile și întreabă-te dacă motivul pentru care ai cumpărat mai e valabil.'],
+  reechilibreaza:['Reechilibrează','Poziția a crescut peste dublul plafonului. Varianta fără impozit: nu mai adaugi și o diluează depunerile. Vânzarea parțială grăbește lucrurile, dar câștigul se impozitează cu 16%.'],
+  cumpara:['Cumpără luna asta','Acțiunea e în planul tău pentru luna asta. Planul alege cel mult 2 cumpărări: întâi oportunitățile, apoi pozițiile cele mai departe de țintă. Suma exactă e în fișa ei și în tabul Plan.'],
+  las:['Las-o','Nu e nimic de făcut acum. Poate fi în regulă, poate are deja destul loc în portofoliu sau poate e momentul prost pentru cumpărat. Motivul exact e în fișa acțiunii.'],
+  uita:['Uită-te la ea','Ceva s-a schimbat și merită 5 minute: prețul a coborât sub nivelul de protecție, trendul și fundamentalele s-au stricat, sau acțiunea a crescut mult peste locul pe care i l-ai dat. Nu e un ordin de vânzare: citește motivul din fișă.'],
+  opor:['Oportunitate ★','O acțiune pe care oricum o adaugi a scăzut temporar (RSI sub 35 sau minus 10% față de maximul pe 3 luni), dar trendul lung și fundamentalele sunt în regulă. Un preț mai bun pentru o cumpărare planificată.'],
+};
+function termen(k){ const g=GLOS[k]; if(!g) return; openSheet(`<div class="grab"></div><div class="lbl">Ce înseamnă</div><h3 style="margin:6px 0 10px;font-size:20px">${esc(g[0])}</h3><p style="color:var(--ink2);font-size:15px;line-height:1.6;margin:0 0 16px">${esc(g[1])}</p><button class="btn ghost" onclick="closeSheet()">Am înțeles</button>`); }
+const q = k => `<button class="q" aria-label="Ce înseamnă?" onclick="event.stopPropagation();termen('${k}')">?</button>`;
+// Leagă termenii cunoscuți din textele motorului (textul e deja escapat).
+const TL = [[/RSI/,'rsi'],[/media de 200 de zile|Media de 200/i,'m200'],[/[Mm]edia de 50 de zile/,'m50'],[/MACD/,'macd'],[/P\/E/,'pe'],[/nivelul de protecție|nivel de protecție/i,'prot'],[/Analiștii/,'analisti'],[/16%/,'impozit'],[/[Tt]ema(?= )/,'tema']];
+const link = s => { let h=esc(s); for(const [re,k] of TL) h=h.replace(re,m=>`<button class="term" onclick="event.stopPropagation();termen('${k}')">${m}</button>`); return h; };
+
+// ===== Date: repo privat prin API-ul GitHub =====
+const GH = 'https://api.github.com/repos/';
+const ghErr = s => s===401?'Token GitHub greșit sau expirat.':s===403?'Tokenul nu are permisiunea necesară.':s===404?'Nu găsesc repo-ul sau fișierul.':'GitHub: HTTP '+s;
+async function gh(path, opt={}) {
+  const r = await fetch(GH+S.repo+path, {...opt, cache:'no-store', headers:{Authorization:'Bearer '+(opt.token||V?.token||''), Accept:opt.raw?'application/vnd.github.raw':'application/vnd.github+json', ...(opt.body?{'Content-Type':'application/json'}:{}), ...(opt.etag?{'If-None-Match':opt.etag}:{})}});
+  if (opt.optional && r.status===404) return null;
+  if (r.status===304) return {neschimbat:true};
+  if (!r.ok) throw new Error(ghErr(r.status));
+  if (opt.etag!==undefined) return {text:await r.text(), etag:r.headers.get('ETag')};
+  return opt.raw ? r.text() : (r.status===204 ? null : r.json());
+}
+// Fișierele din repo, păstrate local cu ETag: dacă nu s-au schimbat, GitHub răspunde 304 și nu se descarcă nimic.
+let FIS = {}; try { FIS = JSON.parse(localStorage.getItem(KEY+'_files')||'{}'); } catch(e){ FIS={}; }
+const saveFIS = () => { try { localStorage.setItem(KEY+'_files', JSON.stringify(FIS)); } catch(e){} };
+async function fisier(path){
+  const c = FIS[path], r = await gh('/contents/'+path, {raw:true, optional:true, etag:c?.etag||''});
+  if (r===null) { delete FIS[path]; return {text:null, schimbat:!!c}; }
+  if (r.neschimbat) return {text:c.text, schimbat:false};
+  FIS[path] = {etag:r.etag, text:r.text}; return {text:r.text, schimbat:true};
+}
+const J_ = t => { try { return t ? JSON.parse(t) : null; } catch(e){ return null; } };
+// Fișierele din repo sunt criptate; se decriptează doar în memorie, cât timp aplicația e deblocată.
+async function dinCache(){
+  if (!DK) return;
+  const d = async f => { try { return J_(await decDate(FIS[f]?.text)); } catch(e) { return null; } };
+  SNAP = await d('date/snapshot.enc'); INTRA = await d('date/intraday.enc'); IST = await d('date/istoric.enc');
+  try { RAP = await decRaport(FIS['rapoarte/ultimul.enc']?.text); } catch(e) { RAP = null; }
+  STARE = J_(FIS['date/stare.json']?.text);
+}
+
+
+let ULTIM = 0, TRANZ = '', ANIM = true; // ANIM: totalul se animă doar când sosesc date noi
+async function reincarca(manual) {
+  if (are_seif() && !V) { LOADED=true; stare(); render(); return; } // blocat: nimic de încărcat
+  $('bref').classList.add('spin'); OFFLINE=false;
+  try {
+    if (live()) {
+      const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
+      const schimbat = rez.some(x=>x.schimbat) || !SNAP;
+      saveFIS(); await dinCache(); ULTIM=Date.now();
+      if (manual) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
+      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); return;
+    }
+    // neconectat: nu există date de arătat, doar ecranul Pornire
+    SNAP = null; IST = null; RAP = null; INTRA = null;
+  } catch(e) {
+    if (live() && FIS['date/snapshot.enc']) { await dinCache(); OFFLINE=true; toast(navigator.onLine?e.message:'Fără conexiune: arăt ultimele date salvate.'); }
+    else { $('bref').classList.remove('spin'); LOADED=true; stare(); render(); toast(e.message); return; }
+  }
+  $('bref').classList.remove('spin'); LOADED=true; stare(); render(); ancora();
+}
+// La revenirea în aplicație: verifică dacă au apărut date noi (cererile neschimbate costă doar un 304).
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && live() && Date.now()-ULTIM > 5*60e3) reincarca(); });
+function cand(iso){
+  if(!iso) return ''; const m=(Date.now()-Date.parse(iso))/60e3;
+  if (m<1) return 'acum'; if (m<60) return `acum ${Math.round(m)} min`; if (m<24*60 && new Date(iso).getDate()===new Date().getDate()) return `azi ${new Date(iso).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}`;
+  if (m<48*60) return `ieri ${new Date(iso).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}`; return dataRo(iso);
+}
+const zileVechi = () => SNAP ? (Date.now()-Date.parse(SNAP.generat))/864e5 : 0;
+function stare(){
+  const p=$('pill'); p.className='pill'+(OFFLINE?' off':''); p.textContent='OFFLINE';
+  document.body.classList.toggle('nolive', !live());
+  $('blk').style.display = live() ? '' : 'none';
+  const ultim = intraValid() ? INTRA.generat : SNAP?.generat;
+  $('stare').textContent = ultim ? cand(ultim) : '';
+  const imp = (SNAP?.schimbari||[]).some(x=>x.important);
+  document.querySelector('nav button[data-v=azi]').querySelector('.dot')?.remove();
+  if (imp) document.querySelector('nav button[data-v=azi]').insertAdjacentHTML('beforeend','<span class="dot"></span>');
+}
+function go(v, dir){ const i0=TABS.indexOf(VIEW), i1=TABS.indexOf(v); TRANZ = i0<0||i1<0||i0===i1 ? '' : i1>i0 ? 'dr' : 'st'; if(v!==VIEW) vib(); VIEW=v; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); render(); scrollTo(0,0); }
+function render(){
+  if (are_seif() && !V) { $('v').innerHTML = vBlocat(); setTimeout(()=>$('pw')?.focus(),50); return; }
+  if (!live()) VIEW='setari';
+  if (!SNAP && VIEW!=='setari') { $('v').innerHTML = LOADED ? `<div class="card empty" style="margin-top:6px">Încă nu există o analiză.<br><br><button class="btn sm" onclick="go('setari')">Deschide setările</button></div>` : skeleton(); return; }
+  const v=$('v'); v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
+  $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.</footer>`;
+  montaGrafice(); countUp();
+}
+const skeleton = () => `<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:110px;margin-bottom:12px"></div>${'<div class="sk" style="height:58px;margin-bottom:6px"></div>'.repeat(5)}`;
+const intraValid = () => INTRA && SNAP && INTRA.generat > SNAP.generat && INTRA.generat.slice(0,10) === new Date().toISOString().slice(0,10);
+function countUp(){
+  document.querySelectorAll('[data-count]').forEach(el=>{
+    const to=+el.dataset.count; if (!ANIM || matchMedia('(prefers-reduced-motion: reduce)').matches) return; ANIM=false;
+    const t0=performance.now(), from=to*0.96, d=650;
+    const step=t=>{ const k=Math.min((t-t0)/d,1), e=1-Math.pow(1-k,3); el.firstChild.textContent=nf(from+(to-from)*e); if(k<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+
+// ===== Grafice SVG (fără biblioteci) =====
+const GR = {}; let grId = 0;
+// series: [{name, v:[], color:'--s1', dash, w}], x: [date], h: [{v,color,label,dash}], fmt
+function lineChart(o){
+  const id='g'+(grId++); GR[id]=o; o.H=o.H||170;
+  return `<div class="chart" id="${id}" data-noswipe><div class="ro num" aria-live="polite"></div></div>`;
+}
+// Praguri „rotunde” pe axă: pași de 1, 2, 2,5 sau 5 × 10^n.
+function praguri(lo, hi, n=5){
+  const brut=(hi-lo)/(n-1)||Math.abs(hi)||1, p10=Math.pow(10,Math.floor(Math.log10(brut)));
+  const pas=[1,2,2.5,5,10].map(k=>k*p10).find(k=>k>=brut);
+  const t0=Math.floor(lo/pas)*pas, out=[]; for(let v=t0; v<hi+pas*0.999; v+=pas) out.push(+v.toPrecision(12));
+  return {t:out, pas};
+}
+function montaGrafice(){
+  for (const [id,o] of Object.entries(GR)) {
+    const el=$(id); if(!el){ delete GR[id]; continue; }
+    const W=Math.max(el.clientWidth,260), H=o.H, pl=2, pr=46, pt=8, pb=22;
+    const all=o.series.flatMap(s=>s.v).concat((o.h||[]).map(h=>h.v)).filter(x=>x!=null&&isFinite(x));
+    if (!all.length) { el.innerHTML='<div class="sub">Date insuficiente.</div>'; continue; }
+    const {t:ticks, pas} = praguri(Math.min(...all), Math.max(...all)), lo=ticks[0], hi=ticks[ticks.length-1];
+    const fA = o.fmtAxa || (v => S.privat&&o.privat ? '•••' : nf(v, pas>=1?0:pas>=0.1?1:2));
+    const n=o.series[0].v.length, X=i=>pl+(W-pl-pr)*(n<2?0:i/(n-1)), Y=v=>pt+(H-pt-pb)*(1-(v-lo)/(hi-lo||1));
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'grafic')}"><defs>${o.series.map((se,k)=>`<linearGradient id="${id}g${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(${se.color});stop-opacity:.24"/><stop offset="1" style="stop-color:var(${se.color});stop-opacity:0"/></linearGradient>`).join('')}</defs>`;
+    s+=ticks.map(t=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--grid)" stroke-width="1" ${t===lo?'':'stroke-dasharray="2 4"'}/><text x="${W-pr+8}" y="${Y(t)+4}" fill="var(--mut)" font-size="10.5" class="num">${esc(fA(t))}</text>`).join('');
+    if (o.x) { const mid=Math.floor((n-1)/2); s+=[[0,'start'],[mid,'middle'],[n-1,'end']].map(([i,a])=>`<text x="${X(i)}" y="${H-5}" fill="var(--mut)" font-size="10.5" text-anchor="${a}">${esc(ziRo(o.x[i],false))}</text>`).join(''); }
+    for (const h of o.h||[]) if(h.v>=lo&&h.v<=hi) s+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(h.v)}" y2="${Y(h.v)}" stroke="var(${h.color})" stroke-width="1.4" stroke-dasharray="5 4"/><text x="${pl+4}" y="${Y(h.v)-5}" fill="var(${h.color})" font-size="10.5" font-weight="600">${esc(h.eticheta||h.name)}</text>`;
+    o.series.forEach((se,k)=>{
+      let d='',on=false; se.v.forEach((v,i)=>{ if(v==null){on=false;return;} d+=(on?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1); on=true; });
+      if (k===0 && o.area) s+=`<path d="${d}L${X(n-1)} ${H-pb}L${X(0)} ${H-pb}Z" fill="url(#${id}g0)"/>`;
+      s+=`<path d="${d}" fill="none" stroke="var(${se.color})" stroke-width="${se.w||2}" ${se.dash?'stroke-dasharray="4 4"':''} stroke-linejoin="round" stroke-linecap="round"/>`;
+    });
+    o.series.forEach((se,k)=>{ const li=se.v.length-1; if(se.v[li]!=null&&k===0) s+=`<circle cx="${X(li)}" cy="${Y(se.v[li])}" r="7" fill="var(${se.color})" opacity=".18"/><circle cx="${X(li)}" cy="${Y(se.v[li])}" r="3.6" fill="var(${se.color})" stroke="var(--panel)" stroke-width="1.6"/>`; });
+    s+=`<line class="xh" y1="${pt}" y2="${H-pb}" stroke="var(--ink2)" stroke-width="1" opacity="0"/>${o.series.map((se,k)=>`<circle class="xd${k}" r="4.5" fill="var(${se.color})" stroke="var(--panel)" stroke-width="2" opacity="0"/>`).join('')}<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" class="hit"/></svg>`;
+    el.insertAdjacentHTML('beforeend', s);
+    const svg=el.querySelector('svg'), ro=el.querySelector('.ro');
+    const fV = v => S.privat&&o.privat ? '•••' : (o.fmt||nf)(v);
+    const citire = i => ro.innerHTML = `<span class="d">${o.x?esc(ziRo(o.x[i],false)):''}</span>`+o.series.map(se=>`<span class="v"><span class="k"><i style="background:var(${se.color})${se.dash?';height:2px':''}"></i>${esc(se.short||se.name)}</span><b>${esc(fV(se.v[i]))}</b></span>`).join('');
+    citire(n-1);
+    const show=ev=>{
+      const r=svg.getBoundingClientRect(), cx=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)*W/r.width;
+      const i=Math.max(0,Math.min(n-1,Math.round((cx-pl)/(W-pl-pr)*(n-1)))), x=X(i);
+      svg.querySelector('.xh').setAttribute('x1',x); svg.querySelector('.xh').setAttribute('x2',x); svg.querySelector('.xh').setAttribute('opacity','.45');
+      o.series.forEach((se,k)=>{ const c=svg.querySelector('.xd'+k); if(se.v[i]==null){c.setAttribute('opacity','0');return;} c.setAttribute('cx',x); c.setAttribute('cy',Y(se.v[i])); c.setAttribute('opacity','1'); });
+      citire(i); ro.classList.add('act');
+    };
+    const hide=()=>{ citire(n-1); ro.classList.remove('act'); svg.querySelector('.xh').setAttribute('opacity','0'); o.series.forEach((_,k)=>svg.querySelector('.xd'+k).setAttribute('opacity','0')); };
+    svg.addEventListener('pointermove',show); svg.addEventListener('pointerdown',show); svg.addEventListener('pointerleave',hide);
+    svg.addEventListener('touchmove',show,{passive:true}); svg.addEventListener('touchend',()=>setTimeout(hide,1400));
+    delete GR[id];
+  }
+}
+function spark(v){
+  if(!v||v.length<2) return '<span></span>';
+  const W=70,H=26,lo=Math.min(...v),hi=Math.max(...v),X=i=>i/(v.length-1)*(W-4)+2,Y=x=>H-3-(H-6)*((x-lo)/((hi-lo)||1));
+  const c='--mut'; // ecran calm: culoarea e rezervată semnalelor care cer ceva de la tine
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><path d="${v.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(x).toFixed(1)).join('')}" fill="none" stroke="var(${c})" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${X(v.length-1)}" cy="${Y(v[v.length-1])}" r="2.4" fill="var(${c})"/></svg>`;
+}
+const wbar = p => `<div class="wb" title="pondere ${nf(p.pondere,1)}%, țintă ${nf(p.tinta,1)}%"><i class="${sem(p)==='uita'&&p.pondere>p.tinta?'over':''}" style="width:${Math.min(p.pondere/Math.max(p.tinta*1.6,p.pondere)*100,100)}%"></i><b style="left:${Math.min(p.tinta/Math.max(p.tinta*1.6,p.pondere)*100,100)}%"></b></div>`;
+
+// ===== Luna ta: cumpărări văzute în cont + bifa locală =====
+const LUNA = () => new Date().toISOString().slice(0,7);
+const cumparari = () => (SNAP?.operatiuni||[]).filter(o=>o.tip==='cumparare');
+const investitLuna = (l=LUNA()) => cumparari().filter(o=>o.data.slice(0,7)===l).reduce((a,o)=>a+o.lei,0);
+const lunaFacuta = (l=LUNA()) => investitLuna(l) > 0 || (S.luniFacute||[]).includes(l) || S.planFacut===l;
+function serieLuni(){ // câte luni la rând (până la luna curentă sau cea trecută) ai investit
+  let n=0, d=new Date(); if (!lunaFacuta()) d.setMonth(d.getMonth()-1);
+  for (let i=0;i<120;i++) { const l=d.toISOString().slice(0,7); if(!lunaFacuta(l)) break; n++; d.setMonth(d.getMonth()-1); }
+  return n;
+}
+function inelLuna(){
+  const tinta = sumaPlan(), inv = investitLuna(), facut = lunaFacuta(), k = facut ? 1 : Math.min(inv/tinta,1), n = serieLuni();
+  const r=18, C=2*Math.PI*r;
+  return `<div class="card" style="display:flex;align-items:center;gap:14px;padding:12px 16px">
+    <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="${r}" fill="none" stroke="var(--panel2)" stroke-width="5"/>
+    <circle cx="23" cy="23" r="${r}" fill="none" stroke="var(${facut?'--pos':'--acc'})" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(C*k).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 23 23)"/>
+    ${facut?'<path d="M16 23.5l5 5 9-10" fill="none" stroke="var(--pos)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>':''}</svg>
+    <div style="flex:1"><div style="font-weight:700">${facut?'Ai investit luna asta':'De investit luna asta'}</div>
+      <div class="sub num">${inv>0?`Confirmat din cont: ${S.privat?'•••':nf(inv,0)} lei`:facut?'Bifat manual':`Planul lunii: ${tinta} lei`}${n>1?` · <b class="ink2">${n} ${de(n)}luni la rând</b>`:''}</div></div></div>`;
+}
+// ===== Linkuri directe din notificări: #plan, #analiza, #setari, #s=SIMBOL =====
+function ancora(){
+  const h = decodeURIComponent(location.hash.slice(1)); if (!h || !SNAP && h!=='setari') return;
+  history.replaceState(null,'',location.pathname+location.search);
+  if (h.startsWith('s=')) { go('azi'); setTimeout(()=>detaliu(h.slice(2)),60); }
+  else if (['plan','analiza','setari','azi'].includes(h)) go(h);
+}
+addEventListener('hashchange', ancora);
+
+// ===== „Ce fac azi” =====
+function ceFac(){
+  const luna = new Date().toISOString().slice(0,7), azi = new Date().toISOString().slice(0,10);
+  const imp = (SNAP.schimbari||[]).filter(x=>x.important);
+  if (imp.length) { const x=imp[0], p=SNAP.pozitii.find(y=>y.symbol===x.symbol);
+    const op = x.eticheta==='Oportunitate';
+    return {k:op?'--opor':'--verifica', tag:op?'Oportunitate':'Uită-te la ea', titlu:op?`${x.symbol} e mai ieftină decât de obicei`:`${x.symbol}: ${x.eticheta.toLowerCase()}`,
+      text:(op?p?.oportunitate:p?.atentie?.[0])||'', acts:[[`Vezi ${x.symbol}`,`detaliu('${x.symbol}')`]], extra:imp.length-1}; }
+  // oportunitate apărută în timpul zilei (verificarea din oră în oră)
+  const opz = intraValid() ? INTRA.pozitii.find(x=>x.oportunitate && !SNAP.pozitii.find(p=>p.symbol===x.symbol)?.oportunitate) : null;
+  if (opz) return {k:'--opor', tag:'Oportunitate azi', titlu:`${opz.symbol} e mai ieftină azi`, text:opz.oportunitate+(!lunaFacuta()?' Dacă n-ai investit încă luna asta, poți cumpăra acum.':''), acts:[[`Vezi ${opz.symbol}`,`detaliu('${opz.symbol}')`]]};
+  const conf = (SNAP.operatiuniNoi||[]).filter(o=>o.tip==='cumparare');
+  if (conf.length) return {k:'--pos', tag:'Din cont', titlu:`Cumpărare confirmată: ${conf.map(o=>`${S.privat?'•••':nf(o.lei,0)+' '+de(o.lei)+'lei'} în ${o.symbol}`).join(', ')}`,
+    text:conf.map(o=>`${o.symbol}: ${nf(o.unitati,4)} unități${o.pret?` la aproximativ ${nf(o.pret)} ${o.moneda||''}`:''}, la ${o.broker}.`).join(' ')+' E notată în jurnal.', acts:[]};
+  const chei = Object.keys(SNAP.planuri||{}).map(Number), s = chei.includes(S.suma)?S.suma:P().contributieTipica;
+  const plan = SNAP.planuri?.[s];
+  if (!lunaFacuta() && plan?.length) return {k:'--acc', tag:'Luna asta', titlu: plan.length===1 ? `Investește ${s} ${de(s)}lei în ${plan[0].symbol}` : `Investește ${s} ${de(s)}lei: ${plan.map(l=>`${l.suma} în ${l.symbol}`).join(', ')}`,
+    text:`La ${plan[0].broker}${plan[0].orar?`, ${plan[0].orar.interval}`:''}. Luna se bifează singură a doua zi, când cumpărarea apare în cont.`, acts:[['Vezi detaliile',"go('plan')"],['Am investit','planFacut()']]};
+  const op = SNAP.pozitii.find(p=>p.oportunitate);
+  if (op) return {k:'--opor', tag:'Oportunitate', titlu:`${op.symbol} e mai ieftină decât de obicei`, text:op.oportunitate, acts:[[`Vezi ${op.symbol}`,`detaliu('${op.symbol}')`]]};
+  const rez = SNAP.pozitii.filter(p=>p.rezultate && (Date.parse(p.rezultate)-Date.parse(azi))/864e5 <= 2 && p.rezultate>=azi);
+  if (rez.length) return {k:'--asteapta', tag:'Atenție', titlu:`Rezultate trimestriale: ${rez.map(p=>p.symbol).join(', ')}`, text:'Sunt posibile mișcări mari. Nu cumpăra înainte de rezultate.', acts:[]};
+  return {k:'--pos', tag:'Totul e pe plan', titlu:'Nimic de făcut azi', text:'Ai investit luna asta și nu există semnale noi. Următorul pas e depunerea de luna viitoare.', acts:[]};
+}
+function planFacut(){ vib();
+  const luna = new Date().toISOString().slice(0,7), s = Object.keys(SNAP.planuri).map(Number).includes(S.suma)?S.suma:P().contributieTipica;
+  for (const l of SNAP.planuri[s]) { const p=SNAP.pozitii.find(x=>x.symbol===l.symbol), e=SNAP.pozitii.find(x=>x.etf);
+    J.unshift({id:Date.now()+Math.random(),data:new Date().toISOString().slice(0,10),symbol:l.symbol,actiune:'cumparat',semnal:p?.semnal||'adauga',pret:p?.ind?.pret??null,pretETF:e?.ind?.pret??null,nota:`Planul lunii: ${l.suma} lei`}); }
+  saveJ(); S.planFacut=luna; S.luniFacute=[...new Set([...(S.luniFacute||[]),luna])].slice(-120); save(); render(); toast('Notat. Confirmarea din cont apare a doua zi.');
+}
+
+// ===== Ora surselor + verificarea sumelor =====
+function surseLinie(){
+  const o = SNAP.ora || {}, v = SNAP.verificare, ora = iso => iso ? new Date(iso).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'}) : null;
+  const parti = [o.t212&&`Trading 212 ${ora(o.t212)}`, o.etoro&&`eToro ${ora(o.etoro)}`, o.bnr&&`BNR ${ziRo(o.bnr,false)}`, o.preturi&&`prețuri ${ziRo(o.preturi,false)}`].filter(Boolean);
+  if (!parti.length && !v) return '';
+  const badge = !v ? '' : v.ok ? `<button class="link" style="color:var(--pos);font-size:12px" onclick="verificare()">✓ verificat cu brokerii</button>` : `<button class="link" style="color:var(--warn);font-size:12px" onclick="verificare()">⚠ diferență față de broker</button>`;
+  return `<div class="sub num" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center">${parti.map(esc).join(' · ')} ${badge}</div>`;
+}
+function verificare(){
+  const v = SNAP.verificare || {}, t = v.t212, e = v.etoro;
+  openSheet(`<div class="grab"></div><h3 style="margin:0 0 10px">Verificarea sumelor</h3>
+  <div class="sub" style="margin-bottom:10px">La fiecare analiză, suma calculată de aplicație e comparată cu cea raportată de broker. Așa se vede imediat o poziție lipsă sau numărată greșit.</div>
+  ${t?`<div class="kv num"><span>Trading 212, calculat</span><span>${lei(t.calculat)}</span><span>Trading 212, raportat de broker</span><span>${lei(t.raportat)}</span>
+    <span>Diferență</span><span class="${t.ok?'pos':'neg'}">${sg(t.difPct,2)}% ${t.ok?'✓':'⚠'}</span></div>`:'<div class="sub">Trading 212: soldul nu a putut fi citit la ultima analiză.</div>'}
+  ${e?`<div class="kv num" style="margin-top:10px"><span>eToro, poziții citite</span><span>${e.pozitii}</span><span>Nerecunoscute</span><span class="${e.ok?'pos':'neg'}">${e.nerecunoscute.length?esc(e.nerecunoscute.join(', ')):'niciuna ✓'}</span></div>`:''}
+  ${v.ok===false?`<div class="al err" style="margin-top:12px">Dacă diferența persistă două zile, trimite-mi o captură: probabil o acțiune nouă trebuie adăugată în maparea simbolurilor.</div>`:''}
+  <button class="btn ghost" style="margin-top:14px" onclick="closeSheet()">Închide</button>`);
+}
+
+// ===== Azi =====
+// Un singur cont: aceleași poziții, cu valorile, câștigul și ponderea doar din contul ales.
+// Semnalele rămân cele calculate pe tot portofoliul (riscul real e cel cumulat).
+const CONTURI = [['toate','Ambele'],['Trading 212','Trading 212'],['eToro','eToro']];
+function vedereCont(C){
+  if (C==='toate') return { poz: SNAP.pozitii, total: SNAP.totalRON, cost: SNAP.costRON };
+  const poz = SNAP.pozitii.filter(p=>p.brokers.some(b=>b.broker===C)).map(p=>{
+    const bs = p.brokers.filter(b=>b.broker===C), sum = k => bs.reduce((a,b)=>a+(b[k]||0),0);
+    const v = sum('valueRON'), c = sum('costRON');
+    return { ...p, valueRON:v, costRON:c, pnlRON:v-c, pnlPct:c?(v/c-1)*100:0, valueUSD:bs.every(b=>b.valueUSD!=null)?sum('valueUSD'):null, costUSD:bs.every(b=>b.costUSD!=null)?sum('costUSD'):null, peCont:true };
+  });
+  const total = poz.reduce((a,p)=>a+p.valueRON,0), cost = poz.reduce((a,p)=>a+p.costRON,0);
+  poz.forEach(p=>p.pondere = total ? p.valueRON/total*100 : 0);
+  const usd = poz.every(p=>p.valueUSD!=null) ? { v: poz.reduce((a,p)=>a+p.valueUSD,0), c: poz.reduce((a,p)=>a+p.costUSD,0) } : null;
+  return { poz, total, cost, usd };
+}
+function vAzi(){
+  const C = CONTURI.some(([k])=>k===S.cont) ? S.cont : 'toate', VC = vedereCont(C);
+  const pnl = VC.total - VC.cost, pc = VC.cost ? pnl/VC.cost*100 : 0;
+  const iv = intraValid() ? Object.fromEntries(INTRA.pozitii.map(x=>[x.symbol,x])) : null;
+  const SORT = {semnal:(a,b)=>(ORD[sem(a)]-ORD[sem(b)])||(b.pondere-a.pondere), pondere:(a,b)=>b.pondere-a.pondere, castig:(a,b)=>b.pnlPct-a.pnlPct,
+    azi:(a,b)=>((iv?.[b.symbol]?.var ?? b.ind?.r1z ?? -1e9)-(iv?.[a.symbol]?.var ?? a.ind?.r1z ?? -1e9))};
+  const poz = [...VC.poz].sort(SORT[S.sort]||SORT.semnal);
+  const zi = iv ? VC.poz.reduce((a,p)=>a+(iv[p.symbol]?p.valueRON*iv[p.symbol].var/100:0),0) : null;
+  const c = ceFac();
+  let h = '';
+  h += `<div class="card todo" style="--k:var(${c.k})"><div class="tag">${esc(c.tag)}</div><h3>${esc(c.titlu)}</h3>${c.text?`<p>${link(c.text)}</p>`:''}
+    ${c.acts.length?`<div class="acts">${c.acts.map((a,i)=>`<button class="btn sm ${i?'ghost':''}" onclick="${a[1]}">${esc(a[0])}</button>`).join('')}</div>`:''}
+    ${c.extra?`<div class="sub" style="margin-top:8px">și încă ${c.extra} ${c.extra===1?'semnal':'semnale'} mai jos</div>`:''}</div>`;
+  if (SNAP.paza?.global) h += `<div class="al err"><b>Date de verificat.</b> ${esc(SNAP.paza.motiv)} Semnalele de azi au fost oprite.</div>`;
+  const ist = (IST||[]).filter(x=>x.totalRON);
+  h += `<div class="card"><div class="seg" data-noswipe style="margin:-4px -4px 12px">${CONTURI.map(([k,t])=>`<button class="${C===k?'on':''}" onclick="S.cont='${k}';save();vib();ANIM=true;render()">${t}</button>`).join('')}</div>
+    <div class="row"><span class="lbl">Valoare totală</span><span style="display:flex;gap:10px;align-items:center"><button class="link" style="font-size:12px;color:var(--mut)" aria-label="${S.privat?'Arată sumele':'Ascunde sumele'}" onclick="S.privat=!S.privat;save();vib();render()">${S.privat?'Arată sumele':'Ascunde sumele'}</button></span></div>
+    <div class="hero num" ${S.privat?'':`data-count="${VC.total.toFixed(2)}"`}>${S.privat?'•••••':nf(VC.total)}<small>lei</small></div>
+    <div class="num ${cls(pnl)}" style="font-weight:600">${S.privat?'':sg(pnl)+' lei · '}${sg(pc)}% <span class="mut" style="font-weight:400">față de cât ai investit</span></div>
+    ${zi!=null?`<div class="sub num" style="margin-top:2px">Azi, până acum: <b class="${cls(zi)}">${sgL(zi)} lei</b></div>`:''}
+    ${VC.usd?`<div class="sub num" style="margin-top:2px">În dolari, ca în aplicația eToro: <b class="ink2">$${S.privat?'•••':nf(VC.usd.v)}</b> · <span class="${cls(VC.usd.v-VC.usd.c)}">${S.privat?'•••':(VC.usd.v-VC.usd.c>=0?'+':'−')+'$'+nf(Math.abs(VC.usd.v-VC.usd.c))}</span></div>`:''}
+    ${C!=='toate'?`<div class="sub" style="margin-top:8px">${VC.poz.length} ${VC.poz.length===1?'poziție':'poziții'} · ${nf(VC.total/SNAP.totalRON*100,1)}% din portofoliu. Semnalele și planul țin cont de ambele conturi.</div>`:''}
+    ${C==='toate'&&ist.length>5?`<div style="margin-top:12px">${lineChart({series:[{name:'Portofoliul tău',short:'Tu',v:ist.slice(-60).map(x=>x.totalRON),color:'--s1'},{name:'Totul în VWCE',short:'Totul în VWCE',v:ist.slice(-60).map(x=>x.bench),color:'--s2',dash:1,w:1.6}],x:ist.slice(-60).map(x=>x.azi),H:130,area:1,privat:1,fmt:x=>nf(x,0)+' lei',aria:'Portofoliul tău față de VWCE, ultimele 60 de zile'})}</div>`:''}
+    ${surseLinie()}</div>`;
+  h += inelLuna();
+  if (SNAP.cashNeinvestit?.lei >= 20 && C!=='eToro') h += `<div class="al">Bani neinvestiți în ${esc(SNAP.cashNeinvestit.broker)}: ${S.privat?'•••':nf(SNAP.cashNeinvestit.lei)} lei. Îi poți folosi la cumpărarea din planul lunii.</div>`;
+  if (RAP) {
+    const linii = RAP.split('\n'), i = linii.findIndex(l=>/^##\s+Pe scurt/i.test(l)), puncte = [];
+    for (let k=i+1; i>=0 && k<linii.length && !/^#/.test(linii[k]); k++) { const m=linii[k].match(/^\s*[-*]\s+(.*)/); if(m) puncte.push(m[1]); }
+    const titlu = (linii.find(l=>/^#\s/.test(l))||'# Raportul de dimineață').replace(/^#\s+/,'');
+    h += `<div class="card" style="cursor:pointer" onclick="raport()"><div class="row"><span class="lbl">${esc(titlu)}</span><span class="link">Citește tot ›</span></div>
+      ${puncte.length?`<ul style="margin:8px 0 0;padding-left:18px;color:var(--ink2);font-size:14px">${puncte.slice(0,3).map(x=>`<li style="margin:3px 0">${md(x).replace(/^<p>|<\/p>$/g,'')}</li>`).join('')}</ul>`:''}</div>`;
+  }
+  const zv = zileVechi();
+  if (live() && zv > 3.5) h += `<div class="al err">Ultima analiză are ${Math.floor(zv)} zile. Verifică în GitHub → Actions dacă rulările au eșuat.</div>`;
+  if (SNAP.erori?.length) h += `<div class="sec"><h2>Probleme la ultima rulare</h2></div>${SNAP.erori.map(a=>`<div class="al err">${esc(a)}</div>`).join('')}`;
+  if (SNAP.avertizari?.length) h += `<button class="sec" style="width:100%;background:none;border:0;padding:0;cursor:pointer" aria-expanded="${!!S.stiut}" onclick="S.stiut=!S.stiut;save();vib();render()"><h2>De știut · ${SNAP.avertizari.length}</h2><span class="sub">${S.stiut?'ascunde ▴':'arată ▾'}</span></button>`
+    + (S.stiut ? SNAP.avertizari.map(a=>`<div class="al">${link(a)}</div>`).join('') : `<div class="al" style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="S.stiut=true;save();render()">${esc(SNAP.avertizari[0])}</div>`);
+  h += `<div class="sec"><h2>${C==='toate'?'Pozițiile tale':'Pozițiile din '+esc(C)} ${q('pondere')}</h2><span class="sub">${C==='toate'?'pondere / țintă':'% din cont'}</span></div>
+  <div class="seg" data-noswipe style="margin-bottom:10px">${[['semnal','Semnal'],['pondere','Pondere'],['castig','Câștig'],['azi',iv?'Azi':'Ieri']].map(([k,t])=>`<button class="${(S.sort||'semnal')===k?'on':''}" onclick="S.sort='${k}';save();vib();render()">${t}</button>`).join('')}</div>
+  <div class="card list">` + poz.map((p,k)=>`
+    <div class="pr" style="animation-delay:${k*25}ms" onclick="detaliu('${esc(p.symbol)}')">
+      <div style="min-width:0"><div class="s">${p.oportunitate||iv?.[p.symbol]?.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div><div class="n">${esc(p.name||'')}</div>
+        ${p.deVerificat?'<div class="sub" style="color:var(--warn)">⚠ date de verificat</div>':''}<div class="sub num" style="margin-top:3px">${lei(p.valueRON,0)} · <span class="${cls(p.pnlPct)}">${sg(p.pnlPct,1)}%</span>${iv?.[p.symbol]?` · azi <span class="${cls(iv[p.symbol].var)}">${sg(iv[p.symbol].var,1)}%</span>`:(S.sort==='azi'&&p.ind?.r1z!=null?` · ieri <span class="${cls(p.ind.r1z)}">${sg(p.ind.r1z,1)}%</span>`:'')}</div></div>
+      ${spark(p.serie?.c?.slice(-30))}
+      <div class="r">${chip(sem(p))}${p.peCont?`<span class="sub num">${nf(p.pondere,1)}% din cont${p.valueUSD!=null&&!S.privat?`<br>$${nf(p.valueUSD)}`:''}</span>`:`${wbar(p)}<span class="sub num">${nf(p.pondere,1)}% / ${nf(p.tinta,0)}%</span>`}</div>
+    </div>`).join('') + `</div>`;
+  return h;
+}
+
+// Un motiv din analiză: „+ …” în favoare, „− …” împotrivă, „· …” neutru.
+function motiv(m){ const t=m[0], c=t==='+'?'--pos':t==='−'?'--neg':'--mut', ic=t==='+'?'▲':t==='−'?'▼':'●';
+  return `<li style="display:flex;gap:10px;align-items:baseline"><span style="color:var(${c});font-size:${ic==='●'?'8':'10'}px;flex:none;width:12px;text-align:center">${ic}</span><span>${link(m.replace(/^[+−·]\s*/,''))}</span></li>`; }
+
+// ===== Detaliu poziție =====
+let DET = {sym:null, zile:126};
+function detaliu(sym, zile){
+  const p = SNAP.pozitii.find(x=>x.symbol===sym); if(!p) return;
+  if (sym!==DET.sym || !zile) DET = {sym, zile: DET.zile||126, det:false, nota:false}; else DET.zile = zile;
+  const i = p.ind || {}, e = SNAP.etfRef || {}, se = p.serie;
+  const rec = p.rec ? `${(p.rec.strongBuy||0)+(p.rec.buy||0)} cumpărare · ${p.rec.hold||0} păstrare · ${(p.rec.sell||0)+(p.rec.strongSell||0)} vânzare` : '—';
+  const cmp = (lbl,a,b) => `<tr><td>${lbl}</td><td class="num ${cls(a)}">${sg(a,1)}%</td>${p.etf?'':`<td class="num">${sg(b,1)}%</td><td class="num ${cls(a-b)}">${a==null||b==null?'—':sg(a-b,1)}</td>`}</tr>`;
+  let graf = '';
+  if (se?.c?.length > 5) {
+    const k = Math.max(0, se.c.length - DET.zile);
+    graf = `<div class="seg" style="margin:4px 0 12px">${[[21,'1 lună'],[63,'3 luni'],[126,'6 luni']].map(([z,t])=>`<button class="${DET.zile===z?'on':''}" onclick="detaliu('${esc(sym)}',${z})">${t}</button>`).join('')}</div>`
+      + lineChart({series:[{name:'Preț',short:'Preț',v:se.c.slice(k),color:'--s1'},{name:'Media de 50 de zile',short:'Media 50 de zile',v:se.m50.slice(k),color:'--mut',w:1.4}], x:se.d.slice(k), fmt:x=>nf(x)+' '+(p.moneda||''),
+          h: !p.etf&&i.protectie?[{v:i.protectie,color:'--warn',eticheta:`Nivel de protecție ${nf(i.protectie)}`}]:[], area:1, aria:`Prețul ${p.symbol}`});
+  }
+  const u = sem(p);
+  const html = `<div class="grab"></div>
+  <div class="row" style="align-items:flex-start"><div><div style="font-size:24px;font-weight:800;letter-spacing:.5px">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>
+    <div class="sub">${esc(p.name||'')}</div></div>${chip(u)}</div>
+  <div class="al ${u==='uita'?'err':u==='cumpara'?'good':''}" style="margin:12px 0 4px;font-size:15px;color:var(--ink)">${link(verdict(p))}</div>
+  <div class="row" style="margin:12px 0 6px;align-items:flex-end"><div><div class="hero num" style="font-size:28px">${nf(i.pret)}</div><div class="sub">preț de închidere, ${esc(p.moneda)}</div></div>
+    <div style="text-align:right"><div class="num ${cls(i.r1z)}" style="font-weight:700">${sg(i.r1z)}% <span class="mut" style="font-weight:400">ieri</span></div><div class="num ${cls(i.r1l)} sub">${sg(i.r1l,1)}% într-o lună</div></div></div>
+  ${graf}
+  <div class="kv num" style="grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;text-align:center">
+    <div class="card" style="padding:10px;margin:0"><div class="lbl" style="font-size:10.5px">Valoare</div><div style="font-weight:700;margin-top:3px">${lei(p.valueRON,0)}</div><div class="sub" style="font-size:11px">${p.brokers.length>1?'2 conturi':esc(p.brokers[0].broker)}</div></div>
+    <div class="card" style="padding:10px;margin:0"><div class="lbl" style="font-size:10.5px">Câștig</div><div class="${cls(p.pnlPct)}" style="font-weight:700;margin-top:3px">${sg(p.pnlPct,1)}%</div><div class="sub" style="font-size:11px">${sgL(p.pnlRON,0)} lei</div></div>
+    <div class="card" style="padding:10px;margin:0" onclick="termen('pondere')"><div class="lbl" style="font-size:10.5px">Pondere</div><div style="font-weight:700;margin-top:3px">${nf(p.pondere,1)}%</div><div class="sub" style="font-size:11px">țintă ${nf(p.tinta,0)}%</div></div>
+  </div>
+  <button class="sec" style="width:100%;background:none;border:0;padding:0;cursor:pointer" aria-expanded="${!!DET.det}" onclick="DET.det=!DET.det;detaliu('${esc(sym)}',DET.zile)"><h2>Detalii</h2><span class="sub">${DET.det?'ascunde ▴':'motive, indicatori, fundamentale ▾'}</span></button>
+  ${DET.det?`<div class="lbl" style="margin:4px 0 2px">Semnal detaliat: ${esc(ETI[p.semnal])}</div>
+  ${p.atentie.slice(u==='uita'?1:0).map(a=>`<div class="al" style="margin-top:8px">${link(a)}</div>`).join('')}
+  ${p.oportunitate?`<div class="al good" style="margin-top:8px">★ ${link(p.oportunitate)}</div>`:''}
+  <ul class="m">${p.motive.map(motiv).join('')||'<li>Date insuficiente</li>'}</ul>
+  <div class="sec"><h2>Poziția ta</h2></div><div class="kv num">
+    <span>Câștig în lei</span><span class="${cls(p.pnlRON)}">${sgL(p.pnlRON)} lei</span>
+    ${p.brokers.map(b=>`<span>· ${esc(b.broker)} (${esc(b.symbol)})</span><span>${lei(b.valueRON)}</span>`).join('')}
+    ${!p.etf&&i.protectie?`<span>Nivel de protecție ${q('prot')}</span><span>${nf(i.protectie)} (${sg((i.protectie/i.pret-1)*100,1)}%)</span>`:''}
+    <span>Temă, monedă</span><span>${esc(p.tema)} · ${esc(p.moneda)}</span>
+  </div>
+  <div class="sec"><h2>Față de VWCE ${q('pp')}</h2></div><table><tr><th></th><th>${esc(p.symbol)}</th>${p.etf?'':'<th>VWCE</th><th>dif. pp</th>'}</tr>
+    ${cmp('3 luni',i.r3l,e.r3l)}${cmp('6 luni',i.r6l,e.r6l)}${cmp('1 an',i.r1a,e.r1a)}</table>
+  <div class="sec"><h2>Indicatori</h2></div><div class="kv num">
+    <span>Media de 50 de zile ${q('m50')}</span><span>${nf(i.sma50)}</span>
+    <span>Media de 200 de zile ${q('m200')}</span><span>${nf(i.sma200)}</span>
+    <span>RSI ${q('rsi')}</span><span>${nf(i.rsi,0)}</span>
+    <span>Mișcare zilnică medie ${q('atr')}</span><span>${nf(i.atrPct,1)}%</span>
+    <span>Față de maximul pe 3 luni</span><span>${sg(i.deLaMaxim3l,1)}%</span></div>
+  <div class="sec"><h2>Fundamentale</h2></div><div class="kv num">
+    <span>P/E ${q('pe')}</span><span>${nf(p.fund?.pe,1)}</span>
+    <span>Creșterea veniturilor</span><span>${p.fund?.crestereVenit==null?'—':sg(p.fund.crestereVenit,1)+'%'}</span>
+    <span>Recomandări ${q('analisti')}</span><span>${rec}</span>
+    ${p.rezultate?`<span>Rezultate trimestriale</span><span>${ziRo(p.rezultate)}</span>`:''}</div>`:''}
+  ${DET.nota?`<input id="jnota" placeholder="Ce vrei să ții minte despre ${esc(p.symbol)}?" maxlength="300"><button class="btn" onclick="notaJurnal('${esc(p.symbol)}')">Salvează nota</button>`
+    :`<button class="link" style="display:block;margin:16px auto 4px" onclick="DET.nota=true;detaliu('${esc(sym)}',DET.zile);setTimeout(()=>$('jnota')?.focus(),50)">+ Notează ceva despre ${esc(p.symbol)}</button>`}
+  <button class="btn ghost" style="margin-top:10px" onclick="closeSheet()">Închide</button>`;
+  if ($('sheet').classList.contains('on') && zile) { $('sheet').innerHTML = html; montaGrafice(); return; }
+  openSheet(html);
+}
+function notaJurnal(sym){ vib();
+  const t = $('jnota').value.trim(); if (!t) { toast('Scrie nota întâi.'); return; }
+  const p = SNAP.pozitii.find(x=>x.symbol===sym), etf = SNAP.pozitii.find(x=>x.etf);
+  J.unshift({ id: Date.now(), data: new Date().toISOString().slice(0,10), symbol: sym, actiune: 'altceva', semnal: p.semnal,
+    pret: p.ind?.pret ?? null, pretETF: etf?.ind?.pret ?? null, nota: t });
+  if (saveJ()) { DET.nota=false; detaliu(sym, DET.zile); toast('Notat. O găsești în Analiză → Deciziile tale.'); }
+}
+// Foi pe două niveluri: o explicație se deschide peste detaliu fără să-l închidă.
+function openSheet(html){
+  const lvl2 = $('sheet').classList.contains('on'), sh = $(lvl2?'sheet2':'sheet'), vl = $(lvl2?'veil2':'veil');
+  sh.innerHTML = html; sh.scrollTop = 0; vl.classList.add('on'); sh.classList.add('on'); history.pushState({s:lvl2?2:1},''); montaGrafice();
+}
+function closeSheet(fromPop){
+  const lvl2 = $('sheet2').classList.contains('on'), sh = $(lvl2?'sheet2':'sheet'), vl = $(lvl2?'veil2':'veil');
+  sh.classList.remove('on'); vl.classList.remove('on');
+  if(!fromPop && history.state?.s) { IGNORE_POP=true; history.back(); }
+}
+// history.back() declanșat de noi nu trebuie să mai închidă încă o foaie
+let IGNORE_POP=false;
+addEventListener('popstate',()=>{ if(IGNORE_POP){ IGNORE_POP=false; return; } if($('sheet2').classList.contains('on')||$('sheet').classList.contains('on')) closeSheet(true); });
+
+// ===== Plan =====
+function vPlan(){
+  const chei = Object.keys(SNAP.planuri||{}).map(Number).sort((a,b)=>a-b);
+  if (!chei.length) return `<div class="empty">Planul apare după prima analiză.</div>`;
+  const s = chei.includes(S.suma) ? S.suma : (chei.includes(P().contributieTipica) ? P().contributieTipica : chei[0]);
+  const plan = SNAP.planuri[s];
+  const etf = SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.valueRON,0), etfP = etf/SNAP.totalRON*100, t = P().tintaETF/100;
+  const x = (t*SNAP.totalRON - etf)/(1-t), luni = x<=0 ? 0 : Math.ceil(x/s);
+  const luna = new Date().toISOString().slice(0,7);
+  return `<div class="sec" style="margin-top:6px"><h2>Cât investești luna asta</h2><span class="sub">lei</span></div>
+  <div class="seg" data-noswipe>${chei.map(c=>`<button class="num ${c===s?'on':''}" onclick="S.suma=${c};save();render()">${c}</button>`).join('')}</div>
+  ${SNAP.cashNeinvestit?.lei>=20?`<div class="al" style="margin-top:12px">Ai deja bani neinvestiți în ${esc(SNAP.cashNeinvestit.broker)}: ${S.privat?'•••':nf(SNAP.cashNeinvestit.lei)} lei. Depui doar diferența.</div>`:''}
+  <div class="sec"><h2>Ce cumperi</h2>${lunaFacuta()?`<span class="sub pos">✓ ${investitLuna()>0?'confirmat din cont':'bifat manual'}</span>`:''}</div>
+  ${plan.map((l,k)=>`<div class="card" style="animation:rise .3s ${k*60}ms both">
+    <div class="row"><div><div style="font-size:19px;font-weight:800">${esc(l.symbol)}</div><div class="sub">la ${esc(l.broker)}</div></div><div class="hero num" style="font-size:26px">${nf(l.suma,0)}<small>lei</small></div></div>
+    ${l.unitati?`<div class="num" style="margin-top:10px;font-size:14.5px">≈ <b>${nf(l.sumaValuta)} ${esc(l.moneda)}</b> · <b>${nf(l.unitati,4)}</b> ${l.unitati===1?'acțiune':'acțiuni'} la ${nf(l.pret)} ${esc(l.moneda)}</div>`:''}
+    <div class="sub" style="margin-top:6px">${l.comision?`Comision valutar: aproximativ ${nf(l.comision)} lei (0,15%). `:''}${l.orar?`Cumpără <b class="ink2">${l.orar.interval}</b>, ${esc(l.orar.motiv)}.`:''}</div>
+    <div class="sub" style="margin-top:6px">${esc(l.motiv)} → după cumpărare <b class="ink2">${nf(l.dupa,1)}%</b></div>
+    ${l.nota?`<div class="al" style="margin:8px 0 0">${esc(l.nota)}</div>`:''}</div>`).join('')}
+  <div class="acts" style="display:flex;gap:8px"><a class="btn ghost" style="flex:1;text-align:center;text-decoration:none;white-space:nowrap" href="https://app.trading212.com" target="_blank" rel="noopener">Trading 212 ↗</a>
+  ${!lunaFacuta()?`<button class="btn" style="flex:1" onclick="planFacut()">Am investit</button>`:''}</div>
+  <div class="sub" style="margin:10px 2px 0">Planul ține cont de ținte, plafoane, rezultatele trimestriale și acțiunile care au urcat prea repede. Nu presupune vânzări, deci nici impozit. Cumpărarea se confirmă automat a doua zi, din cont.</div>
+  <div class="sec"><h2>Nucleul ${q('nucleu')}</h2></div><div class="card">
+    <div class="row"><div><div class="hero num" style="font-size:28px">${nf(etfP,1)}%</div><div class="sub">din ținta de ${P().tintaETF}% în ETF global</div></div>
+      <div style="text-align:right"><div class="hero num" style="font-size:28px">${luni?'~'+luni:'✓'}</div><div class="sub">${luni?(luni===1?'lună':'luni')+' până la țintă':'țintă atinsă'}</div></div></div>
+    <div class="wb" style="width:100%;height:8px;margin-top:12px"><i style="width:${Math.min(etfP/P().tintaETF*100,100)}%;background:var(--acc)"></i></div>
+    <div class="sub" style="margin-top:8px">${luni?`La ${s} lei pe lună, toți în ETF, fără să socotim creșterile sau scăderile de preț.`:'De acum, banii noi se împart după ținte.'}</div></div>
+  <div class="sec"><h2>De ce 60 / 40</h2></div><div class="card" style="font-size:14.5px;color:var(--ink2);line-height:1.6">
+    <p style="margin-top:0">Ai minimum ${P().orizontAni} ani în față și depui constant sume mici. Pentru un astfel de profil, partea principală stă de obicei într-un ETF global: <b class="ink2">VWCE</b> are mii de companii din toată lumea, iar riscul unei singure companii aproape dispare.</p>
+    <p>Restul de 40% rămâne pentru acțiunile alese de tine. Aici poți câștiga mai mult decât piața, dar și pierde mai mult. De aceea nicio acțiune nu trece de ${P().maxActiune}% și nicio <button class="term" onclick="termen('tema')">temă</button> de ${P().maxTema}%.</p>
+    <p style="margin-bottom:0">${(()=>{const [tn,tp]=Object.entries(SNAP.teme).filter(([n])=>!n.startsWith('ETF')).sort((a,b)=>b[1]-a[1])[0]||['',0];
+      return `Acum ai ${nf(etfP,1)}% în ETF${tp>P().maxTema?`, iar tema „${esc(tn)}” are ${nf(tp,1)}%: riscul e concentrat pe aceeași idee`:''}. `})()}Ajungi la țintă doar din depuneri, fără să vinzi. Ținta se schimbă în <code>runner/config.js</code>.</p></div>`;
+}
+
+// ===== Analiză =====
+const BUCKETE = () => { const t=Object.entries(SNAP.teme).sort((a,b)=>(b[0].startsWith('ETF')-a[0].startsWith('ETF'))||b[1]-a[1]); return t.map(([n],i)=>({n,c:'--s'+Math.min(i+1,5)})); };
+function vAnaliza(){
+  const pr = P(), e = SNAP.etfRef || {}, ist = (IST||[]).filter(x=>x.totalRON&&x.bench);
+  let h = '';
+  h += `<div class="sec" style="margin-top:6px"><h2>Tu față de totul în VWCE ${q('fantoma')}</h2></div><div class="card">${SNAP.bench||ist.length>5?`
+    ${SNAP.bench?`<div class="row num"><div><div class="lbl">Diferență</div><div class="hero ${cls(SNAP.bench.diferenta)}" style="font-size:28px">${sgL(SNAP.bench.diferenta,0)}<small>lei</small></div></div>
+      <div style="text-align:right" class="sub">din ${ziRo(SNAP.bench.start)}<br>VWCE: ${lei(SNAP.bench.valoare,0)}</div></div>`:''}
+    ${ist.length>5?`<div style="margin-top:10px">${lineChart({series:[{name:'Portofoliul tău',short:'Tu',v:ist.map(x=>x.totalRON),color:'--s1'},{name:'Aceleași depuneri, numai în VWCE',short:'Numai VWCE',v:ist.map(x=>x.bench),color:'--s2',dash:1,w:1.6}],x:ist.map(x=>x.azi),area:1,privat:1,fmt:x=>nf(x,0)+' lei',aria:'Evoluția portofoliului față de VWCE'})}</div>`:''}
+`
+    :`<div class="sub">Pornește la prima analiză cu date reale.</div>`}</div>`;
+  // alocare: acum vs țintă, pe găleți (ETF + teme)
+  const B = BUCKETE(), tintaTema = n => n.startsWith('ETF') ? pr.tintaETF : SNAP.pozitii.filter(p=>p.tema===n).reduce((a,p)=>a+p.tinta,0);
+  const bar = f => `<div class="stack">${B.map(b=>{const v=f(b.n);return v>0.05?`<div style="flex:${v};background:var(${b.c})" title="${esc(b.n)}: ${nf(v,1)}%"></div>`:''}).join('')}</div>`;
+  h += `<div class="sec"><h2>Alocare: acum și ținta ${q('tema')}</h2></div><div class="card">
+    <div class="row sub"><span>Acum</span></div>${bar(n=>SNAP.teme[n])}
+    <div class="row sub" style="margin-top:8px"><span>Ținta ta</span></div>${bar(tintaTema)}
+    <div style="margin-top:12px">${B.map(b=>{const a=SNAP.teme[b.n],t=tintaTema(b.n),over=!b.n.startsWith('ETF')&&a>pr.maxTema;return `<div class="row" style="padding:5px 0;font-size:14px;border-bottom:1px solid var(--line)">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:10px;height:10px;border-radius:3px;background:var(${b.c});flex:none"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.n)}</span></span>
+      <span class="num" style="white-space:nowrap"><b class="${over?'neg':''}">${nf(a,1)}%</b> <span class="mut">/ ${nf(t,0)}%</span></span></div>`}).join('')}</div>
+    <div class="sub" style="margin-top:8px">Plafon pe temă ${pr.maxTema}%, pe acțiune ${pr.maxActiune}%.</div></div>`;
+  // fiecare acțiune vs VWCE, bare divergente în pp
+  const rows = SNAP.pozitii.filter(p=>!p.etf&&p.ind?.r1a!=null&&e.r1a!=null).map(p=>({s:p.symbol,d:p.ind.r1a-e.r1a})).sort((a,b)=>b.d-a.d);
+  const mx = Math.max(...rows.map(r=>Math.abs(r.d)),1);
+  h += `<div class="sec"><h2>Pe ultimul an, față de VWCE ${q('pp')}</h2></div><div class="card">${rows.map(r=>`
+    <div class="dv"><b>${esc(r.s)}</b><div class="t"><i style="background:var(${r.d>=0?'--pos':'--neg'});${r.d>=0?`left:50%;width:${r.d/mx*50}%`:`right:50%;width:${-r.d/mx*50}%`}"></i></div><span class="num ${cls(r.d)}" style="text-align:right">${sg(r.d,1)}</span></div>`).join('')}
+    <div class="sub" style="margin-top:6px">Diferența față de VWCE, în puncte procentuale${e.r1a!=null?`. VWCE a avut ${sg(e.r1a,1)}% în același an`:''}. E randamentul acțiunii pe ultimul an, nu de când o ai tu.</div></div>`;
+  // monede
+  const V = Object.entries(SNAP.valute||{}).sort((a,b)=>b[1]-a[1]), VC = ['--s1','--s2','--s3','--s4','--s5'];
+  h += `<div class="sec"><h2>Monede</h2></div><div class="card"><div class="stack">${V.map(([m,p],i)=>`<div style="flex:${p};background:var(${VC[i%5]})"></div>`).join('')}</div>
+    <div class="leg">${V.map(([m,p],i)=>`<span><i style="background:var(${VC[i%5]});height:10px;width:10px;border-radius:3px"></i>${esc(m)} <b class="num">${nf(p,1)}%</b></span>`).join('')}</div>
+    <div class="sub" style="margin-top:8px">Câștigi și cheltui în lei, așa că o scădere a dolarului față de leu îți micșorează valoarea chiar dacă acțiunile stau pe loc. VWCE e listat în euro, dar conține companii din toată lumea.</div></div>`;
+  if (SNAP.dubluri?.length) h += `<div class="sec"><h2>În ambele conturi</h2></div><div class="card">${SNAP.dubluri.map(d=>`<div style="font-size:14px;color:var(--ink2)">${esc(d)}</div>`).join('')}
+    <div class="sub" style="margin-top:6px">Nu muta ce ai: mutarea înseamnă vânzare, iar vânzarea se impozitează. Doar banii noi merg într-un singur cont.</div></div>`;
+  const R = SNAP.realizat;
+  h += `<div class="sec"><h2>Impozit ${R?.an||''} ${q('impozit')}</h2></div><div class="card">${R?`
+    <div class="row num"><div><div class="lbl">Impozit estimat</div><div class="hero" style="font-size:28px">${S.privat?'•••':nf(R.impozitEstimat)}<small>lei</small></div></div>
+      <div style="text-align:right"><div class="lbl">Câștig net</div><div class="${cls(R.totalLei)}" style="font-size:18px;font-weight:700">${sgL(R.totalLei)} lei</div></div></div>
+    <div class="kv num" style="margin-top:10px">${R.peBroker.map(b=>`<span>${esc(b.broker)} · ${b.n} vânzări</span><span class="${cls(b.lei)}">${sgL(b.lei)} lei</span>`).join('')}</div>
+    <div class="sub" style="margin-top:8px">Declari în Declarația Unică până la ${esc(R.termen)} anul viitor. eToro e convertit cu cursul BNR din ziua vânzării. E o estimare: verifică cu rapoartele anuale ale brokerilor${R.faraCurs?` (${R.faraCurs} tranzacții fără curs BNR)`:''}.</div>`
+    :`<div class="sub">Apare la prima analiză cu date reale.</div>`}</div>`;
+  h += `<div class="sec"><h2>Conturi și curs</h2></div><div class="card">${['Trading 212','eToro'].map(b=>{const v=SNAP.pozitii.flatMap(p=>p.brokers).filter(x=>x.broker===b).reduce((a,x)=>a+x.valueRON,0);return `<div class="row num" style="padding:4px 0"><span class="ink2">${b}</span><b>${lei(v)}</b></div>`}).join('')}
+    ${SNAP.fx?`<div class="sub num" style="margin-top:6px">1 USD = ${nf(SNAP.fx.USD,4)} lei · 1 EUR = ${nf(SNAP.fx.EUR,4)} lei · ${esc(SNAP.fx.sursa||'')}${SNAP.fx.data?', '+ziRo(SNAP.fx.data):''}</div>`:''}</div>`;
+  h += jurnalSectiune();
+  h += `<div class="sec"><h2>Profilul tău ${q('nucleu')}</h2></div><div class="card"><div class="kv num">
+    <span>Orizont</span><span>${pr.orizontAni}+ ani</span><span>Depunere lunară</span><span>${pr.contributieMin}–${pr.contributieMax} lei</span>
+    <span>Ținta ETF</span><span>${pr.tintaETF}%</span><span>Plafon acțiune / temă</span><span>${pr.maxActiune}% / ${pr.maxTema}%</span>
+    <span>Banii noi merg la</span><span>${esc(pr.brokerPreferat||'')}</span></div>
+    <div class="sub" style="margin-top:8px">Se schimbă în <code>runner/config.js</code>.</div></div>`;
+  return h;
+}
+
+// ===== Jurnal =====
+function intrareJ(j, etfNow){
+  const now = SNAP?.pozitii.find(p=>p.symbol===j.symbol)?.ind?.pret;
+  const r = j.pret&&now ? (now/j.pret-1)*100 : null, re = j.pretETF&&etfNow ? (etfNow/j.pretETF-1)*100 : null;
+  return `<div style="padding:11px 0;border-bottom:1px solid var(--line)">
+    <div class="row"><div><b>${esc(j.symbol)}</b> <span class="sub">${ACT[j.actiune]||''}</span></div><span class="sub">${ziRo(j.data)}</span></div>
+    ${j.nota?`<div class="ink2" style="font-size:14px;margin-top:3px">${esc(j.nota)}</div>`:''}
+    <div class="row num" style="margin-top:6px;font-size:13px"><span class="mut">De atunci</span><span><b class="${cls(r)}">${sg(r,1)}%</b> <span class="mut">· VWCE ${sg(re,1)}%</span>${r!=null&&re!=null?` · <b class="${cls(r-re)}">${sg(r-re,1)} pp</b>`:''}</span></div>
+    ${j.din==='cont'?'':`<button class="link" style="margin-top:6px;color:var(--mut);font-size:12px" onclick="stergeJ(${j.id})">Șterge</button>`}</div>`;
+}
+// Jurnalul = notele tale + cumpărările/vânzările văzute în cont (fără dubluri cu „Am investit”).
+function pretETFLa(data){ const e=SNAP?.pozitii.find(p=>p.etf)?.serie; if(!e) return null; let v=null; e.d.forEach((d,i)=>{ if(d<=data) v=e.c[i]; }); return v; }
+function jurnalTot_(){
+  const ops = (SNAP?.operatiuni||[]).filter(o=>o.tip!=='posibila_divizare').map((o,i)=>({ id:'op'+i+o.data+o.symbol, data:o.data, symbol:o.symbol, actiune:o.tip==='cumparare'?'cumparat':'vandut', din:'cont',
+    nota:`${o.lei?`${S.privat?'•••':nf(o.lei,0)} lei · `:''}${nf(o.unitati,4)} unități la ${o.broker} (confirmat din cont)`, pret:o.pret, pretETF:pretETFLa(o.data) }));
+  const local = J.filter(j=>!(j.actiune==='cumparat' && /^Planul lunii/.test(j.nota||'') && ops.some(o=>o.symbol===j.symbol && o.data.slice(0,7)===j.data.slice(0,7))));
+  return [...ops, ...local].sort((a,b)=>b.data.localeCompare(a.data));
+}
+function jurnalSectiune(){
+  const etfNow = SNAP?.pozitii.find(p=>p.etf)?.ind?.pret, J = jurnalTot_();
+  return `<div class="sec"><h2>Deciziile tale</h2>${J.length>3?`<button class="link" onclick="jurnalTot()">Toate (${J.length}) ›</button>`:''}</div><div class="card" style="padding:4px 16px">${
+    J.length ? J.slice(0,3).map(j=>intrareJ(j,etfNow)).join('') : `<div class="sub" style="padding:12px 0">Cumpărările confirmate din cont apar aici automat. Din fișa unei acțiuni poți adăuga și o notă. Peste câteva luni vezi cum au ieșit deciziile, față de VWCE.</div>`}
+    <div style="display:flex;gap:8px;padding:10px 0"><button class="btn ghost sm" style="flex:1" onclick="exportJurnal()">Salvează o copie</button><button class="btn ghost sm" style="flex:1" onclick="$('fimp').click()">Încarcă o copie</button></div></div>`;
+}
+function jurnalTot(){
+  const etfNow = SNAP?.pozitii.find(p=>p.etf)?.ind?.pret, J = jurnalTot_();
+  openSheet(`<div class="grab"></div><h3 style="margin:0 0 6px">Deciziile tale</h3><div class="sub">Jurnalul stă doar pe acest telefon.</div>${J.map(j=>intrareJ(j,etfNow)).join('')}<button class="btn ghost" style="margin-top:12px" onclick="closeSheet()">Închide</button>`);
+}
+function stergeJ(id){
+  const j = J.find(x=>x.id===id); if(!j) return;
+  openSheet(`<div class="grab"></div><h3 style="margin:4px 0 6px">Ștergi notița pentru ${esc(j.symbol)} din ${ziRo(j.data)}?</h3>
+  <div class="sub" style="margin-bottom:14px">Nu se poate anula.</div>
+  <button class="btn red" onclick="J=J.filter(x=>x.id!==${id});saveJ();closeSheet();if($('sheet').classList.contains('on'))closeSheet();render()">Șterge</button><button class="btn ghost" onclick="closeSheet()">Renunță</button>`);
+}
+function exportJurnal(){
+  const b = new Blob([JSON.stringify({app:'Analist',versiune:APP_VER,jurnal:J},null,1)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Analist_jurnal_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.json`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function importJurnal(inp){
+  const f = inp.files[0]; if(!f) return;
+  f.text().then(t=>{ const d = JSON.parse(t); if(!Array.isArray(d.jurnal)) throw 0;
+    const ids = new Set(J.map(x=>x.id)); const noi = d.jurnal.filter(x=>x&&x.id&&x.symbol&&!ids.has(x.id));
+    J = [...noi, ...J].sort((a,b)=>b.id-a.id); saveJ(); render(); toast(`${noi.length} notițe adăugate.`); })
+   .catch(()=>toast('Fișierul nu e o copie de jurnal Analist.')).finally(()=>inp.value='');
+}
+
+// ===== Raport =====
+function md(t){
+  const lines = esc(t).split('\n'); let h='', inUl=false;
+  const inl = s => s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener" style="color:var(--acc)">$1</a>');
+  for (const l of lines) {
+    const m = l.match(/^(#{1,3})\s+(.*)/), li = l.match(/^\s*[-*]\s+(.*)/);
+    if (!li && inUl) { h+='</ul>'; inUl=false; }
+    if (m) h += `<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`;
+    else if (li) { if(!inUl){h+='<ul>';inUl=true;} h += `<li>${inl(li[1])}</li>`; }
+    else if (l.trim()) h += `<p>${inl(l)}</p>`;
+  }
+  return h + (inUl?'</ul>':'');
+}
+function raport(){ openSheet(`<div class="grab"></div><div class="rap">${md(RAP||'Raportul de dimineață nu a sosit încă.')}</div><button class="btn ghost" style="margin-top:14px" onclick="closeSheet()">Închide</button>`); }
+
+// ===== Setări =====
+const PASI = [
+  ['repo','Creează două repo-uri goale'],['chei','Pune cheile în GitHub'],['token','Conectează telefonul'],['test','Testează']];
+const SECRETE = [
+  ['DATA_KEY','Analist','obligatoriu','Cheia care criptează datele tale în GitHub. Se generează aici, pe telefon. Pune-o ca secret și salveaz-o și în managerul de parole: fără ea, datele nu mai pot fi citite dacă pierzi telefonul.',null],
+  ['T212_KEY','Trading 212','obligatoriu','În aplicația Trading 212: Setări → API (Beta) → Generate. Bifează Account data, Portfolio și History, fără Orders. Primești o cheie și un secret. Secretul apare o singură dată.',null],
+  ['T212_SECRET','Trading 212','obligatoriu','Secretul generat odată cu cheia.',null],
+  ['ETORO_API_KEY','eToro','recomandat','Pe site (nu din aplicație): Setări → Trading → API Key Management → Create New Key. Environment Real, Permissions Read. Fără eToro lipsesc pozițiile de acolo și graficele.','https://www.etoro.com/settings/trade'],
+  ['ETORO_USER_KEY','eToro','recomandat','A doua cheie din aceeași pagină.','https://www.etoro.com/settings/trade'],
+  ['FINNHUB_KEY','Finnhub','opțional','Cont gratuit. Cheia apare în dashboard. Aduce P/E, recomandările analiștilor și datele rezultatelor.','https://finnhub.io/register'],
+  ['NTFY_TOPIC','ntfy','opțional','Pentru notificări pe telefon. Generează un nume aici, pune-l ca secret și abonează-te la el în aplicația ntfy.',null]];
+const copiaza = t => { (navigator.clipboard?.writeText(t)||Promise.reject()).then(()=>{vib();toast(t.length>30?'Copiat.':'Copiat: '+t);}).catch(()=>toast(t)); };
+async function verificaParola(pw){ const o=JSON.parse(localStorage.getItem(SEIF)); const k=await cheieParola(pw, b64d(o.sare), o.iter); await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, k, b64d(o.ct)); }
+async function schimbaParola(){
+  const a=$('pwv').value, n1=$('pwn1').value, n2=$('pwn2').value;
+  if (n1.length<8) { toast('Parola nouă trebuie să aibă minimum 8 caractere.'); return; } if (n1!==n2) { toast('Parolele noi nu coincid.'); return; }
+  try { await verificaParola(a); } catch(e) { vib(); toast('Parola actuală e greșită.'); return; }
+  await creeazaSeif(n1, V); vib(); toast('Parola a fost schimbată.'); render();
+}
+async function aratăCheia(){
+  try { await verificaParola($('pwa').value); } catch(e) { vib(); toast('Parola e greșită.'); return; }
+  $('dkv').innerHTML = `<button class="btn ghost sm num" style="width:100%;word-break:break-all;font-size:12.5px;margin-top:8px" onclick="copiaza('${V.dataKey}')">${V.dataKey} ⧉</button><div class="sub" style="margin-top:4px">Salveaz-o în managerul de parole. Nu o trimite nimănui.</div>`;
+  setTimeout(()=>{ if($('dkv')) $('dkv').innerHTML=''; }, 60000);
+}
+// Valorile generate la pornire stau temporar pe telefon, până se creează seiful (apoi se mută în el).
+const PORN = () => { try { return JSON.parse(localStorage.getItem(KEY+'_pornire')||'{}'); } catch(e){ return {}; } };
+const setPorn = o => localStorage.setItem(KEY+'_pornire', JSON.stringify({...PORN(), ...o}));
+function topicNou(){ const a=new Uint8Array(15); crypto.getRandomValues(a); setPorn({topic:'analist-'+[...a].map(x=>(x%36).toString(36)).join('')}); render(); }
+function cheieNoua(){ setPorn({dataKey:b64url(crypto.getRandomValues(new Uint8Array(32)))}); render(); }
+function cheieExistenta(){ const k=($('fdk').value||'').trim(); try { if(unb64url(k).length!==32) throw 0; } catch(e){ toast('Cheia nu are formatul corect (43 de caractere).'); return; } setPorn({dataKey:k, existenta:true}); render(); toast('Cheia de date a fost preluată.'); }
+const STAREI = {ok:['✓','--pos'],eroare:['✗','--neg'],lipsa:['!','--warn'],optional:['○','--mut']};
+const NUMEC = {seif:'Cheia de date (DATA_KEY)',t212:'Trading 212',etoro:'eToro',finnhub:'Finnhub',ntfy:'Notificări (ntfy)',bnr:'Curs BNR'};
+function conexiuniHTML(){
+  const c = STARE?.conexiuni || SNAP?.conexiuni; if (!c) return `<div class="sub">Încă nu am rezultatul unui test.</div>`;
+  return Object.entries(NUMEC).filter(([k])=>c[k]).map(([k,n])=>{ const [ic,col]=STAREI[c[k].stare]||['?','--mut'];
+    return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)"><b style="color:var(${col});width:16px;text-align:center">${ic}</b><div><div style="font-weight:600">${n}</div><div class="sub">${esc(c[k].mesaj||'')}</div></div></div>`; }).join('')
+    + (SNAP.ultimaIncercare?`<div class="sub" style="margin-top:6px">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>`:'');
+}
+function vSetari(){
+  const aspect = `<div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" onclick="S.tema='${k}';save();aplicaTema();render()">${t}</button>`).join('')}</div></div>`;
+  const ver = `<div class="card sub">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>`;
+  if (live()) return `<div class="sec" style="margin-top:6px"><h2>Conexiuni</h2></div><div class="card">${conexiuniHTML()}
+    <button class="btn" style="margin-top:12px" onclick="ruleaza(true)">Testează din nou</button><button class="btn ghost" onclick="ruleaza()">Rulează analiza acum</button>
+    <details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Schimbă tokenul (expiră după un an)</summary>
+      <input id="ft" type="password" autocomplete="off" placeholder="Tokenul nou (github_pat_…)"><button class="btn ghost" onclick="salveaza(true)">Salvează și testează</button></details></div>
+    <div class="sec"><h2>Securitate</h2></div><div class="card">
+      <div class="sub" style="font-size:13.5px;line-height:1.6">Datele din GitHub sunt criptate. Pe telefon, totul stă criptat cu parola ta. Aplicația se blochează după 2 minute în fundal. Notificările nu conțin simboluri sau sume.</div>
+      <button class="btn ghost" style="margin-top:10px" onclick="blocheaza();toast('Blocat.')">Blochează acum</button>
+      <details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Schimbă parola</summary>
+        <input id="pwv" type="password" autocomplete="current-password" placeholder="Parola actuală"><input id="pwn1" type="password" autocomplete="new-password" placeholder="Parola nouă (minimum 8 caractere)"><input id="pwn2" type="password" autocomplete="new-password" placeholder="Parola nouă, încă o dată">
+        <button class="btn ghost" onclick="schimbaParola()">Schimbă parola</button></details>
+      <details style="margin-top:10px"><summary class="sub" style="cursor:pointer">Arată cheia de date (pentru copia de siguranță)</summary>
+        <input id="pwa" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" onclick="aratăCheia()">Arată</button><div id="dkv"></div></details>
+    </div>
+    ${aspect}
+    <div class="sec"><h2>Gesturi</h2></div><div class="card sub" style="font-size:13.5px;line-height:1.7">Trage în jos de sus ca să reîncarci · glisează între tab-uri · atinge un termen subliniat sau „?” · atinge un grafic ca să citești valorile · trage o fereastră în jos ca s-o închizi.</div>
+    <button class="btn ghost" onclick="deconecteaza()">Deconectează</button>${ver}`;
+  const R = S.repo||'costi1622/analist-date', [own] = R.split('/'), pas = S.pasi||{};
+  const PR = PORN();
+  const bif = k => `<button class="q" style="width:22px;height:22px;font-size:13px;${pas[k]?'background:var(--pos);color:#fff;border-color:var(--pos)':''}" aria-label="Bifează" onclick="S.pasi={...(S.pasi||{}),${k}:!${!!pas[k]}};save();render()">${pas[k]?'✓':''}</button>`;
+  const pasH = (n,k,t,body) => `<div class="card"><div class="row"><span class="lbl">Pasul ${n}</span>${k?bif(k):''}</div><h3 style="margin:4px 0 8px;font-size:18px">${t}</h3>${body}</div>`;
+  return `<div class="sec" style="margin-top:6px"><h2>Pornire</h2><span class="sub">~15 minute, o singură dată</span></div>
+  <div class="sub" style="margin:0 2px 12px">Aplicația pornește cu datele tale după pasul 3. Fiecare pas e explicat în detaliu în documentație.</div>
+  ${pasH(1,'repo','Creează două repo-uri goale',`<div class="sub" style="margin-bottom:10px">Doar le creezi, fără fișiere. Codul îl publică Claude, după ce îi spui în chat că sunt create.</div>
+    <div style="display:flex;gap:8px"><a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist-date&visibility=private" target="_blank" rel="noopener">analist-date (privat) ↗</a>
+    <a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist&visibility=public" target="_blank" rel="noopener">analist (public) ↗</a></div>`)}
+  ${pasH(2,'chei','Pune cheile în GitHub',`<div class="sub" style="margin-bottom:6px">Pentru fiecare cheie: New repository secret, apoi numele exact și valoarea. Atinge numele ca să-l copiezi.</div>
+    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:6px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener">Deschide pagina de secrete ↗</a>
+    ${SECRETE.map(([n,b,tip,cum,url])=>`<div style="padding:9px 0;border-bottom:1px solid var(--line)"><div class="row"><button class="chip" style="color:var(--acc)" onclick="copiaza('${n}')">${n} ⧉</button><span class="sub" style="color:var(${tip==='obligatoriu'?'--neg':tip==='recomandat'?'--warn':'--mut'})">${tip}</span></div>
+      <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a href="${url}" target="_blank" rel="noopener" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
+      ${n==='NTFY_TOPIC'?(PORN().topic?`<div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost sm" style="flex:1" onclick="copiaza('${PORN().topic}')">${PORN().topic} ⧉</button><a class="btn ghost sm" style="text-decoration:none" href="https://ntfy.sh/${PORN().topic}" target="_blank" rel="noopener">Abonează-te ↗</a></div>`:`<button class="btn ghost sm" style="margin-top:6px" onclick="topicNou()">Generează un nume</button>`):''}
+      ${n==='DATA_KEY'?(PORN().dataKey?`<button class="btn ghost sm num" style="margin-top:6px;width:100%;word-break:break-all;font-size:12.5px" onclick="copiaza('${PORN().dataKey}')">${PORN().dataKey} ⧉</button>${PORN().existenta?'<div class="sub pos" style="margin-top:4px">Cheie existentă, preluată. Nu o pune din nou în GitHub dacă e deja acolo.</div>':''}`
+        :`<div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost sm" style="flex:1" onclick="cheieNoua()">Generează cheia de date</button></div>
+          <details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Am deja o cheie de date (telefon nou)</summary><input id="fdk" autocomplete="off" placeholder="Cheia de date (43 de caractere)"><button class="btn ghost sm" onclick="cheieExistenta()">Folosește cheia</button></details>`):''}</div>`).join('')}`)}
+  ${pasH(3,null,'Conectează telefonul',`<div class="sub">La crearea tokenului alegi:</div><ul class="m" style="font-size:13.5px"><li>Repository access: <b class="ink2">Only select repositories → analist-date</b></li><li>Permissions: <b class="ink2">Contents: Read-only</b> și <b class="ink2">Actions: Read and write</b></li><li>Expiration: <b class="ink2">1 an</b></li></ul><div class="sub">Tokenul nu poate citi alt repo și nu poate modifica fișiere.</div>
+    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin:10px 0" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Creează tokenul ↗</a>
+    <input id="ft" type="password" autocomplete="off" placeholder="Lipește tokenul aici (github_pat_…)">
+    <details style="margin-bottom:8px"><summary class="sub" style="cursor:pointer">Alt repo decât ${esc(R)}?</summary><input id="fu" value="${esc(R)}"></details>
+    <div class="sub" style="margin-top:6px">Alege o parolă pentru aplicație. Cu ea se criptează pe telefon tokenul, cheia de date și jurnalul. Minimum 8 caractere. O frază din câteva cuvinte e cea mai sigură.</div>
+    <input id="pw1" type="password" autocomplete="new-password" placeholder="Parola aplicației">
+    <input id="pw2" type="password" autocomplete="new-password" placeholder="Parola, încă o dată">
+    <button class="btn" onclick="salveaza(true)">Conectează și testează</button>`)}
+  ${aspect}${ver}`;
+}
+async function salveaza(test){
+  const r=($('fu')?.value||S.repo).trim(), t=$('ft').value.trim();
+  if (!t) { toast('Lipește tokenul întâi.'); return; }
+  const pornire = !V;
+  if (pornire) {
+    const pw1=$('pw1').value, pw2=$('pw2').value, pr=PORN();
+    if (!pr.dataKey) { toast('Generează întâi cheia de date (pasul 2).'); return; }
+    if (pw1.length < 8) { toast('Parola trebuie să aibă minimum 8 caractere.'); return; }
+    if (pw1 !== pw2) { toast('Parolele nu coincid.'); return; }
+  }
+  // tokenul se verifică înainte de orice salvare: unul greșit nu trebuie să te blocheze
+  const r0 = S.repo; S.repo = r;
+  try { await gh('', {token:t}); } catch(e) { S.repo=r0; vib(); toast(e.message.includes('găsesc') ? `Nu găsesc repo-ul ${r} cu acest token. Verifică „Only select repositories”.` : e.message); return; }
+  if (r!==r0) { FIS={}; saveFIS(); SNAP=null; }
+  save();
+  if (pornire) {
+    toast('Se generează cheile și se criptează seiful…');
+    const pr = PORN(), kp = await perecheRaport();
+    await creeazaSeif($('pw1').value, { token:t, dataKey:pr.dataKey, topic:pr.topic||'', priv:kp.priv, pub:kp.pub, jurnal:[] });
+    localStorage.removeItem(KEY+'_pornire');
+  } else { V.token = t; await salveazaSeif(); }
+  stare();
+  if (test) ruleaza(true); else reincarca().then(()=>go('azi'));
+}
+function deconecteaza(){
+  openSheet(`<div class="grab"></div><h3 style="margin:0 0 8px">Deconectezi telefonul?</h3>
+  <div class="sub" style="font-size:14px;line-height:1.6;margin-bottom:12px">Se șterg de pe telefon seiful, tokenul și datele salvate. Datele din GitHub rămân criptate. Pentru reconectare îți trebuie cheia de date.</div>
+  <button class="btn red" onclick="stergeSeif()">Deconectează</button><button class="btn ghost" onclick="closeSheet()">Renunță</button>`);
+}
+async function ruleaza(test){
+  try { vib(); if (test) { go('setari'); }
+    const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
+    await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:V.pub}:{mod:'zi'}})});
+    toast(test?'Testez conexiunile. Durează în jur de un minut…':'Analiza a pornit. Durează în jur de un minut…');
+    for (let i=0;i<30;i++) {
+      await new Promise(r=>setTimeout(r,10000));
+      const j = await gh('/actions/workflows/analiza.yml/runs?event=workflow_dispatch&per_page=1');
+      const run = j.workflow_runs?.[0];
+      if (run && run.created_at >= inainte.slice(0,19) && run.status==='completed') {
+        await new Promise(r=>setTimeout(r,3000)); await reincarca();
+        if (test || run.conclusion!=='success') { go('setari'); toast(run.conclusion==='success'?'Testul s-a terminat. Rezultatul e mai jos.':'O conexiune nu merge. Detaliile sunt mai jos.'); return; }
+        go('azi'); toast('Analiză actualizată.'); return;
+      }
+    }
+    toast('Încă rulează. Reîncarcă peste un minut.');
+  } catch(e){ toast(e.message); }
+}
+
+// ===== Foi: trage în jos ca să închizi =====
+['sheet','sheet2'].forEach(id=>{
+  const sh=$(id); let y0=null, dy=0;
+  sh.addEventListener('touchstart',e=>{ if(sh.scrollTop>0||e.target.closest('[data-noswipe],input,textarea')){y0=null;return;} y0=e.touches[0].clientY; dy=0; sh.style.transition='none'; },{passive:true});
+  sh.addEventListener('touchmove',e=>{ if(y0==null) return; dy=Math.max(0,e.touches[0].clientY-y0); if(dy>0) sh.style.transform=`translateY(${dy}px)`; },{passive:true});
+  sh.addEventListener('touchend',()=>{ if(y0==null) return; sh.style.transition=''; sh.style.transform=''; if(dy>110){ vib(); closeSheet(); } y0=null; });
+});
+
+// ===== Gesturi: tragere pentru reîncărcare, glisare între tab-uri =====
+(()=>{
+  let x0=null,y0=null,pull=false,noSwipe=false;
+  const sheetOn=()=>$('sheet').classList.contains('on');
+  addEventListener('touchstart',e=>{ if(sheetOn()) return; const t=e.touches[0]; x0=t.clientX; y0=t.clientY; pull=scrollY<=0; noSwipe=!!e.target.closest('[data-noswipe],input,textarea'); },{passive:true});
+  addEventListener('touchmove',e=>{ if(x0==null||!pull) return; const dy=e.touches[0].clientY-y0; if(dy>0) $('ptr').style.transform=`translate(-50%,${Math.min(dy*0.5,60)-60}px) rotate(${dy*2}deg)`; },{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0==null) return; const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0;
+    $('ptr').style.transform='translate(-50%,-60px)';
+    if(pull&&dy>110&&Math.abs(dx)<60) reincarca(true);
+    else if(!noSwipe&&Math.abs(dx)>80&&Math.abs(dy)<45&&TABS.includes(VIEW)){ const i=TABS.indexOf(VIEW)+(dx<0?1:-1); if(i>=0&&i<TABS.length) go(TABS[i]); }
+    x0=null;
+  });
+  // doar la schimbarea lățimii (rotire), nu la apariția tastaturii, care ar șterge ce scrii
+  let w0=innerWidth; addEventListener('resize',()=>{ if(innerWidth===w0) return; w0=innerWidth; clearTimeout(window._rz); window._rz=setTimeout(render,200); });
+})();
+
+// Versiune nouă: noul service worker așteaptă; bara îl activează la cerere.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(reg=>{
+  const arata = w => { $('upd').classList.add('on'); $('upd').onclick = () => { w.postMessage('activeaza'); }; };
+  if (reg.waiting && navigator.serviceWorker.controller) arata(reg.waiting);
+  reg.addEventListener('updatefound', () => { const w = reg.installing; w?.addEventListener('statechange', () => { if (w.state==='installed' && navigator.serviceWorker.controller) arata(w); }); });
+  reg.update().catch(()=>{});
+}).catch(()=>{});
+let RELOADING=false; navigator.serviceWorker?.addEventListener('controllerchange',()=>{ if(!RELOADING){ RELOADING=true; location.reload(); } });
+LOADED = !are_seif() ? true : LOADED;
+render(); reincarca();
+setInterval(()=>{ if(!document.hidden) stare(); }, 60e3);
+</script>
+</body>
+</html>

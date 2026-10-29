@@ -1,0 +1,405 @@
+// Motorul analistului: funcții pure, fără rețea. Testabil în node.
+// Orientare: investitor pe termen lung (nucleu ETF + sateliți), care reechilibrează din depuneri.
+import { THEMES, ALIASES, ETFS, RISK, PROFIL, TINTE, PROTECTIE, MONEDA_SUFIX, COMISION_FX, ORAR, TREPTE_ORIZONT, SCENARII } from './config.js';
+
+// ---------- Indicatori ----------
+export function sma(v, n) {
+  if (v.length < n) return null;
+  let s = 0; for (let i = v.length - n; i < v.length; i++) s += v[i];
+  return s / n;
+}
+export function emaSeries(v, n) {
+  const k = 2 / (n + 1), out = []; let e = null;
+  v.forEach((x, i) => {
+    if (i < n - 1) { out.push(null); return; }
+    if (e === null) e = v.slice(0, n).reduce((a, b) => a + b, 0) / n;
+    else e = x * k + e * (1 - k);
+    out.push(e);
+  });
+  return out;
+}
+export function rsi(v, n = 14) { // Wilder
+  if (v.length < n + 1) return null;
+  let g = 0, l = 0;
+  for (let i = 1; i <= n; i++) { const d = v[i] - v[i - 1]; d > 0 ? g += d : l -= d; }
+  g /= n; l /= n;
+  for (let i = n + 1; i < v.length; i++) {
+    const d = v[i] - v[i - 1];
+    g = (g * (n - 1) + Math.max(d, 0)) / n;
+    l = (l * (n - 1) + Math.max(-d, 0)) / n;
+  }
+  if (l === 0) return 100;
+  return 100 - 100 / (1 + g / l);
+}
+export function atr(candles, n = 14) { // Wilder, pe true range
+  if (candles.length < n + 1) return null;
+  const tr = [];
+  for (let i = 1; i < candles.length; i++) {
+    const { h, l } = candles[i], pc = candles[i - 1].c;
+    tr.push(Math.max((h ?? candles[i].c) - (l ?? candles[i].c), Math.abs((h ?? candles[i].c) - pc), Math.abs((l ?? candles[i].c) - pc)));
+  }
+  let a = tr.slice(0, n).reduce((x, y) => x + y, 0) / n;
+  for (let i = n; i < tr.length; i++) a = (a * (n - 1) + tr[i]) / n;
+  return a;
+}
+export function macd(v) {
+  const e12 = emaSeries(v, 12), e26 = emaSeries(v, 26);
+  const line = v.map((_, i) => (e12[i] != null && e26[i] != null) ? e12[i] - e26[i] : null);
+  const valid = line.filter(x => x != null);
+  if (valid.length < 9) return null;
+  const sig = emaSeries(valid, 9);
+  const hist = valid.map((x, i) => sig[i] == null ? null : x - sig[i]).filter(x => x != null);
+  return { hist: hist.slice(-5) };
+}
+const pct = (a, b) => (b ? (a / b - 1) * 100 : null);
+const ret = (c, n) => (c.length > n ? pct(c[c.length - 1], c[c.length - 1 - n]) : null);
+
+export function indicators(candles) {
+  const c = candles.map(x => x.c);
+  if (c.length < 30) return null;
+  const last = c[c.length - 1];
+  const hi52 = Math.max(...candles.slice(-252).map(x => x.h ?? x.c));
+  const m = macd(c);
+  let macdCross = 0;
+  if (m && m.hist.length >= 4) {
+    const h = m.hist, prevNeg = h.slice(-4, -1).some(x => x < 0), prevPos = h.slice(-4, -1).some(x => x > 0);
+    if (h[h.length - 1] > 0 && prevNeg) macdCross = 1;
+    if (h[h.length - 1] < 0 && prevPos) macdCross = -1;
+  }
+  const a = atr(candles.slice(-120));
+  const maxP = Math.max(...c.slice(-PROTECTIE.zile));
+  const protectie = a != null ? maxP - Math.max(PROTECTIE.multATR * a, maxP * PROTECTIE.minPct / 100) : null;
+  return {
+    pret: last,
+    sma50: sma(c, 50), sma200: sma(c, 200),
+    rsi: rsi(c.slice(-120)),
+    macdCross,
+    atr: a, atrPct: a != null ? a / last * 100 : null,
+    protectie, subProtectie: protectie != null && last < protectie,
+    deLaMaxim: pct(last, hi52),
+    deLaMaxim3l: pct(last, Math.max(...c.slice(-63))),
+    r1z: ret(c, 1), r1l: ret(c, 21), r3l: ret(c, 63), r6l: ret(c, 126), r1a: ret(c, 252),
+    zile: c.length,
+  };
+}
+
+// Seria pentru grafice: ultimele n închideri + media de 50 de zile pe aceeași fereastră.
+const r4 = x => x == null ? null : +x.toPrecision(6);
+export function serie(candles, n = 260) {
+  const c = candles.map(x => x.c), k = Math.max(0, c.length - n), out = { d: [], c: [], m50: [] };
+  for (let i = k; i < c.length; i++) {
+    out.d.push(String(candles[i].t || '').slice(0, 10)); out.c.push(r4(c[i]));
+    out.m50.push(i >= 49 ? r4(c.slice(i - 49, i + 1).reduce((a, b) => a + b, 0) / 50) : null);
+  }
+  return out;
+}
+
+// ---------- Profilul: orizont + suma lunară -> toate regulile ----------
+// u = { anTinta, suma } setate de tine în aplicație. Orizontul scade singur, an de an,
+// iar strategia devine treptat mai prudentă pe măsură ce te apropii de anul în care ai nevoie de bani.
+const intreg = (x, lo, hi, d) => { const n = Math.round(+x); return Number.isFinite(n) ? Math.min(Math.max(n, lo), hi) : d; };
+export function derivaProfil(u = {}, azi = new Date().toISOString().slice(0, 10)) {
+  const an = +azi.slice(0, 4);
+  const anTinta = intreg(u.anTinta, an + 1, an + 50, an + PROFIL.orizontAni);
+  const h = anTinta - an, suma = intreg(u.suma, 10, 100000, PROFIL.contributieTipica);
+  const t = TREPTE_ORIZONT.find(x => h >= x.min);
+  const unaSingura = suma < 2 * PROFIL.transaMinima;
+  return { ...PROFIL, orizontAni: h, anTinta, treapta: t.nume,
+    contributieTipica: suma, contributieMin: suma, contributieMax: suma,
+    tintaETF: t.etf, maxActiune: t.actiune, maxTema: t.tema,
+    transaMinima: Math.min(PROFIL.transaMinima, suma), maxCumparariPeLuna: unaSingura ? 1 : PROFIL.maxCumparariPeLuna };
+}
+// Valoarea estimată peste `ani` ani: ce ai acum + depunerea lunară, capitalizat lunar.
+export function proiectie(total, suma, ani, rataAn) {
+  const r = Math.pow(1 + rataAn / 100, 1 / 12) - 1, n = Math.round(ani * 12);
+  const fv = total * Math.pow(1 + r, n) + (r ? suma * (Math.pow(1 + r, n) - 1) / r : suma * n);
+  return { valoare: fv, depus: total + suma * n };
+}
+export function scenarii(total, suma, ani) {
+  return Object.fromEntries(Object.entries(SCENARII).map(([k, r]) => [k, { rata: r, ...proiectie(total, suma, ani, r) }]));
+}
+
+// ---------- Portofoliu combinat ----------
+export const canon = s => ALIASES[s] || s;
+export const TEMA_ETF = 'ETF global (nucleu)';
+export function themeOf(sym) {
+  if (ETFS.includes(sym)) return TEMA_ETF;
+  for (const [t, list] of Object.entries(THEMES)) if (list.includes(sym)) return t;
+  return 'Altele';
+}
+export function monedaOf(sym, cur) {
+  if (cur) return cur;
+  const suf = Object.keys(MONEDA_SUFIX).find(s => sym.endsWith(s));
+  return suf ? MONEDA_SUFIX[suf] : 'USD';
+}
+
+// positions: [{broker, symbol, name, qty, price, currency, valueRON, costRON}]
+export function combine(positions) {
+  const map = {};
+  for (const p of positions) {
+    const s = canon(p.symbol);
+    const g = map[s] ||= { symbol: s, name: p.name, valueRON: 0, costRON: 0, brokers: [], moneda: monedaOf(s, p.currency) };
+    g.valueRON += p.valueRON; g.costRON += p.costRON;
+    g.brokers.push({ broker: p.broker, symbol: p.symbol, qty: p.qty, valueRON: p.valueRON, costRON: p.costRON, ...(p.costUSD != null ? { costUSD: p.costUSD } : {}), ...(p.valueUSD != null ? { valueUSD: p.valueUSD } : {}) });
+  }
+  const list = Object.values(map);
+  const total = list.reduce((a, b) => a + b.valueRON, 0);
+  for (const g of list) {
+    g.pondere = total ? g.valueRON / total * 100 : 0;
+    g.pnlRON = g.valueRON - g.costRON;
+    g.pnlPct = g.costRON ? g.pnlRON / g.costRON * 100 : 0;
+    g.tema = themeOf(g.symbol);
+    g.etf = ETFS.includes(g.symbol);
+  }
+  const teme = {};
+  for (const g of list) teme[g.tema] = (teme[g.tema] || 0) + g.pondere;
+  list.sort((a, b) => b.valueRON - a.valueRON);
+  return { list, total, teme };
+}
+
+// Ținta fiecărei poziții: ETF-urile împart tintaETF, acțiunile împart restul (cu plafon).
+export function tinte(list, profil = PROFIL, proprii = TINTE) {
+  const etf = list.filter(g => g.etf), act = list.filter(g => !g.etf);
+  const out = {};
+  etf.forEach(g => out[g.symbol] = profil.tintaETF / (etf.length || 1));
+  const sat = 100 - (etf.length ? profil.tintaETF : 0);
+  const fixe = act.filter(g => proprii[g.symbol] != null);
+  const rest = sat - fixe.reduce((a, g) => a + proprii[g.symbol], 0);
+  const libere = act.filter(g => proprii[g.symbol] == null);
+  fixe.forEach(g => out[g.symbol] = proprii[g.symbol]);
+  libere.forEach(g => out[g.symbol] = Math.min(Math.max(rest, 0) / (libere.length || 1), profil.maxActiune));
+  return out;
+}
+
+// ---------- Evaluarea unei poziții ----------
+// Semnale pentru investitor: adauga, pastreaza, nu_adauga, asteapta, verifica, reechilibreaza.
+export const ETICHETE = {
+  adauga: 'Adaugă', pastreaza: 'Păstrează', nu_adauga: 'Nu mai adăuga', asteapta: 'Așteaptă',
+  verifica: 'Verifică teza', reechilibreaza: 'Reechilibrează',
+};
+// Acordul numeralului: „de” de la 20 în sus (după ultimele două cifre): 22 de luni, 101 lei, 350 de lei.
+export const de = n => { const a = Math.floor(Math.abs(n)), k = a % 100; return a >= 20 && (k === 0 || k >= 20) ? 'de ' : ''; };
+export const fmt = x => (x == null ? '—' : (Math.round(x * 10) / 10).toString().replace('.', ',').replace('-', '−'));
+const LUNI = ['ian.', 'feb.', 'mar.', 'apr.', 'mai', 'iun.', 'iul.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.'];
+export const dataRo = iso => { const [, m, d] = iso.split('-').map(Number); return `${d} ${LUNI[m - 1]}`; };
+
+export function contextScor(m) {
+  const motive = []; let tehnic = 0, fundam = 0;
+  const ind = m?.ind;
+  if (ind) {
+    if (ind.sma200 != null) {
+      if (ind.pret > ind.sma200) { tehnic += 1; motive.push('+ Prețul e peste media de 200 de zile: trendul lung e în sus'); }
+      else { tehnic -= 1; motive.push('− Prețul e sub media de 200 de zile: trendul lung e în jos'); }
+    }
+    if (ind.sma50 != null && ind.sma200 != null) {
+      if (ind.sma50 > ind.sma200) { tehnic += 0.5; motive.push('+ Media de 50 de zile e peste cea de 200'); }
+      else { tehnic -= 0.5; motive.push('− Media de 50 de zile e sub cea de 200'); }
+    }
+    if (ind.rsi != null) {
+      const r = Math.round(ind.rsi);
+      if (ind.rsi < 30) { tehnic += 1; motive.push(`+ RSI ${r}: a scăzut foarte repede (supravândută)`); }
+      else if (ind.rsi > 70) { tehnic -= 1; motive.push(`− RSI ${r}: a urcat foarte repede (supracumpărată)`); }
+      else motive.push(`· RSI ${r}: zonă neutră`);
+    }
+    if (ind.macdCross === 1) { tehnic += 0.5; motive.push('+ MACD s-a întors în sus în ultimele zile'); }
+    if (ind.macdCross === -1) { tehnic -= 0.5; motive.push('− MACD s-a întors în jos în ultimele zile'); }
+  }
+  const rec = m?.rec;
+  if (rec) {
+    const pos = (rec.strongBuy || 0) + (rec.buy || 0), neg = (rec.sell || 0) + (rec.strongSell || 0), tot = pos + neg + (rec.hold || 0);
+    if (tot) {
+      const h = rec.hold || 0, net = (pos - neg) / tot, txt = `Analiștii: ${pos} recomandă cumpărare, ${h} păstrare, ${neg} vânzare`;
+      if (net > 0.5) { fundam += 1; motive.push('+ ' + txt); } else if (net < 0) { fundam -= 1; motive.push('− ' + txt); } else motive.push('· ' + txt);
+    }
+  }
+  const f = m?.fund;
+  if (f) {
+    if (f.crestereVenit != null) {
+      if (f.crestereVenit > 15) { fundam += 0.5; motive.push(`+ Venituri în creștere cu ${fmt(f.crestereVenit)}% pe an`); }
+      else if (f.crestereVenit < 0) { fundam -= 0.5; motive.push(`− Venituri în scădere (${fmt(f.crestereVenit)}% pe an)`); }
+    }
+    if (f.pe != null) {
+      if (f.pe > 60) { fundam -= 0.5; motive.push(`− Evaluare scumpă: P/E ${fmt(f.pe)}`); }
+      else if (f.pe > 0 && f.pe < 15) { fundam += 0.5; motive.push(`+ Evaluare ieftină: P/E ${fmt(f.pe)}`); }
+    }
+  }
+  return { tehnic, fundam, motive };
+}
+
+export function evalueaza(g, m, teme, azi, profil = PROFIL) {
+  const { tehnic, fundam, motive } = contextScor(m);
+  const atentie = []; const ind = m?.ind;
+  const scor = Math.round((tehnic + fundam) * 10) / 10;
+  const tinta = g.tinta ?? 0, abatere = g.pondere - tinta;
+  const tp = teme[g.tema] || 0;
+  let zileRez = null;
+  if (m?.rezultate && azi) zileRez = Math.round((Date.parse(m.rezultate) - Date.parse(azi)) / 864e5);
+  const rezAproape = zileRez != null && zileRez >= 0 && zileRez <= RISK.zileRezultate;
+  if (rezAproape) atentie.push(`Rezultate trimestriale pe ${dataRo(m.rezultate)}. Sunt posibile mișcări mari, în ambele sensuri.`);
+
+  let semnal, oportunitate = null;
+  if (g.etf) {
+    motive.unshift('· ETF-ul global e nucleul portofoliului: se cumpără constant și nu se vinde pe semnale');
+    semnal = abatere < -1 ? 'adauga' : abatere > 5 ? 'nu_adauga' : 'pastreaza';
+  } else if (g.pondere > profil.maxActiune * RISK.reechilibrareX) {
+    semnal = 'reechilibreaza';
+    atentie.push(`Ocupă ${fmt(g.pondere)}% din portofoliu, de ${fmt(g.pondere / tinta)} ori mai mult decât ținta ta de ${fmt(tinta)}%. Fără impozit: nu mai cumpăra și lasă depunerile noi să-i scadă ponderea. Mai repede: vinzi o parte, dar câștigul din vânzare se impozitează cu 16%.`);
+  } else if (ind?.subProtectie) {
+    semnal = 'verifica';
+    atentie.push(`A coborât sub nivelul de protecție (${fmt(ind.protectie)}). Nu e un ordin de vânzare. Verifică dacă motivul pentru care o ții mai e valabil: rezultate, prognoze, știri.`);
+  } else if (tehnic + fundam <= -2.5) {
+    semnal = 'verifica';
+    atentie.push('S-au deteriorat și trendul, și fundamentalele. Verifică dacă motivul pentru care o ții mai e valabil.');
+  } else if (tp > profil.maxTema && g.tema !== 'Altele') {
+    semnal = abatere < 0 ? 'pastreaza' : 'nu_adauga';
+    atentie.push(`Tema „${g.tema}” are ${fmt(tp)}% din portofoliu, peste plafonul de ${profil.maxTema}%. Banii noi merg în altă parte.`);
+  } else if (abatere > 2) {
+    semnal = 'nu_adauga';
+  } else if (abatere < 0) {
+    if (rezAproape) semnal = 'asteapta';
+    else if (ind?.rsi > RISK.rsiScump) { semnal = 'asteapta'; atentie.push(`RSI ${Math.round(ind.rsi)}: a urcat foarte repede în ultimele săptămâni. Amână cumpărarea, adesea apare un preț mai bun.`); }
+    else semnal = 'adauga';
+  } else semnal = 'pastreaza';
+
+  // Oportunitate: o acțiune sub țintă, în trend lung bun, care a scăzut temporar.
+  if (!g.etf && semnal === 'adauga' && ind && ind.sma200 != null && ind.pret > ind.sma200 && fundam >= 0 &&
+      ((ind.rsi != null && ind.rsi < RISK.rsiIeftin) || (ind.deLaMaxim3l != null && ind.deLaMaxim3l <= -10))) {
+    oportunitate = `A scăzut ${fmt(-ind.deLaMaxim3l)}% față de maximul pe 3 luni. Trendul lung și fundamentalele sunt în regulă.`;
+  }
+  if (abatere !== 0 && !g.etf) motive.push(`· Pondere ${fmt(g.pondere)}%, ținta ta e ${fmt(tinta)}%`);
+  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate };
+}
+
+// ---------- Oportunitate în timpul zilei ----------
+// Aceleași reguli ca seara, pe prețul de acum: o acțiune pe care oricum o adaugi (semnal Adaugă),
+// în trend lung bun, cu fundamentale neutre sau bune, care a scăzut temporar.
+// p = poziția din ultima analiză de seară (cu serie, ind, fundam), pret = prețul de acum.
+export function oportunitateIntraday(p, pret) {
+  if (!p || p.etf || p.semnal !== 'adauga' || p.oportunitate || !(pret > 0)) return null;
+  const c = p.serie?.c, ind = p.ind;
+  if (!c?.length || !ind?.sma200 || pret <= ind.sma200 || (p.fundam ?? 0) < 0) return null;
+  const max3l = Math.max(...c.slice(-63)), scadere = (pret / max3l - 1) * 100;
+  const r = rsi([...c.slice(-120), pret]);
+  if (!(scadere <= -10 || (r != null && r < RISK.rsiIeftin))) return null;
+  return { scadere, rsi: r, text: scadere <= -10
+    ? `A scăzut ${fmt(-scadere)}% față de maximul pe 3 luni. Trendul lung și fundamentalele sunt în regulă.`
+    : `RSI ${Math.round(r)}: a scăzut foarte repede. Trendul lung și fundamentalele sunt în regulă.` };
+}
+
+// ---------- Planul lunar ----------
+// Unde merg banii noi ca portofoliul să se apropie de ținte, FĂRĂ vânzări.
+export function planLunar(pozitii, total, suma, profil = PROFIL) {
+  const T2 = total + suma;
+  const cand = pozitii
+    .filter(p => p.semnal === 'adauga')
+    .map(p => ({ p, deficit: p.tinta / 100 * T2 - p.valueRON }))
+    .filter(x => x.deficit > 0)
+    .sort((a, b) => (!!b.p.oportunitate - !!a.p.oportunitate) || b.deficit - a.deficit) // oportunitățile întâi
+    .slice(0, profil.maxCumparariPeLuna);
+  let linii = [];
+  if (!cand.length) {
+    const etf = pozitii.find(p => p.etf);
+    if (etf) linii = [{ symbol: etf.symbol, suma, motiv: 'Toate acțiunile sunt la țintă sau peste: banii merg în ETF-ul global' }];
+  } else {
+    const totDef = cand.reduce((a, x) => a + x.deficit, 0);
+    linii = cand.map(x => ({ symbol: x.p.symbol, suma: Math.floor(suma * x.deficit / totDef / 10) * 10, etf: x.p.etf,
+      motiv: `acum ${fmt(x.p.pondere)}%, ținta ${fmt(x.p.tinta)}%` }));
+    // tranșe prea mici se adună la prima
+    for (let i = linii.length - 1; i > 0; i--) if (linii[i].suma < profil.transaMinima) { linii[0].suma += linii[i].suma; linii.splice(i, 1); }
+    linii[0].suma += suma - linii.reduce((a, l) => a + l.suma, 0);
+  }
+  for (const l of linii) {
+    const p = pozitii.find(x => x.symbol === l.symbol);
+    l.broker = profil.brokerPreferat;
+    l.dupa = (p.valueRON + l.suma) / T2 * 100;
+    if (!p.brokers.some(b => b.broker === profil.brokerPreferat)) l.nota = `O ai doar la ${p.brokers[0].broker}. Dacă o găsești și la ${profil.brokerPreferat}, cumpăr-o acolo: contul e în lei.`;
+  }
+  return linii;
+}
+
+// Planul în unități reale: cât în moneda acțiunii, câte acțiuni, comisionul valutar, când să cumperi.
+export function planExact(l, pozitii, fx) {
+  const p = pozitii.find(x => x.symbol === l.symbol), pret = p?.ind?.pret, m = p?.moneda, curs = fx?.[m];
+  const out = { ...l, moneda: m };
+  if (pret && curs) { out.sumaValuta = l.suma / curs; out.unitati = out.sumaValuta / pret; out.pret = pret; }
+  const c = COMISION_FX[l.broker]; if (c != null && m && m !== 'RON') out.comision = l.suma * c / 100;
+  if (ORAR[m]) out.orar = ORAR[m];
+  return out;
+}
+
+// Câte luni de depuneri până ETF-ul atinge ținta, dacă toți banii noi merg acolo.
+export function luniPanaLaTinta(totalETF, total, profil = PROFIL) {
+  const t = profil.tintaETF / 100;
+  const x = (t * total - totalETF) / (1 - t);
+  return x <= 0 ? 0 : Math.ceil(x / profil.contributieTipica);
+}
+
+// ---------- Avertizări pe tot portofoliul ----------
+export function avertizariPortofoliu(comb, profil = PROFIL) {
+  const out = [];
+  for (const [t, p] of Object.entries(comb.teme)) {
+    if (t !== 'Altele' && t !== TEMA_ETF && p > profil.maxTema) out.push(`Tema „${t}” are ${fmt(p)}% din portofoliu, peste plafonul de ${profil.maxTema}%. Dacă tema scade, scad aproape toate pozițiile odată.`);
+  }
+  for (const g of comb.list) {
+    if (!g.etf && g.pondere > profil.maxActiune * RISK.reechilibrareX) out.push(`${g.symbol} are singură ${fmt(g.pondere)}% din portofoliu, peste plafonul de ${profil.maxActiune}% pe acțiune.`);
+  }
+  const etf = comb.list.filter(g => g.etf).reduce((a, b) => a + b.valueRON, 0);
+  const etfP = comb.total ? etf / comb.total * 100 : 0;
+  if (etfP < profil.tintaETF - 5) {
+    const luni = luniPanaLaTinta(etf, comb.total, profil);
+    out.push(`ETF-ul global are ${fmt(etfP)}% din portofoliu, ținta e ${profil.tintaETF}%. Dacă toate depunerile merg acolo, ajungi la țintă în aproximativ ${luni} ${de(luni)}${luni === 1 ? 'lună' : 'luni'}, cu ${profil.contributieTipica} ${de(profil.contributieTipica)}lei pe lună, fără să vinzi nimic.`);
+  }
+  return out;
+}
+
+export function expunereValutara(list) {
+  const out = {};
+  for (const g of list) out[g.moneda] = (out[g.moneda] || 0) + g.pondere;
+  return out;
+}
+export function dubluri(list, profil = PROFIL) {
+  const s = list.filter(g => new Set(g.brokers.map(b => b.broker)).size > 1).map(g => g.symbol);
+  if (!s.length) return [];
+  const lista = s.length === 1 ? s[0] : `${s.slice(0, -1).join(', ')} și ${s.at(-1)}`;
+  return [`${lista} ${s.length === 1 ? 'e' : 'sunt'} în ambele conturi. Păstrează ce ai și cumpără de acum doar la ${profil.brokerPreferat}.`];
+}
+
+// ---------- Instantaneul complet ----------
+export function construiesteSnapshot({ positions, market, azi, surse, fx, profil = PROFIL }) {
+  const comb = combine(positions);
+  const t = tinte(comb.list, profil);
+  for (const g of comb.list) g.tinta = t[g.symbol];
+  const pozitii = comb.list.map(g => {
+    const m = market[g.symbol];
+    const ev = evalueaza(g, m, comb.teme, azi, profil);
+    return { ...g, ind: m?.ind || null, serie: m?.serie || null, fund: m?.fund || null, rec: m?.rec || null, rezultate: m?.rezultate || null, ...ev };
+  });
+  const planuri = { [profil.contributieTipica]: planLunar(pozitii, comb.total, profil.contributieTipica, profil).map(l => planExact(l, pozitii, fx)) };
+  const vw = pozitii.find(p => p.etf)?.ind;
+  return {
+    generat: new Date().toISOString(), azi, surse, fx, profil,
+    totalRON: comb.total,
+    costRON: comb.list.reduce((a, b) => a + b.costRON, 0),
+    teme: comb.teme,
+    valute: expunereValutara(comb.list),
+    dubluri: dubluri(comb.list, profil),
+    avertizari: avertizariPortofoliu(comb, profil),
+    etfRef: vw ? { r3l: vw.r3l, r6l: vw.r6l, r1a: vw.r1a } : null,
+    planuri,
+    pozitii,
+  };
+}
+
+// Schimbări de semnal care merită o notificare (nu orice pendulare Păstrează/Adaugă).
+const IMPORTANTE = ['verifica', 'reechilibreaza'];
+export function schimbari(vechi, nou) {
+  if (!vechi) return [];
+  const v = Object.fromEntries((vechi.pozitii || []).map(p => [p.symbol, p]));
+  const out = [];
+  for (const p of nou.pozitii) {
+    const o = v[p.symbol]; if (!o) continue;
+    if (o.semnal !== p.semnal) out.push({ symbol: p.symbol, din: o.semnal, in: p.semnal, eticheta: p.eticheta, important: IMPORTANTE.includes(p.semnal) });
+    if (p.oportunitate && !o.oportunitate) out.push({ symbol: p.symbol, din: o.semnal, in: p.semnal, eticheta: 'Oportunitate', important: true });
+  }
+  return out;
+}

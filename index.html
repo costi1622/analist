@@ -346,7 +346,7 @@ input[type=range]:focus{box-shadow:none}
 <button id="upd">Versiune nouă a aplicației · <b>Reîncarcă</b></button>
 <input type="file" id="fimp" accept="application/json" style="display:none" onchange="importJurnal(this)">
 <script>
-const APP_VER = '0.16.3';
+const APP_VER = '0.16.4';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică teza',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,las:2};
@@ -931,7 +931,7 @@ function linkBroker(k, mod){ const b=BROKER[k]; if (!eAndroid()) return b.web; r
 function alegeMetoda(k, m){ const o = typeof S.brokerMod==='object' && S.brokerMod ? {...S.brokerMod} : {t212:modBroker('t212'), etoro:modBroker('etoro')}; o[k]=m; S.brokerMod=o; if (S.brokerPlay) delete S.brokerPlay[k]; save(); vib(); toast(`${BROKER[k].nume}: metoda ${m.toUpperCase()} păstrată.`); testBrokeri(); }
 function testBrokeri(){
   const sh = $('sheet').classList.contains('on') ? $('sheet') : null;
-  const html = `${capFoaie('extern','Deschiderea aplicațiilor','găsește metoda care merge pe telefonul tău')}
+  const html = `${capFoaie('extern','Deschiderea aplicațiilor',`găsește metoda care merge · versiunea ${APP_VER}`)}
     <div class="sub" style="margin-bottom:12px">Atinge pe rând „Încearcă”. Dacă se deschide <b class="ink2">aplicația</b> (nu Magazin Play și nici site-ul), revino aici și apasă „Merge”. Metoda aleasă se folosește la toate butoanele.</div>
     ${['t212','etoro'].map(k=>`<div class="sec"><h2>${BROKER[k].nume}</h2><span class="sub">acum: ${modBroker(k).toUpperCase()}</span></div><div class="card grp">${Object.entries(METODE).filter(([,o])=>!o.doar||o.doar===k).map(([m,o])=>`<div class="it" style="--k:var(${modBroker(k)===m?'--pos':'--acc'})"><span class="ib2"><b class="fd">${m.toUpperCase()}</b></span><span class="tx"><b>${esc(o.t)}</b>${modBroker(k)===m?'<small style="color:var(--pos)">✓ folosită acum</small>':''}</span><a class="btn sm ghost" href="${esc(linkBroker(k,m))}" onclick="vib()">Încearcă</a>${modBroker(k)===m?'':`<button class="btn sm" style="margin-left:6px" onclick="alegeMetoda('${k}','${m}')">Merge</button>`}</div>`).join('')}</div>`).join('')}
     <button class="btn ghost sm" style="margin-top:4px" onclick="S.brokerPlay={...(S.brokerPlay||{}),t212:1};S.brokerMod={...(typeof S.brokerMod==='object'&&S.brokerMod||{etoro:modBroker('etoro')}),t212:'a'};save();vib();toast('Trading 212: butonul duce în Magazin Play, de unde apeși „Deschide”.');testBrokeri()">Nicio metodă nu merge pentru Trading 212</button>

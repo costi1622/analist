@@ -137,17 +137,55 @@ export function xirr(flows) {
   return (lo + hi) / 2 * 100;
 }
 
+// ---------- Riscul istoric al portofoliului de azi ----------
+// Ponderile de azi aplicate randamentelor din ultimul an, aliniate pe date (bursele au sărbători diferite;
+// o zi fără preț păstrează prețul anterior). vol = volatilitate anualizată, dd = cea mai mare scădere,
+// luna = pierderea lunară depășită doar în ~5% din luni (aproximare normală).
+export function riscIstoric(pozitii, n = 252) {
+  const poz = pozitii.filter(p => p.serie?.c?.length > 40 && p.serie.d?.length === p.serie.c.length && p.pondere > 0);
+  if (!poz.length) return null;
+  const toate = [...new Set(poz.flatMap(p => p.serie.d))].filter(Boolean).sort();
+  const start = poz.map(p => p.serie.d[0]).sort().pop(); // de când au toate preț
+  const zile = toate.filter(d => d >= start).slice(-(n + 1));
+  if (zile.length < 30) return null;
+  const W = poz.reduce((a, p) => a + p.pondere, 0);
+  const preturi = poz.map(p => { const m = new Map(p.serie.d.map((d, i) => [d, p.serie.c[i]])); let u = null; return zile.map(d => (u = m.get(d) ?? u)); });
+  const R = [];
+  for (let i = 1; i < zile.length; i++) R.push(poz.reduce((a, p, k) => { const x = preturi[k][i - 1], y = preturi[k][i]; return a + (x && y ? p.pondere / W * (y / x - 1) : 0); }, 0));
+  const sd = a => { const m = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
+  let v = 1, mx = 1, dd = 0; for (const r of R) { v *= 1 + r; mx = Math.max(mx, v); dd = Math.min(dd, v / mx - 1); }
+  const volP = {}; poz.forEach((p, k) => { const c = preturi[k].filter(Boolean); if (c.length > 30) volP[p.symbol] = sd(c.slice(1).map((x, i) => x / c[i] - 1)) * Math.sqrt(252) * 100; });
+  const e = poz.find(p => p.etf);
+  return { vol: sd(R) * Math.sqrt(252) * 100, volE: e ? volP[e.symbol] ?? null : null, dd: dd * 100, luna: 1.65 * sd(R) * Math.sqrt(21) * 100, zile: R.length, volP };
+}
+
+// ---------- Tu față de VWCE, cu exact aceleași depuneri ----------
+// flows: aceleași fluxuri ca la xirr (negativ = bani puși, pozitiv = bani scoși: vânzări, dividende).
+// pretLa(data) = prețul unei unități de ETF în lei la acea dată (sau null dacă nu se știe).
+// Fiecare depunere cumpără ETF la prețul zilei; fiecare ieșire vinde ETF de aceeași valoare.
+export function aceleasiDepuneri(flows, pretLa, azi) {
+  const f = flows.filter(x => x.suma && x.data && x.data <= azi).sort((a, b) => a.data.localeCompare(b.data));
+  if (!f.length) return null;
+  let u = 0;
+  for (const x of f) { const p = pretLa(x.data); if (!(p > 0)) return null; u = Math.max(0, u - x.suma / p); }
+  const pA = pretLa(azi); if (!(pA > 0)) return null;
+  const valoare = u * pA;
+  return { valoare, anual: xirr([...f, { data: azi, suma: valoare }]) };
+}
+
 // ---------- Corelații: ce acțiuni se mișcă împreună ----------
 // series: { SIMBOL: { d:[date], c:[închideri] } }. Randamente zilnice pe zilele comune, ultimele n.
-export function corelatii(series, n = 126) {
+// pas = 5: randamente pe câte 5 zile de bursă. Pe zile, o acțiune europeană (închisă la 17:30) și una americană
+// (închisă la 22:00) par mai puțin legate decât sunt; pe săptămâni, diferența de oră dispare.
+export function corelatii(series, n = 250, pas = 5) {
   const sim = Object.keys(series), R = {}, set = Object.fromEntries(sim.map(s => [s, new Set(series[s].d)]));
   const comune = sim.reduce((acc, s) => acc ? acc.filter(d => set[s].has(d)) : [...series[s].d], null) || [];
-  const zile = comune.slice(-(n + 1));
+  const tot = comune.slice(-(n + 1)), zile = tot.filter((_, i) => (tot.length - 1 - i) % pas === 0);
   for (const s of sim) { const m = new Map(series[s].d.map((d, i) => [d, series[s].c[i]])); const c = zile.map(d => m.get(d)); R[s] = c.slice(1).map((x, i) => x / c[i] - 1); }
   const rho = (a, b) => { const k = a.length; if (k < 20) return null; const ma = a.reduce((x, y) => x + y, 0) / k, mb = b.reduce((x, y) => x + y, 0) / k;
     let sab = 0, sa = 0, sb = 0; for (let i = 0; i < k; i++) { const x = a[i] - ma, y = b[i] - mb; sab += x * y; sa += x * x; sb += y * y; } return sa && sb ? sab / Math.sqrt(sa * sb) : null; };
   const M = {}; for (const a of sim) { M[a] = {}; for (const b of sim) M[a][b] = a === b ? 1 : rho(R[a], R[b]); }
-  return { simboluri: sim, M, zile: Math.max(zile.length - 1, 0) };
+  return { simboluri: sim, M, zile: Math.max(tot.length - 1, 0), puncte: Math.max(zile.length - 1, 0), pas };
 }
 // Câte pariuri independente are de fapt portofoliul (1 = totul se mișcă la fel, N = N acțiuni independente).
 export function pariuriEfective(ponderi, M) {
@@ -237,10 +275,16 @@ export function combine(positions) {
 }
 
 // Ținta fiecărei poziții: ETF-urile împart tintaETF, acțiunile împart restul (cu plafon).
+// Obligațiunile (EUNA), dacă le ai sau le-ai ales, iau din ținta ETF o parte după orizont: 10% de la 7 ani în sus,
+// apoi câte 10 puncte în plus pentru fiecare an sub 7 (5 ani → 20%, 3 ani → 40%), fără să depășească ținta ETF.
+export const tintaObligatiuni = profil => Math.min(profil.tintaETF, Math.max(10, 10 * (7 - profil.orizontAni)));
 export function tinte(list, profil = PROFIL, proprii = TINTE) {
   const etf = list.filter(g => g.etf), act = list.filter(g => !g.etf);
   const out = {};
-  etf.forEach(g => out[g.symbol] = profil.tintaETF / (etf.length || 1));
+  const obl = etf.filter(g => ETF_CATALOG[g.symbol]?.rol === 'obligatiuni'), nuc = etf.filter(g => !obl.includes(g));
+  const tObl = obl.length ? (nuc.length ? tintaObligatiuni(profil) : profil.tintaETF) : 0;
+  nuc.forEach(g => out[g.symbol] = (profil.tintaETF - tObl) / nuc.length);
+  obl.forEach(g => out[g.symbol] = tObl / obl.length);
   const sat = 100 - (etf.length ? profil.tintaETF : 0);
   const fixe = act.filter(g => proprii[g.symbol] != null);
   const rest = sat - fixe.reduce((a, g) => a + proprii[g.symbol], 0);
@@ -322,7 +366,7 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
     semnal = abatere < -1 ? 'adauga' : abatere > 5 ? 'nu_adauga' : 'pastreaza';
   } else if (g.pondere > profil.maxActiune * RISK.reechilibrareX) {
     semnal = 'reechilibreaza';
-    atentie.push(`Ocupă ${fmt(g.pondere)}% din portofoliu, de ${fmt(g.pondere / tinta)} ori mai mult decât ținta ta de ${fmt(tinta)}%. Fără impozit: nu mai cumpăra și lasă depunerile noi să-i scadă ponderea. Mai repede: vinzi o parte, dar câștigul din vânzare se impozitează cu 16%.`);
+    atentie.push(`Ocupă ${fmt(g.pondere)}% din portofoliu, ${tinta > 0 ? `de ${fmt(g.pondere / tinta)} ori mai mult decât ținta ta de ${fmt(tinta)}%` : 'iar ținta ta pentru acțiuni e 0%'}. Fără impozit: nu mai cumpăra și lasă depunerile noi să-i scadă ponderea. Mai repede: vinzi o parte, dar câștigul din vânzare se impozitează cu 16%.`);
   } else if (ind?.subProtectie) {
     semnal = 'verifica';
     atentie.push(`A coborât sub nivelul de protecție (${fmt(ind.protectie)}). Nu e un ordin de vânzare. Verifică dacă motivul pentru care o ții mai e valabil: rezultate, prognoze, știri.`);
@@ -407,10 +451,12 @@ export function planExact(l, pozitii, fx) {
 }
 
 // Câte luni de depuneri până ETF-ul atinge ținta, dacă toți banii noi merg acolo.
-export function luniPanaLaTinta(totalETF, total, profil = PROFIL) {
+// null = ținta nu se poate atinge doar din depuneri (ținta 100% cu acțiuni în portofoliu).
+export function luniPanaLaTinta(totalETF, total, profil = PROFIL, suma = profil.contributieTipica) {
   const t = profil.tintaETF / 100;
-  const x = (t * total - totalETF) / (1 - t);
-  return x <= 0 ? 0 : Math.ceil(x / profil.contributieTipica);
+  if (totalETF >= t * total) return 0;
+  if (t >= 1 || !(suma > 0)) return null;
+  return Math.ceil((t * total - totalETF) / (1 - t) / suma);
 }
 
 // ---------- Avertizări pe tot portofoliul ----------
@@ -426,7 +472,8 @@ export function avertizariPortofoliu(comb, profil = PROFIL) {
   const etfP = comb.total ? etf / comb.total * 100 : 0;
   if (etfP < profil.tintaETF - 5) {
     const luni = luniPanaLaTinta(etf, comb.total, profil);
-    out.push(`ETF-ul global are ${fmt(etfP)}% din portofoliu, ținta e ${profil.tintaETF}%. Dacă toate depunerile merg acolo, ajungi la țintă în aproximativ ${luni} ${de(luni)}${luni === 1 ? 'lună' : 'luni'}, cu ${profil.contributieTipica} ${de(profil.contributieTipica)}lei pe lună, fără să vinzi nimic.`);
+    out.push(luni == null ? `ETF-ul global are ${fmt(etfP)}% din portofoliu, ținta ta e ${profil.tintaETF}%. Cu acțiuni în portofoliu, ținta de 100% se atinge doar vânzându-le; depunerile doar te apropie de ea.`
+      : `ETF-ul global are ${fmt(etfP)}% din portofoliu, ținta e ${profil.tintaETF}%. Dacă toate depunerile merg acolo, ajungi la țintă în aproximativ ${luni} ${de(luni)}${luni === 1 ? 'lună' : 'luni'}, cu ${profil.contributieTipica} ${de(profil.contributieTipica)}lei pe lună, fără să vinzi nimic.`);
   }
   return out;
 }

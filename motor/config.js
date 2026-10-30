@@ -1,5 +1,5 @@
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.13.0';
+export const VERSION = '0.15.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -83,6 +83,9 @@ export const ORAR = {
   EUR: { text: '10:00–18:30', interval: 'între 10:00 și 18:30', motiv: 'cât timp bursa (Xetra, Euronext) e deschisă și diferența dintre prețul de cumpărare și cel de vânzare e mică' },
   USD: { text: '16:30–23:00', interval: 'între 16:30 și 23:00', motiv: 'în timpul ședinței americane, nu înainte de deschidere sau după închidere' },
 };
+// Costul anual al ETF-urilor (TER, % pe an), din documentul cu informații cheie al fondului.
+export const TER = { VWCE: 0.22 };
+
 // Paza la date ciudate: peste aceste praguri, datele sunt marcate „de verificat” și nu trimitem notificări pe ele.
 export const PAZA = { miscareZi: 40, totalZi: 15, dif_broker: 0.5 };
 

@@ -119,6 +119,40 @@ export function scenarii(total, suma, ani) {
   return Object.fromEntries(Object.entries(SCENARII).map(([k, r]) => [k, { rata: r, ...proiectie(total, suma, ani, r) }]));
 }
 
+// ---------- Randamentul real al banilor tăi (XIRR) ----------
+// flows: [{ data: 'AAAA-LL-ZZ', suma }] — negativ = bani puși, pozitiv = bani scoși (și valoarea de azi la final).
+// Ține cont de momentul fiecărei depuneri: 1.000 de lei puși acum o lună contează mai puțin decât acum 3 ani.
+export function xirr(flows) {
+  const f = flows.filter(x => x.suma && x.data).sort((a, b) => a.data.localeCompare(b.data));
+  if (f.length < 2 || !f.some(x => x.suma < 0) || !f.some(x => x.suma > 0)) return null;
+  const t0 = Date.parse(f[0].data), ani = x => (Date.parse(x.data) - t0) / (365.25 * 864e5);
+  if (ani(f.at(-1)) < 0.08) return null; // sub o lună nu are sens anualizat
+  const npv = r => f.reduce((a, x) => a + x.suma / Math.pow(1 + r, ani(x)), 0);
+  let lo = -0.95, hi = 10;
+  if (npv(lo) * npv(hi) > 0) return null;
+  for (let i = 0; i < 200; i++) { const m = (lo + hi) / 2; (npv(lo) * npv(m) <= 0) ? hi = m : lo = m; }
+  return (lo + hi) / 2 * 100;
+}
+
+// ---------- Corelații: ce acțiuni se mișcă împreună ----------
+// series: { SIMBOL: { d:[date], c:[închideri] } }. Randamente zilnice pe zilele comune, ultimele n.
+export function corelatii(series, n = 126) {
+  const sim = Object.keys(series), R = {}, set = Object.fromEntries(sim.map(s => [s, new Set(series[s].d)]));
+  const comune = sim.reduce((acc, s) => acc ? acc.filter(d => set[s].has(d)) : [...series[s].d], null) || [];
+  const zile = comune.slice(-(n + 1));
+  for (const s of sim) { const m = new Map(series[s].d.map((d, i) => [d, series[s].c[i]])); const c = zile.map(d => m.get(d)); R[s] = c.slice(1).map((x, i) => x / c[i] - 1); }
+  const rho = (a, b) => { const k = a.length; if (k < 20) return null; const ma = a.reduce((x, y) => x + y, 0) / k, mb = b.reduce((x, y) => x + y, 0) / k;
+    let sab = 0, sa = 0, sb = 0; for (let i = 0; i < k; i++) { const x = a[i] - ma, y = b[i] - mb; sab += x * y; sa += x * x; sb += y * y; } return sa && sb ? sab / Math.sqrt(sa * sb) : null; };
+  const M = {}; for (const a of sim) { M[a] = {}; for (const b of sim) M[a][b] = a === b ? 1 : rho(R[a], R[b]); }
+  return { simboluri: sim, M, zile: Math.max(zile.length - 1, 0) };
+}
+// Câte pariuri independente are de fapt portofoliul (1 = totul se mișcă la fel, N = N acțiuni independente).
+export function pariuriEfective(ponderi, M) {
+  const s = Object.keys(ponderi), W = s.reduce((a, x) => a + ponderi[x], 0); if (!W) return null;
+  let v = 0; for (const a of s) for (const b of s) v += ponderi[a] * ponderi[b] * (M[a]?.[b] ?? (a === b ? 1 : 0));
+  return v > 0 ? (W * W) / v : null;
+}
+
 // ---------- Portofoliu combinat ----------
 export const canon = s => ALIASES[s] || s;
 export const TEMA_ETF = 'ETF global (nucleu)';

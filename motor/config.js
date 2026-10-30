@@ -1,5 +1,5 @@
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.17.0';
+export const VERSION = '0.18.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -10,7 +10,7 @@ export const PROFIL = {
   contributieTipica: 350,     // folosită la estimări (mijlocul intervalului)
   tintaETF: 60,               // % din portofoliu în ETF-ul global (sfatul pentru 10+ ani)
   maxActiune: 10,             // % maxim pe o singură acțiune
-  maxTema: 25,                // % maxim pe o temă
+  maxTema: 25,                // % maxim pe un sector
   brokerPreferat: 'Trading 212', // contul în lei: banii noi merg aici
   transaMinima: 50,           // lei; sub atât nu are rost o cumpărare separată
   maxCumparariPeLuna: 2,      // ca planul să rămână simplu
@@ -18,7 +18,7 @@ export const PROFIL = {
 
 // Cum se adaptează strategia la orizont (anii până ai nevoie de bani).
 // Regula din practica administratorilor de portofolii: cu cât orizontul e mai scurt, cu atât crește partea
-// diversificată (ETF global) și scad pariurile pe acțiuni sau teme. O piață de acțiuni poate scădea 30–50%
+// diversificată (ETF global) și scad pariurile pe acțiuni sau sectoare. O piață de acțiuni poate scădea 30–50%
 // și poate avea nevoie de 3–5 ani ca să revină: banii de care ai nevoie mai repede nu au ce căuta acolo.
 export const TREPTE_ORIZONT = [
   { min: 20, etf: 50, actiune: 10, tema: 25, nume: 'foarte lung' },
@@ -38,10 +38,29 @@ export const TINTE = {};
 
 // Teme: acțiuni care tind să urce și să scadă împreună (ponderi adunate din AMBELE conturi).
 export const THEMES = {
-  'AI și infrastructura ei': ['NVDA', 'AMD', 'TSM', 'GEV', 'PWR', 'GOOGL'],
-  'Aviație': ['GE', 'AIR.PA'],
-  'Big Tech consum': ['AAPL'],
-  'Gaming': ['TTWO'],
+  'AI și infrastructură': ['NVDA', 'AMD', 'TSM', 'GEV', 'PWR', 'GOOGL'],
+  'Aviație și apărare': ['GE', 'AIR.PA'],
+  'Tehnologie de consum': ['AAPL'],
+  'Jocuri video': ['TTWO'],
+  // sectoarele acțiunilor din catalogul de diversificare (mai jos)
+  'Financiar': ['V', 'JPM'], 'Sănătate': ['LLY', 'JNJ'], 'Consum de bază': ['PG', 'KO', 'COST'], 'Energie': ['XOM'],
+  'Utilități': ['NEE'], 'Software (Europa)': ['SAP.DE'], 'Lux (Europa)': ['MC.PA'],
+};
+
+// Acțiuni pentru diversificare: companii mari, din sectoare pe care portofoliul tău nu le are.
+// Nu sunt sfaturi de cumpărare: aplicația le arată doar pe cele din sectoarele care îți lipsesc, cu datele lor de azi.
+export const ACTIUNI_CATALOG = {
+  V:        { nume: 'Visa', sector: 'Financiar', despre: 'Rețeaua de plăți cu cardul. Câștigă un comision mic din fiecare plată, oriunde în lume.' },
+  JPM:      { nume: 'JPMorgan Chase', sector: 'Financiar', despre: 'Cea mai mare bancă din SUA: credite, conturi, investiții.' },
+  LLY:      { nume: 'Eli Lilly', sector: 'Sănătate', despre: 'Medicamente, între care tratamente pentru diabet și obezitate.' },
+  JNJ:      { nume: 'Johnson & Johnson', sector: 'Sănătate', despre: 'Medicamente și dispozitive medicale. Plătește dividende în creștere de peste 60 de ani.' },
+  PG:       { nume: 'Procter & Gamble', sector: 'Consum de bază', despre: 'Produse de folosință zilnică (Gillette, Pampers, Ariel). Vânzări stabile și în crize.' },
+  KO:       { nume: 'Coca-Cola', sector: 'Consum de bază', despre: 'Băuturi vândute în peste 200 de țări. Dividend constant.' },
+  COST:     { nume: 'Costco', sector: 'Consum de bază', despre: 'Magazine en-gros pe bază de abonament. Clienți fideli, creștere constantă.' },
+  XOM:      { nume: 'Exxon Mobil', sector: 'Energie', despre: 'Petrol și gaze. Merge de obicei invers față de tehnologie când energia se scumpește.' },
+  NEE:      { nume: 'NextEra Energy', sector: 'Utilități', despre: 'Cel mai mare producător de energie eoliană și solară din SUA, plus o rețea de electricitate.' },
+  'SAP.DE': { nume: 'SAP', sector: 'Software (Europa)', despre: 'Cel mai mare producător de software din Europa, pentru firme.' },
+  'MC.PA':  { nume: 'LVMH', sector: 'Lux (Europa)', despre: 'Louis Vuitton, Dior, Moët Hennessy. Cea mai mare companie de lux din lume.' },
 };
 
 // Aceeași companie, simboluri diferite (clase de acțiuni).
@@ -49,15 +68,15 @@ export const ALIASES = { GOOG: 'GOOGL' };
 
 // Catalogul de ETF-uri pe care analistul le cunoaște și le poate recomanda (toate UCITS, acumulare, listate pe Xetra în EUR).
 // Date verificate în octombrie 2026 (justETF, emitenți). rol: nucleu (global), obligatiuni, regional, tematic.
-// tema = tema din THEMES în care intră (o expunere tematică prin ETF se adună la aceeași temă ca acțiunile).
+// tema = tema din THEMES în care intră (o expunere tematică prin ETF se adună la același sector ca acțiunile).
 // detine = acțiuni din portofoliul tău pe care ETF-ul le conține printre cele mai mari poziții (pentru „similar cu ce ai”).
 export const ETF_CATALOG = {
   VWCE: { nume: 'Vanguard FTSE All-World', isin: 'IE00BK5BQT80', ter: 0.14, rol: 'nucleu', indice: 'FTSE All-World', companii: '~3.700', despre: 'Companii mari și mijlocii din toată lumea, inclusiv piețe emergente.' },
   EUNL: { nume: 'iShares Core MSCI World', isin: 'IE00B4L5Y983', ter: 0.20, rol: 'nucleu', indice: 'MSCI World', companii: '~1.300', despre: 'Companii mari și mijlocii din 23 de țări dezvoltate, fără piețe emergente.' },
-  SXR8: { nume: 'iShares Core S&P 500', isin: 'IE00B5BMR087', ter: 0.07, rol: 'regional', tema: 'SUA (indice)', indice: 'S&P 500', companii: '~500', despre: 'Cele mai mari 500 de companii din SUA. Foarte ieftin, dar concentrat pe o singură țară și pe tehnologie.', detine: ['NVDA', 'AAPL', 'GOOGL', 'AMD', 'GE', 'GEV', 'PWR'] },
+  SXR8: { nume: 'iShares Core S&P 500', isin: 'IE00B5BMR087', ter: 0.07, rol: 'regional', tema: 'Indicele S&P 500', indice: 'S&P 500', companii: '~500', despre: 'Cele mai mari 500 de companii din SUA. Foarte ieftin, dar concentrat pe o singură țară și pe tehnologie.', detine: ['NVDA', 'AAPL', 'GOOGL', 'AMD', 'GE', 'GEV', 'PWR'] },
   IS3N: { nume: 'iShares Core MSCI EM IMI', isin: 'IE00BKM4GZ66', ter: 0.18, rol: 'regional', tema: 'Piețe emergente', indice: 'MSCI EM IMI', companii: '~3.100', despre: 'Companii din piețele emergente (Taiwan, India, China, Coreea și altele), inclusiv cele mici.', detine: ['TSM'] },
-  VVSM: { nume: 'VanEck Semiconductor', isin: 'IE00BMC38736', ter: 0.35, rol: 'tematic', tema: 'AI și infrastructura ei', indice: 'MVIS US Listed Semiconductor 10% Capped', companii: '~25', despre: 'Producătorii de cipuri: TSMC, Nvidia, ASML, AMD, Broadcom și alții. Aceeași idee ca acțiunile tale de AI, împărțită pe mai multe companii.', detine: ['TSM', 'NVDA', 'AMD'] },
-  DFEN: { nume: 'VanEck Defense', isin: 'IE000YYE6WK5', ter: 0.55, rol: 'tematic', tema: 'Aviație', indice: 'MarketVector Global Defense Industry', companii: '~30', despre: 'Industria de apărare din SUA și Europa (Rheinmetall, Thales, Leonardo, Saab și alții).', detine: ['GE', 'AIR.PA'] },
+  VVSM: { nume: 'VanEck Semiconductor', isin: 'IE00BMC38736', ter: 0.35, rol: 'tematic', tema: 'AI și infrastructură', indice: 'MVIS US Listed Semiconductor 10% Capped', companii: '~25', despre: 'Producătorii de cipuri: TSMC, Nvidia, ASML, AMD, Broadcom și alții. Aceeași idee ca acțiunile tale de AI, împărțită pe mai multe companii.', detine: ['TSM', 'NVDA', 'AMD'] },
+  DFEN: { nume: 'VanEck Defense', isin: 'IE000YYE6WK5', ter: 0.55, rol: 'tematic', tema: 'Aviație și apărare', indice: 'MarketVector Global Defense Industry', companii: '~30', despre: 'Industria de apărare din SUA și Europa (Rheinmetall, Thales, Leonardo, Saab și alții).', detine: ['GE', 'AIR.PA'] },
   EUNA: { nume: 'iShares Core Global Aggregate Bond EUR Hedged', isin: 'IE00BDBRDM35', ter: 0.10, rol: 'obligatiuni', tema: 'Obligațiuni', indice: 'Bloomberg Global Aggregate', companii: '~23.000 de obligațiuni', despre: 'Obligațiuni de stat și de companii din toată lumea, cu riscul valutar acoperit în euro. Se mișcă mult mai puțin decât acțiunile.' },
 };
 // ETF-uri tratate ca nucleu: fără semnale de vânzare sau de protecție; împart ținta ETF.
@@ -73,7 +92,7 @@ export const RISK = {
   rsiIeftin: 35,       // sub (și peste media de 200 de zile): oportunitate
 };
 
-// Nivelul de protecție = maximul ultimelor N zile minus cel mai mare dintre K × ATR(14) și minPct%.
+// Nivelul de alertă = maximul ultimelor N zile minus cel mai mare dintre K × ATR(14) și minPct%.
 // Se adaptează la fiecare acțiune (una volatilă primește un prag mai larg), dar nu e niciodată mai
 // strâns de 15%: pentru 10+ ani, corecțiile normale nu trebuie să te sperie.
 export const PROTECTIE = { zile: 126, multATR: 5, minPct: 15 };
@@ -87,7 +106,7 @@ export const IMPOZIT = { cota: 16, termen: '25 mai' };
 // Sufixe Trading 212 -> sufixe de bursă. "VWCEd_EQ" = VWCE pe Xetra.
 export const T212_SUFFIX = { d: '.DE', p: '.PA', l: '.L', a: '.AS', e: '.MC', m: '.MI', s: '.SW' };
 export const SYMBOL_OVERRIDES = { 'VWCEd_EQ': 'VWCE', 'EUNLd_EQ': 'EUNL', 'SXR8d_EQ': 'SXR8', 'IS3Nd_EQ': 'IS3N', 'VVSMd_EQ': 'VVSM', 'DFENd_EQ': 'DFEN', 'EUNAd_EQ': 'EUNA' };
-export const ETORO_SYMBOL = { VWCE: 'VWCE.DE', EUNL: 'EUNL.DE', SXR8: 'SXR8.DE', IS3N: 'IS3N.DE', VVSM: 'VVSM.DE', DFEN: 'DFEN.DE', EUNA: 'EUNA.DE' };
+export const ETORO_SYMBOL = { 'SAP.DE': 'SAP.DE', 'MC.PA': 'MC.PA', VWCE: 'VWCE.DE', EUNL: 'EUNL.DE', SXR8: 'SXR8.DE', IS3N: 'IS3N.DE', VVSM: 'VVSM.DE', DFEN: 'DFEN.DE', EUNA: 'EUNA.DE' };
 
 // Moneda de listare după sufix (pentru expunerea valutară).
 export const MONEDA_SUFIX = { '.PA': 'EUR', '.DE': 'EUR', '.AS': 'EUR', '.MC': 'EUR', '.MI': 'EUR', '.L': 'GBP', '.SW': 'CHF' };

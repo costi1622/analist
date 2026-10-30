@@ -920,20 +920,26 @@ const METODE = {
   d: { t:'Schema proprie a aplicației', l:k=>`intent://${BROKER[k].cale||''}#Intent;scheme=${BROKER[k].schema};package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
   e: { t:'Pornire ca din meniul telefonului', l:k=>`intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
   f: { t:'Link web simplu (App Links)', l:k=>'https://'+BROKER[k].host2 },
+  // doar pentru Trading 212: alte adrese și scheme posibile
+  g: { t:'Link de invitație către aplicație', doar:'t212', l:k=>`intent://www.trading212.com/invite#Intent;scheme=https;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  h: { t:'Link web fără „www”', doar:'t212', l:k=>`intent://trading212.com/#Intent;scheme=https;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  i: { t:'Schema scurtă „t212”', doar:'t212', l:k=>`intent://open#Intent;scheme=t212;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
 };
-const modBroker = k => { const m = S.brokerMod; return (typeof m==='string' ? m : m?.[k]) || 'a'; };
+const MOD_IMPLICIT = { t212:'a', etoro:'c' }; // eToro: C verificată pe telefon (Honor 90). Trading 212: nicio metodă verificată încă.
+const modBroker = k => { const m = S.brokerMod; return (typeof m==='string' ? m : m?.[k]) || MOD_IMPLICIT[k]; };
 function linkBroker(k, mod){ const b=BROKER[k]; if (!eAndroid()) return b.web; return (METODE[mod||modBroker(k)]||METODE.a).l(k); }
-function alegeMetoda(k, m){ const o = typeof S.brokerMod==='object' && S.brokerMod ? {...S.brokerMod} : {t212:modBroker('t212'), etoro:modBroker('etoro')}; o[k]=m; S.brokerMod=o; save(); vib(); toast(`${BROKER[k].nume}: metoda ${m.toUpperCase()} păstrată.`); testBrokeri(); }
+function alegeMetoda(k, m){ const o = typeof S.brokerMod==='object' && S.brokerMod ? {...S.brokerMod} : {t212:modBroker('t212'), etoro:modBroker('etoro')}; o[k]=m; S.brokerMod=o; if (S.brokerPlay) delete S.brokerPlay[k]; save(); vib(); toast(`${BROKER[k].nume}: metoda ${m.toUpperCase()} păstrată.`); testBrokeri(); }
 function testBrokeri(){
   const sh = $('sheet').classList.contains('on') ? $('sheet') : null;
   const html = `${capFoaie('extern','Deschiderea aplicațiilor','găsește metoda care merge pe telefonul tău')}
     <div class="sub" style="margin-bottom:12px">Atinge pe rând „Încearcă”. Dacă se deschide <b class="ink2">aplicația</b> (nu Magazin Play și nici site-ul), revino aici și apasă „Merge”. Metoda aleasă se folosește la toate butoanele.</div>
-    ${['t212','etoro'].map(k=>`<div class="sec"><h2>${BROKER[k].nume}</h2><span class="sub">acum: ${modBroker(k).toUpperCase()}</span></div><div class="card grp">${Object.entries(METODE).map(([m,o])=>`<div class="it" style="--k:var(${modBroker(k)===m?'--pos':'--acc'})"><span class="ib2"><b class="fd">${m.toUpperCase()}</b></span><span class="tx"><b>${esc(o.t)}</b>${modBroker(k)===m?'<small style="color:var(--pos)">✓ folosită acum</small>':''}</span><a class="btn sm ghost" href="${esc(linkBroker(k,m))}" onclick="vib()">Încearcă</a>${modBroker(k)===m?'':`<button class="btn sm" style="margin-left:6px" onclick="alegeMetoda('${k}','${m}')">Merge</button>`}</div>`).join('')}</div>`).join('')}
+    ${['t212','etoro'].map(k=>`<div class="sec"><h2>${BROKER[k].nume}</h2><span class="sub">acum: ${modBroker(k).toUpperCase()}</span></div><div class="card grp">${Object.entries(METODE).filter(([,o])=>!o.doar||o.doar===k).map(([m,o])=>`<div class="it" style="--k:var(${modBroker(k)===m?'--pos':'--acc'})"><span class="ib2"><b class="fd">${m.toUpperCase()}</b></span><span class="tx"><b>${esc(o.t)}</b>${modBroker(k)===m?'<small style="color:var(--pos)">✓ folosită acum</small>':''}</span><a class="btn sm ghost" href="${esc(linkBroker(k,m))}" onclick="vib()">Încearcă</a>${modBroker(k)===m?'':`<button class="btn sm" style="margin-left:6px" onclick="alegeMetoda('${k}','${m}')">Merge</button>`}</div>`).join('')}</div>`).join('')}
+    <button class="btn ghost sm" style="margin-top:4px" onclick="S.brokerPlay={...(S.brokerPlay||{}),t212:1};S.brokerMod={...(typeof S.brokerMod==='object'&&S.brokerMod||{etoro:modBroker('etoro')}),t212:'a'};save();vib();toast('Trading 212: butonul duce în Magazin Play, de unde apeși „Deschide”.');testBrokeri()">Nicio metodă nu merge pentru Trading 212</button>
     <div class="sub" style="margin-top:8px">Dacă nicio metodă nu deschide aplicația, telefonul nu permite pornirea ei dintr-o pagină web. Atunci butoanele rămân scurtătura spre Magazin Play, de unde apeși „Deschide”.</div>
     <button class="btn ghost" style="margin-top:12px" onclick="closeSheet();render()">Gata</button>`;
   if (sh) { sh.innerHTML = html; iconiteSectiuni(sh); } else openSheet(html);
 }
-const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener"'} onclick="vib()"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>Deschide aplicația</small></span>${ic('extern','ex')}</a>`;
+const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener"'} onclick="vib()"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>${eAndroid()&&S.brokerPlay?.[k]?'Magazin Play → Deschide':'Deschide aplicația'}</small></span>${ic('extern','ex')}</a>`;
 const butoaneBrokeri = () => `<div class="brks">${butonBroker('t212')}${butonBroker('etoro')}</div>`;
 
 // ===== Mișcarea: crește, scade, stagnează =====

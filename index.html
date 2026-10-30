@@ -346,7 +346,7 @@ input[type=range]:focus{box-shadow:none}
 <button id="upd">Versiune nouă a aplicației · <b>Reîncarcă</b></button>
 <input type="file" id="fimp" accept="application/json" style="display:none" onchange="importJurnal(this)">
 <script>
-const APP_VER = '0.16.2';
+const APP_VER = '0.16.3';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică teza',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,las:2};
@@ -907,15 +907,32 @@ function iconiteSectiuni(root=document){
 }
 // Butoanele care deschid aplicațiile brokerilor (Android: intent către pachetul aplicației; dacă nu e instalată, Magazin Play).
 const BROKER = {
-  t212: { nume:'Trading 212', pkg:'com.avuscapital.trading212', host:'www.trading212.com', web:'https://app.trading212.com' },
-  etoro:{ nume:'eToro', pkg:'com.etoro.openbook', host:'www.etoro.com', web:'https://www.etoro.com/portfolio' } };
+  t212: { nume:'Trading 212', pkg:'com.avuscapital.trading212', host:'www.trading212.com', host2:'app.trading212.com', schema:'trading212', web:'https://app.trading212.com' },
+  etoro:{ nume:'eToro', pkg:'com.etoro.openbook', host:'www.etoro.com', host2:'www.etoro.com/portfolio', schema:'etoro', cale:'portfolio', web:'https://www.etoro.com/portfolio' } };
 const eAndroid = () => /Android/i.test(navigator.userAgent);
-// Varianta A (implicită): Magazin Play „launch” pornește direct aplicația instalată.
-// Varianta B: linkul web al brokerului, trimis direct pachetului aplicației.
-function linkBroker(k){ const b=BROKER[k], play = encodeURIComponent('https://play.google.com/store/apps/details?id='+b.pkg);
-  if (!eAndroid()) return b.web;
-  if ((S.brokerMod||'a')==='b') return `intent://${b.host}/#Intent;scheme=https;package=${b.pkg};S.browser_fallback_url=${play};end`;
-  return `intent://launch?id=${b.pkg}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${play};end`; }
+// Pe Android, deschiderea aplicației depinde de ce linkuri acceptă fiecare aplicație și de telefon.
+// De aceea există mai multe metode; în Setări le încerci pe rând și o păstrezi pe cea care merge (separat pentru fiecare broker).
+const PLAY = k => 'https://play.google.com/store/apps/details?id='+BROKER[k].pkg;
+const METODE = {
+  a: { t:'Magazin Play „launch”', l:k=>`intent://launch?id=${BROKER[k].pkg}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  b: { t:'Link web către aplicație', l:k=>`intent://${BROKER[k].host}/#Intent;scheme=https;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  c: { t:'Link web, adresa aplicației', l:k=>`intent://${BROKER[k].host2}#Intent;scheme=https;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  d: { t:'Schema proprie a aplicației', l:k=>`intent://${BROKER[k].cale||''}#Intent;scheme=${BROKER[k].schema};package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  e: { t:'Pornire ca din meniul telefonului', l:k=>`intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${BROKER[k].pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end` },
+  f: { t:'Link web simplu (App Links)', l:k=>'https://'+BROKER[k].host2 },
+};
+const modBroker = k => { const m = S.brokerMod; return (typeof m==='string' ? m : m?.[k]) || 'a'; };
+function linkBroker(k, mod){ const b=BROKER[k]; if (!eAndroid()) return b.web; return (METODE[mod||modBroker(k)]||METODE.a).l(k); }
+function alegeMetoda(k, m){ const o = typeof S.brokerMod==='object' && S.brokerMod ? {...S.brokerMod} : {t212:modBroker('t212'), etoro:modBroker('etoro')}; o[k]=m; S.brokerMod=o; save(); vib(); toast(`${BROKER[k].nume}: metoda ${m.toUpperCase()} păstrată.`); testBrokeri(); }
+function testBrokeri(){
+  const sh = $('sheet').classList.contains('on') ? $('sheet') : null;
+  const html = `${capFoaie('extern','Deschiderea aplicațiilor','găsește metoda care merge pe telefonul tău')}
+    <div class="sub" style="margin-bottom:12px">Atinge pe rând „Încearcă”. Dacă se deschide <b class="ink2">aplicația</b> (nu Magazin Play și nici site-ul), revino aici și apasă „Merge”. Metoda aleasă se folosește la toate butoanele.</div>
+    ${['t212','etoro'].map(k=>`<div class="sec"><h2>${BROKER[k].nume}</h2><span class="sub">acum: ${modBroker(k).toUpperCase()}</span></div><div class="card grp">${Object.entries(METODE).map(([m,o])=>`<div class="it" style="--k:var(${modBroker(k)===m?'--pos':'--acc'})"><span class="ib2"><b class="fd">${m.toUpperCase()}</b></span><span class="tx"><b>${esc(o.t)}</b>${modBroker(k)===m?'<small style="color:var(--pos)">✓ folosită acum</small>':''}</span><a class="btn sm ghost" href="${esc(linkBroker(k,m))}" onclick="vib()">Încearcă</a>${modBroker(k)===m?'':`<button class="btn sm" style="margin-left:6px" onclick="alegeMetoda('${k}','${m}')">Merge</button>`}</div>`).join('')}</div>`).join('')}
+    <div class="sub" style="margin-top:8px">Dacă nicio metodă nu deschide aplicația, telefonul nu permite pornirea ei dintr-o pagină web. Atunci butoanele rămân scurtătura spre Magazin Play, de unde apeși „Deschide”.</div>
+    <button class="btn ghost" style="margin-top:12px" onclick="closeSheet();render()">Gata</button>`;
+  if (sh) { sh.innerHTML = html; iconiteSectiuni(sh); } else openSheet(html);
+}
 const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener"'} onclick="vib()"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>Deschide aplicația</small></span>${ic('extern','ex')}</a>`;
 const butoaneBrokeri = () => `<div class="brks">${butonBroker('t212')}${butonBroker('etoro')}</div>`;
 
@@ -1838,8 +1855,7 @@ function vSetari(){
       ${it('--s4','lacat','Schimbă tokenul GitHub','expiră după un an',null,tg('tok'))}
       ${des('tok',`<input id="ft" type="password" autocomplete="off" placeholder="Tokenul nou (github_pat_…)"><button class="btn ghost" onclick="salveaza(true)">Salvează și testează</button>`)}</div>
     <div class="sec"><h2>Aplicațiile brokerilor</h2></div>${butoaneBrokeri()}
-    <div class="card" style="margin-top:10px"><div class="sub" style="margin-bottom:8px">Dacă butoanele deschid Magazin Play în loc de aplicație, încearcă cealaltă metodă. Telefonul o ține minte.</div>
-      <div class="seg">${[['a','Metoda A'],['b','Metoda B']].map(([k,t])=>`<button class="${(S.brokerMod||'a')===k?'on':''}" onclick="S.brokerMod='${k}';save();render();toast('${t} aleasă. Încearcă butoanele de mai sus.')">${t}</button>`).join('')}</div></div>
+    <div class="card grp" style="margin-top:10px"><button class="it" style="--k:var(--warn)" onclick="testBrokeri()"><span class="ib2">${ic('extern')}</span><span class="tx"><b>Se deschide Magazin Play?</b><small>Încearcă metodele pe rând și păstreaz-o pe cea care merge · T212: ${modBroker('t212').toUpperCase()} · eToro: ${modBroker('etoro').toUpperCase()}</small></span><span class="ch">›</span></button></div>
     <div class="sec"><h2>Securitate</h2></div>
     <div class="card grp">
       ${it('--pos','mana','Deblocare cu amprenta', bio?'Activă pe acest telefon':'Parola rămâne mereu variantă de rezervă', `<span class="sw ${bio?'on':''}"></span>`, bio?'dezactiveazaAmprenta()':'activeazaAmprenta()').replace('class="it"','class="it" id="bact"')}

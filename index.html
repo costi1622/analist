@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'none'; frame-src 'none'; child-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script>/* aplicația nu se deschide în interiorul altui site (protecție la clickjacking: GitHub Pages nu trimite antetul frame-ancestors) */ if (window.top !== window.self) { document.documentElement.style.display='none'; try { window.top.location = window.self.location.href; } catch(e) {} }</script>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0b0f14" media="(prefers-color-scheme: dark)">
@@ -48,7 +49,7 @@ header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 8
 body.nolive nav,body.nolive #bref,body.nolive #blk{display:none}
 .stamp{color:var(--mut);font-size:12px;margin-left:auto;white-space:nowrap}
 .brand>div{white-space:nowrap}@media (max-width:420px){.brand small{display:none}.hrow{gap:8px}}
-.ib{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));display:grid;place-items:center;cursor:pointer;transition:transform .15s,border-color .2s}.ib:active{transform:scale(.9)}.ib.on{border-color:color-mix(in srgb,var(--acc) 55%,var(--line))}.ib.on .ico{stroke:var(--acc)}
+.ib{width:40px;height:40px;border-radius:13px;border:1px solid transparent;background:linear-gradient(180deg,color-mix(in srgb,var(--panel2) 92%,#fff 8%),var(--panel)) padding-box,linear-gradient(160deg,color-mix(in srgb,var(--acc) 45%,transparent),color-mix(in srgb,var(--ink) 10%,transparent) 55%,color-mix(in srgb,var(--acc2) 35%,transparent)) border-box;box-shadow:0 6px 16px -10px rgba(0,0,0,.6),inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent);display:grid;place-items:center;cursor:pointer;transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}.ib:active{transform:scale(.9)}.ib.on{border-color:color-mix(in srgb,var(--acc) 55%,var(--line))}.ib.on .ico{stroke:var(--acc)}
 .ico{width:20px;height:20px;stroke:var(--ink2);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none;overflow:visible}
 .ico .f{fill:currentColor;stroke:none;opacity:.16}
 .ib .ico{color:var(--acc)}
@@ -388,6 +389,23 @@ nav button.on .ico .s{transform-box:view-box;transform-origin:12px 12px;animatio
 .sec h2 .sic .s{animation:sicIn .6s .5s cubic-bezier(.3,1.6,.5,1) both}
 .tile .th .ico .s,.tic .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:respira 3.2s ease-in-out infinite}
 @keyframes respira{50%{transform:scale(1.35);opacity:.75}}
+/* progresul analizei la cerere */
+#prog{position:fixed;top:calc(68px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-12px);z-index:31;display:flex;gap:10px;align-items:center;padding:9px 14px;border-radius:999px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(12px);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.22,1,.36,1),transform .3s cubic-bezier(.22,1,.36,1);white-space:nowrap}
+#prog.on{opacity:1;transform:translate(-50%,0)}#prog i{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--acc);animation:spin .8s linear infinite}
+/* antet: iconițe HD, cu gradient și umplere fină */
+header .ib .ico{width:22px;height:22px;stroke:url(#gIco);stroke-width:1.7}header .ib .ico .f2{fill:color-mix(in srgb,var(--acc) 14%,transparent)}header .ib .ico .s{fill:#f5c84b;stroke:none}
+#bref .ico{transition:transform .6s cubic-bezier(.22,1,.36,1)}#bref:active .ico{transform:rotate(180deg)}
+.vbar{display:flex;margin-bottom:8px}.seg.vis{flex:none;width:auto}.seg.vis button{display:flex;align-items:center;gap:6px;padding:7px 14px}.seg.vis .ico{width:16px;height:16px}
+.sortr{margin:0 0 10px}.sortr .chips{margin:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.sortr .chips button{padding:8px 4px;text-align:center}
+.chips button.on{border-color:var(--acc);color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,var(--panel2))}
+/* claritate maximă: text, vectori, imagini */
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+svg{shape-rendering:geometricPrecision}.av img{image-rendering:auto}
+/* mișcare fină: aceleași curbe peste tot, doar transform și opacity */
+:root{--ease:cubic-bezier(.22,1,.36,1)}
+.sheet.on{transition:transform .42s var(--ease)}.sheet{will-change:transform}
+nav .ind{transition:transform .45s var(--ease),width .45s var(--ease)!important}
+.intra>*{animation-timing-function:var(--ease)!important;animation-duration:.5s!important}
 /* apăsare și focus, la fel peste tot */
 .btn,.it,.chips button,.seg button,.qo,.lz,.link,.ib,nav button,.brk,.tile{transition:transform .14s cubic-bezier(.3,.7,.4,1),background-color .2s,border-color .2s,opacity .2s}
 .btn:active,.qo:not(:disabled):active,.lz:active,.chips button:active,.seg button:active{transform:scale(.97)}
@@ -420,11 +438,11 @@ input[type=range]:focus{box-shadow:none}
 </div></nav>
 <div class="veil" id="veil" onclick="closeSheet()"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
 <div class="veil" id="veil2" onclick="closeSheet()"></div><div class="sheet" id="sheet2" role="dialog" aria-modal="true"></div>
-<div id="toast" role="status"></div>
+<div id="toast" role="status"></div><div id="prog" role="status" aria-live="polite"></div>
 <button id="upd">Versiune nouă a aplicației · <b>Reîncarcă</b></button>
 <input type="file" id="fimp" accept="application/json" style="display:none" onchange="importJurnal(this)">
 <script>
-const APP_VER = '0.18.0';
+const APP_VER = '0.19.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,las:2};
@@ -459,6 +477,8 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch
 const saveJ = () => { if(!V){ toast('Aplicația e blocată.'); return false; } V.jurnal=J; salveazaSeif(); return true; };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Un text ca argument JavaScript într-un atribut onclick: șir JSON, apoi codat pentru HTML. Nicio ghilimea din date nu poate ieși din șir.
+const ja = s => esc(JSON.stringify(String(s ?? '')));
 const nf = (x, d=2) => x==null||isNaN(x) ? '–' : x.toLocaleString('ro-RO',{minimumFractionDigits:d,maximumFractionDigits:d});
 const de = n => { const a=Math.floor(Math.abs(n)), k=a%100; return a>=20&&(k===0||k>=20)?'de ':''; };
 const lei = (x,d=2) => (S.privat?'•••':nf(x,d))+' lei';
@@ -603,7 +623,7 @@ const LOGO = (c='', anim=true, fundal=true) => { const k='L'+(LOGO_N++);
 const AMPRENTA = `<svg viewBox="0 0 24 24"><path d="M12 11v3a8 8 0 0 1-1.5 4.7"/><path d="M8.5 9.5A3.5 3.5 0 0 1 15.5 11v2a12 12 0 0 1-.6 3.8"/><path d="M5.6 7.6A7 7 0 0 1 19 11v1.5"/><path d="M5 12v1a11 11 0 0 0 1.3 5.2"/><path d="M8.5 13a14 14 0 0 1-.4 3.6"/><path d="M18.6 16.5a17 17 0 0 1-.9 3"/><path d="M8 4.2A9 9 0 0 1 20.5 7"/></svg>`;
 function vBlocat(){
   const e = S.esec || {n:0}, astept = Date.now() < (e.pana||0), bio = !!citesteSeif()?.bio;
-  if (bio && !vBlocat.incercat) { vBlocat.incercat = true; setTimeout(()=>deblocheazaAmprenta(true), 250); }
+  if (bio && !vBlocat.incercat) { vBlocat.incercat = true; requestAnimationFrame(()=>deblocheazaAmprenta(true)); } // amprenta se cere imediat
   return `<div style="max-width:380px;margin:9vh auto 0;text-align:center">
     ${LOGO('logo-big')}
     <h3 style="font-size:26px;margin:14px 0 4px;letter-spacing:-.3px">Analist</h3>
@@ -626,6 +646,10 @@ document.addEventListener('visibilitychange',()=>{
   if (document.hidden) { ASCUNS_LA = Date.now(); document.body.classList.add('ascuns'); }
   else { document.body.classList.remove('ascuns'); if (V && Date.now()-ASCUNS_LA > 120000) blocheaza(); }
 });
+// Și cu aplicația deschisă: fără nicio atingere 10 minute, se blochează singură.
+let ULTIMA_ATINGERE = Date.now();
+['pointerdown','keydown','scroll','touchstart'].forEach(e=>addEventListener(e,()=>{ ULTIMA_ATINGERE=Date.now(); },{passive:true,capture:true}));
+setInterval(()=>{ if (V && !RULEAZA && Date.now()-ULTIMA_ATINGERE > 600000) { blocheaza(); toast('Blocat după 10 minute fără activitate.'); } }, 30000);
 addEventListener('pagehide',()=>document.body.classList.add('ascuns'));
 const dataRo = iso => iso ? new Date(iso).toLocaleString('ro-RO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '–';
 const ziRo = (iso,an=true) => iso ? new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',an?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short'}) : '–';
@@ -712,10 +736,9 @@ const J_ = t => { try { return t ? JSON.parse(t) : null; } catch(e){ return null
 // Fișierele din repo sunt criptate; se decriptează doar în memorie, cât timp aplicația e deblocată.
 async function dinCache(){
   if (!DK) return;
-  try { await motor(); } catch(e) {}
+  // totul în paralel: motorul și cele patru fișiere criptate (înainte: unul după altul)
   const d = async f => { try { return J_(await decDate(FIS[f]?.text)); } catch(e) { return null; } };
-  SNAP = await d('date/snapshot.enc'); INTRA = await d('date/intraday.enc'); IST = await d('date/istoric.enc');
-  try { RAP = await decRaport(FIS['rapoarte/ultimul.enc']?.text); } catch(e) { RAP = null; }
+  [, SNAP, INTRA, IST, RAP] = await Promise.all([motor().catch(()=>null), d('date/snapshot.enc'), d('date/intraday.enc'), d('date/istoric.enc'), decRaport(FIS['rapoarte/ultimul.enc']?.text).catch(()=>null)]);
   STARE = J_(FIS['date/stare.json']?.text);
   aplicaProfil(); pregatesteCulori();
 }
@@ -995,9 +1018,9 @@ const ICO = {
   play:'<path d="M8 5.5v13l10.5-6.5z"/>',
   jos:'<path d="M6 9.5l6 6 6-6"/>',
   invata:'<path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.6V16c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.4"/><path d="M21.5 9.5v5"/><circle class="s" cx="21.5" cy="16.4" r="1.6"/>',
-  setari:'<path d="M5 7h9M18 7h1M5 17h1M10 17h9"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/><circle class="s" cx="12" cy="12" r="1.4"/>',
-  refresh:'<path d="M19.5 11.5A7.5 7.5 0 1 0 17 17"/><path d="M20 5v6h-6"/><circle class="s" cx="17" cy="17" r="1.6"/>',
-  lacat:'<rect x="5" y="11" width="14" height="10" rx="3"/><path class="toarta" d="M8 11V8a4 4 0 0 1 8 0v3"/><circle class="s" cx="12" cy="16" r="1.6"/>',
+  setari:'<path d="M4 6.5h9.5M18.5 6.5H20M4 12h3M12 12h8M4 17.5h11M19.5 17.5H20"/><circle cx="16" cy="6.5" r="2.4" class="f2"/><circle cx="9.5" cy="12" r="2.4" class="f2"/><circle class="s" cx="17.5" cy="17.5" r="1.9"/>',
+  refresh:'<path d="M18.8 9.2A7.2 7.2 0 0 0 5.6 8.4"/><path d="M5.2 14.8a7.2 7.2 0 0 0 13.2.8"/><path d="M5 4.6v4.2h4.2"/><path d="M19 19.4v-4.2h-4.2"/><circle class="s" cx="12" cy="12" r="1.7"/>',
+  lacat:'<rect x="5" y="10.5" width="14" height="10.5" rx="3.2" class="f2"/><path class="toarta" d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/><path d="M12 15.2v2"/><circle class="s" cx="12" cy="14.6" r="1.5"/>',
   harta:'<rect x="3.5" y="4" width="9" height="16" rx="2"/><rect x="14.5" y="4" width="6" height="7" rx="2"/><rect x="14.5" y="13" width="6" height="7" rx="2"/><circle class="s" cx="8" cy="12" r="1.6"/>',
   bec:'<path d="M9 17h6v-2.2a6 6 0 1 0-6 0z"/><path d="M10 20.5h4"/><circle class="s" cx="12" cy="9.5" r="1.6"/>',
   lista:'<path d="M9.5 6H20M9.5 12H20M9.5 18H20"/><circle cx="4.8" cy="6" r="1.4"/><circle cx="4.8" cy="18" r="1.4"/><circle class="s" cx="4.8" cy="12" r="1.7"/>',
@@ -1045,7 +1068,7 @@ const PLAY = k => 'https://play.google.com/store/apps/details?id='+BROKER[k].pkg
 function linkBroker(k){ const b=BROKER[k]; if (!eAndroid()) return b.web;
   return b.prinPlay ? `intent://launch?id=${b.pkg}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end`
     : `intent://${b.cale}#Intent;scheme=https;package=${b.pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end`; }
-const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener"'} onclick="vib()"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>${eAndroid()&&BROKER[k].prinPlay?'Magazin Play → Deschide':'Deschide aplicația'}</small></span>${ic('extern','ex')}</a>`;
+const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener noreferrer"'} onclick="vib()"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>${eAndroid()&&BROKER[k].prinPlay?'Magazin Play → Deschide':'Deschide aplicația'}</small></span>${ic('extern','ex')}</a>`;
 const butoaneBrokeri = () => `<div class="brks">${butonBroker('t212')}${butonBroker('etoro')}</div>`;
 
 // ===== Mișcarea: crește, scade, stagnează =====
@@ -1078,7 +1101,7 @@ function harta(poz){
   const it=[...poz].sort((a,b)=>b.valueRON-a.valueRON).map(p=>({p, v:p.valueRON/tot*W*H}));
   return `<div class="tmap" data-noswipe>${squarify(it,0,0,W,H).map(({p,x,y,w,h})=>{ const m=MISC(p), t=tr(m), k=Math.round(30+60*Math.min(Math.abs(m||0)/3,1));
     const bg = t==='flat' ? '#3b4757' : `color-mix(in srgb,var(${TCOL[t]}) ${k}%,#1c2430)`;
-    return `<button class="${w<54||h<38?'mic':''}" style="left:${x/W*100}%;top:${y/H*100}%;width:${w/W*100}%;height:${h/H*100}%;background:${bg}" onclick="detaliu('${esc(p.symbol)}')" aria-label="${esc(p.symbol)} ${sg(m,2)}%"><b>${esc(p.symbol)}</b><span class="num">${m==null?'':sg(m,1)+'%'}</span></button>`; }).join('')}</div>`;
+    return `<button class="${w<54||h<38?'mic':''}" style="left:${x/W*100}%;top:${y/H*100}%;width:${w/W*100}%;height:${h/H*100}%;background:${bg}" onclick="detaliu(${ja(p.symbol)})" aria-label="${esc(p.symbol)} ${sg(m,2)}%"><b>${esc(p.symbol)}</b><span class="num">${m==null?'':sg(m,1)+'%'}</span></button>`; }).join('')}</div>`;
 }
 // „De știut”: cartonașe cu cifra, limita și ce înseamnă pentru tine.
 function deStiut(){
@@ -1088,7 +1111,7 @@ function deStiut(){
       text:`Acțiunile din același sector scad împreună. Dacă sectorul pierde 30%, portofoliul pierde aproximativ ${S.privat?'•••':nf(T*v/100*0.3,0)} lei, adică ${nf(v*0.3,1)}% din tot.`, gl:'tema'});
   for (const p of [...SNAP.pozitii].sort((a,b)=>b.pondere-a.pondere)) if (!p.etf && p.pondere>pr.maxActiune*2)
     out.push({k:'--reechilibreaza', ic:'⚖', titlu:`${p.symbol} a crescut peste locul ei`, val:nf(p.pondere,1)+'%', sub:`din portofoliu, plafonul pe acțiune e ${pr.maxActiune}%`, g:[p.pondere,pr.maxActiune,Math.max(p.pondere*1.2,30)],
-      text:'Nu trebuie să vinzi. Depunerile noi merg în altă parte și îi scad treptat ponderea. Vânzarea parțială e mai rapidă, dar câștigul se impozitează cu 16%.', act:`detaliu('${esc(p.symbol)}')`});
+      text:'Nu trebuie să vinzi. Depunerile noi merg în altă parte și îi scad treptat ponderea. Vânzarea parțială e mai rapidă, dar câștigul se impozitează cu 16%.', act:`detaliu(${ja(p.symbol)})`});
   const etf=SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.valueRON,0), etfP=etf/T*100, luni=M?M.luniPanaLaTinta(etf,T,pr,suma):null;
   if (etfP < pr.tintaETF-5) out.push({k:'--acc', ic:'◉', titlu:'ETF-ul de bază e încă mic', val:nf(etfP,1)+'%', sub:`în ETF global, ținta ta e ${pr.tintaETF}%`, g:[etfP,pr.tintaETF,100],
     text:luni==null?`Cu acțiuni în portofoliu, ținta de ${pr.tintaETF}% se atinge doar vânzându-le. Depunerile în ETF doar te apropie de ea.`:`Cu ${suma} ${de(suma)}lei pe lună, toți în ETF, ajungi la țintă în aproximativ ${luni} ${de(luni)}${luni===1?'lună':'luni'}, fără să vinzi nimic.`, gl:'nucleu'});
@@ -1145,7 +1168,8 @@ function pregatesteCulori(){ let rest=0, gasit=false;
   for (const p of SNAP?.pozitii||[]) { const l=sigla(p); if (!l || p.symbol in CUL) continue; CUL[p.symbol]=null; rest++; const im=new Image();
     const gata=()=>{ if (--rest===0 && gasit && V && !$('sheet').classList.contains('on') && !VT_ACUM) render(); }; // o singură redesenare, când sunt gata toate
     im.onload=()=>{ try { CUL[p.symbol]=culoareDin(im); gasit = gasit || !!CUL[p.symbol]; } catch(e) { CUL[p.symbol]=null; } gata(); }; im.onerror=gata; im.src=l; } }
-const avatar = (p, m) => { const l=sigla(p), t=esc(p.symbol.replace(/\..*$/,'').slice(0,4)), cl=l&&culoriActiune(p.symbol); return l ? `<span class="av img${m?' '+m:''}" style="--c:${cl?cl.c:`var(${culoareTema(p.tema)})`}"><img src="${l}" alt="" loading="lazy" decoding="async" onerror="const a=this.parentNode;a.classList.remove('img');a.textContent='${t}'"></span>` : `<span class="av${m?' '+m:''}${p.virtual?' vt':''}" style="--c:var(${culoareTema(p.tema)})">${t}</span>`; };
+function avErr(im){ const a=im.parentNode; a.classList.remove('img'); a.textContent=im.dataset.t||''; }
+const avatar = (p, m) => { const l=sigla(p), t=esc(p.symbol.replace(/\..*$/,'').slice(0,4)), cl=l&&culoriActiune(p.symbol); return l ? `<span class="av img${m?' '+m:''}" style="--c:${cl?cl.c:`var(${culoareTema(p.tema)})`}"><img src="${l}" alt="" loading="lazy" decoding="async" data-t="${t}" onerror="avErr(this)"></span>` : `<span class="av${m?' '+m:''}${p.virtual?' vt':''}" style="--c:var(${culoareTema(p.tema)})">${t}</span>`; };
 function inelLuna(mic){
   const tinta = sumaPlan(), inv = investitLuna(), facut = lunaFacuta(), k = facut ? 1 : Math.min(inv/tinta,1), n = serieLuni();
   const R=mic?13:18, W=mic?34:46, C=2*Math.PI*R, c=W/2;
@@ -1194,11 +1218,11 @@ function vAzi(){
   const viz = S.vizAzi==='harta' ? 'harta' : 'lista';
   const sus = VC.poz.filter(p=>tr(MISC(p))==='up').length, jos = VC.poz.filter(p=>tr(MISC(p))==='down').length;
   h += `<div class="sec"><h2>${C==='toate'?'Pozițiile tale':'Pozițiile din '+esc(C)} ${q(viz==='harta'?'harta':'pondere')}</h2><span class="sub num"><span class="up">▲ ${sus}</span> · <span class="down">▼ ${jos}</span> · ${poz.length}</span></div>
-  <div class="row" data-noswipe style="gap:8px;margin-bottom:10px"><div class="seg mini" style="max-width:150px">${[['lista','Listă'],['harta','Hartă']].map(([k,t])=>`<button class="${viz===k?'on':''}" onclick="S.vizAzi='${k}';save();vib();render()">${t}</button>`).join('')}</div>
-    ${viz==='lista'?`<div class="seg mini">${[['semnal','Semnal'],['pondere','Pondere'],['castig','Câștig'],['azi',iv?'Azi':'Ziua']].map(([k,t])=>`<button class="${(S.sort||'semnal')===k?'on':''}" onclick="S.sort='${k}';save();vib();render()">${t}</button>`).join('')}</div>`:''}</div>
+  <div class="vbar" data-noswipe><div class="seg vis">${[['lista','Listă'],['harta','Hartă']].map(([k,t])=>`<button class="${viz===k?'on':''}" onclick="S.vizAzi='${k}';save();vib();render()">${ic(k==='lista'?'lista':'harta')}${t}</button>`).join('')}</div></div>
+  ${viz==='lista'?`<div class="sortr" data-noswipe role="group" aria-label="Ordonează pozițiile după"><div class="chips">${[['semnal','Semnal'],['pondere','Pondere'],['castig','Câștig'],['azi',iv?'Azi':'Ziua']].map(([k,t])=>`<button class="${(S.sort||'semnal')===k?'on':''}" onclick="S.sort='${k}';save();vib();render()">${t}</button>`).join('')}</div></div>`:''}
   ${viz==='harta'?`<div class="card" style="padding:8px">${harta(VC.poz)}</div>`:''}
   ${viz==='lista'?`<div class="card list">` + poz.map((p,k)=>{ const m=MISC(p), s=sem(p); return `
-    <div class="pr" data-s="${esc(p.symbol)}" style="animation-delay:${k*25}ms;--t:var(${TCOL[tr(m)]})" onclick="deschideDetaliu('${esc(p.symbol)}',this.querySelector('.av'))">
+    <div class="pr" data-s="${esc(p.symbol)}" style="animation-delay:${k*25}ms;--t:var(${TCOL[tr(m)]})" onclick="deschideDetaliu(${ja(p.symbol)},this.querySelector('.av'))">
       ${avatar(p)}
       <div style="min-width:0"><div class="s">${p.oportunitate||iv?.[p.symbol]?.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div><div class="n"><span class="sd" style="color:var(${SEMC[s]})">● ${SEM[s]}</span> ${esc(p.name||'')}</div>
         ${p.deVerificat?'<div class="sub" style="color:var(--warn)">⚠ date de verificat</div>':''}
@@ -1268,7 +1292,7 @@ function detaliu(sym, zile){
     if (!PER.some(([z])=>z===DET.zile)) DET.zile = PER.at(-1)[0];
     const k = Math.max(0, se.c.length - DET.zile - 1), c = se.c.slice(k), rp = (c.at(-1)/c[0]-1)*100, tp = tr(rp, 0.5), lc = TCOL[tp]==='--flat'?'--s1':TCOL[tp];
     const prot = !p.etf && i.protectie;
-    graf = `<div class="card" style="padding:12px 12px 10px;margin-top:12px"><div class="seg" style="margin:0 0 10px">${PER.map(([z,t])=>`<button class="${DET.zile===z?'on':''}" onclick="detaliu('${esc(sym)}',${z})">${t}</button>`).join('')}</div>
+    graf = `<div class="card" style="padding:12px 12px 10px;margin-top:12px"><div class="seg" style="margin:0 0 10px">${PER.map(([z,t])=>`<button class="${DET.zile===z?'on':''}" onclick="detaliu(${ja(sym)},${z})">${t}</button>`).join('')}</div>
       <div class="row" id="rper" style="margin-bottom:6px"><span class="sub">În ultimele ${esc(PER.find(([z])=>z===DET.zile)[1])}</span>${mv(rp,0,0.5)}</div>`
       + lineChart({series:[{name:'Preț',short:'Preț',v:c,color:lc},{name:'Media de 50 de zile',short:'Media 50 de zile',v:se.m50.slice(k),color:'--mut',w:1.4}], x:se.d.slice(k), fmt:x=>nf(x)+' '+(p.moneda||''),
           h: prot?[{v:i.protectie,color:'--warn',eticheta:''}]:[], area:1, aria:`Prețul ${p.symbol}`})
@@ -1290,7 +1314,7 @@ function detaliu(sym, zile){
   </div>
   <div class="sec"><h2>Indicatorii acțiunii</h2></div><div class="card" style="padding:6px 14px 14px">${radiografie(p)}</div>
   ${alerteHTML(p)}
-  <button class="sec" style="width:100%;background:none;border:0;padding:0;cursor:pointer" aria-expanded="${!!DET.det}" onclick="DET.det=!DET.det;detaliu('${esc(sym)}',DET.zile)"><h2>Detalii</h2><span class="sub">${DET.det?'ascunde ▴':'motive, cifre, conturi ▾'}</span></button>
+  <button class="sec" style="width:100%;background:none;border:0;padding:0;cursor:pointer" aria-expanded="${!!DET.det}" onclick="DET.det=!DET.det;detaliu(${ja(sym)},DET.zile)"><h2>Detalii</h2><span class="sub">${DET.det?'ascunde ▴':'motive, cifre, conturi ▾'}</span></button>
   ${DET.det?`<div class="card"><div class="lbl" style="margin:0 0 2px">Semnalul motorului: ${esc(ETI[p.semnal])}</div>
   ${p.atentie.slice(u==='uita'?1:0).map(a=>`<div class="al" style="margin-top:8px">${link(a)}</div>`).join('')}
   ${p.oportunitate?`<div class="al good" style="margin-top:8px">★ ${link(p.oportunitate)}</div>`:''}
@@ -1309,8 +1333,8 @@ function detaliu(sym, zile){
     <span>Randament 3 luni / 6 luni / 1 an</span><span>${sg(i.r3l,1)}% / ${sg(i.r6l,1)}% / ${sg(i.r1a,1)}%</span>
     ${p.rezultate?`<span>Rezultate trimestriale</span><span>${ziRo(p.rezultate)}</span>`:''}</div></div>`:''}
   ${inPlan(p.symbol)?`<div style="margin-top:14px">${butoaneBrokeri()}</div>`:''}
-  ${DET.nota?`<input id="jnota" placeholder="Ce vrei să ții minte despre ${esc(p.symbol)}?" maxlength="300"><button class="btn" onclick="notaJurnal('${esc(p.symbol)}')">Salvează nota</button>`
-    :`<button class="link" style="display:block;margin:16px auto 4px" onclick="DET.nota=true;detaliu('${esc(sym)}',DET.zile);setTimeout(()=>$('jnota')?.focus(),50)">+ Notează ceva despre ${esc(p.symbol)}</button>`}
+  ${DET.nota?`<input id="jnota" placeholder="Ce vrei să ții minte despre ${esc(p.symbol)}?" maxlength="300"><button class="btn" onclick="notaJurnal(${ja(p.symbol)})">Salvează nota</button>`
+    :`<button class="link" style="display:block;margin:16px auto 4px" onclick="DET.nota=true;detaliu(${ja(sym)},DET.zile);setTimeout(()=>$('jnota')?.focus(),50)">+ Notează ceva despre ${esc(p.symbol)}</button>`}
   <button class="btn ghost" style="margin-top:10px" onclick="closeSheet()">Închide</button></div>`;
   if ($('sheet').classList.contains('on') && zile) { const st=$('sheet').scrollTop; $('sheet').innerHTML = html; iconiteSectiuni($('sheet')); montaGrafice(); $('sheet').scrollTop=st; return; }
   openSheet(html);
@@ -1560,7 +1584,7 @@ function cardRec(r){
     ${r.despre?`<div class="sub" style="margin-top:8px">${esc(r.despre)}</div>`:''}
     <div class="meta num"><span><b>${esc(String(r.companii||''))}</b> companii</span><span>indice <b>${esc(r.indice||'')}</b></span><span>ISIN <b>${esc(r.isin)}</b> ${q('isin')}</span></div>
     ${r.nota?`<div class="al" style="margin:10px 0 0">${esc(r.nota)}</div>`:''}
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" onclick="decideETF('${r.ticker}','da')">Da, investesc</button><button class="btn ghost" style="flex:1" onclick="decideETF('${r.ticker}','nu')">Nu, mulțumesc</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" onclick="decideETF(${ja(r.ticker)},'da')">Da, investesc</button><button class="btn ghost" style="flex:1" onclick="decideETF(${ja(r.ticker)},'nu')">Nu, mulțumesc</button></div>
   </div>`;
 }
 // Suma sugerată pentru o idee nouă: ținta ei în lei și o primă cumpărare rezonabilă din suma lunară.
@@ -1578,7 +1602,7 @@ function cardActiune(r){
     ${plus.length||minus.length?`<div class="pc">${plus.map(m=>`<div class="up">${link(m.slice(2))}</div>`).join('')}${minus.map(m=>`<div class="down">${link(m.slice(2))}</div>`).join('')}</div>`:''}
     ${r.nota?`<div class="al" style="margin:10px 0 0">${esc(r.nota)}</div>`:''}
     <div class="sug">${ic('portofel')}<span>${sg2.text}</span></div>
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" onclick="decideETF('${esc(r.ticker)}','da')">Da, investesc</button><button class="btn ghost" style="flex:1" onclick="decideETF('${esc(r.ticker)}','nu')">Nu, mulțumesc</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" onclick="decideETF(${ja(r.ticker)},'da')">Da, investesc</button><button class="btn ghost" style="flex:1" onclick="decideETF(${ja(r.ticker)},'nu')">Nu, mulțumesc</button></div>
   </div>`;
 }
 // Acțiunile pe care le ai deja: care pot primi bani noi și de ce celelalte nu.
@@ -1598,14 +1622,14 @@ function portofoliuHTML(pr){
   const pot = ac.filter(x=>x.s.o<=1).length, aprope = ac.filter(x=>x.s.o===3).slice(0,2).map(x=>x.p.symbol);
   return `<div class="sec"><h2>Din acțiunile tale ${q('portofoliu')}</h2><span class="sub">${pot} din ${ac.length} pot primi bani</span></div>
     <div class="card"><div class="sub" style="margin-bottom:6px;color:var(--ink2);font-size:14px">${pot?`Pe lângă ETF, ${pot===1?'această acțiune poate':'aceste acțiuni pot'} primi bani noi fără să strice echilibrul portofoliului.`:`Acum niciuna nu are nevoie de bani noi: toate au deja cât le revine sau sunt într-un sector prea mare. De aceea banii merg în ETF.${aprope.length?` Cele mai apropiate de a primi bani: ${aprope.join(' și ')}.`:''}`}</div>
-    ${ac.map(({p,s})=>`<button class="pf" onclick="deschideDetaliu('${esc(p.symbol)}')">${avatar(p,'mic')}<span class="tx"><b>${esc(p.symbol)} <span class="pill2" style="--k:var(${s.k})">${s.t}</span></b><small>${link(s.d)}</small></span><span class="ch">›</span></button>`).join('')}</div>`;
+    ${ac.map(({p,s})=>`<button class="pf" onclick="deschideDetaliu(${ja(p.symbol)})">${avatar(p,'mic')}<span class="tx"><b>${esc(p.symbol)} <span class="pill2" style="--k:var(${s.k})">${s.t}</span></b><small>${link(s.d)}</small></span><span class="ch">›</span></button>`).join('')}</div>`;
 }
 const PLAN_DESC = k => (S.planDesc||{})[k] ?? false;
 function comutaPlan(k, el){ S.planDesc = {...(S.planDesc||{}), [k]: el.open}; save(); }
 function recomandariHTML(pr){
   const rec = recomandari(), ra = recomandariActiuni(), al = aleseAcum(), d = decizii(), refuz = Object.keys(d).filter(k=>d[k]?.r==='nu');
   let h = `<div class="sec"><h2>Idei noi de investit ${q('etfrec')}</h2>${refuz.length?`<button class="link" onclick="refuzuri()">Refuzate (${refuz.length}) ›</button>`:''}</div>`;
-  if (al.length) h += `<div class="card grp">${al.map(k=>{ const v=SNAP.virtuale?.find(x=>x.symbol===k); return `<div class="it" style="--k:var(--pos)"><span class="ib2">${ic(v&&!v.etf?'stea':'nucleu')}</span><span class="tx"><b>${esc(k)} · ales de tine</b><small>${v?`În planul lunar, cu ținta de ${nf(v.tinta||0,1)}%. Dispare de aici când apare în cont.`:'Îl ai deja în cont.'}</small></span><button class="link" onclick="decideETF('${esc(k)}','anuleaza')">Anulează</button></div>`; }).join('')}</div>`;
+  if (al.length) h += `<div class="card grp">${al.map(k=>{ const v=SNAP.virtuale?.find(x=>x.symbol===k); return `<div class="it" style="--k:var(--pos)"><span class="ib2">${ic(v&&!v.etf?'stea':'nucleu')}</span><span class="tx"><b>${esc(k)} · ales de tine</b><small>${v?`În planul lunar, cu ținta de ${nf(v.tinta||0,1)}%. Dispare de aici când apare în cont.`:'Îl ai deja în cont.'}</small></span><button class="link" onclick="decideETF(${ja(k)},'anuleaza')">Anulează</button></div>`; }).join('')}</div>`;
   h += `<details class="dd" ${PLAN_DESC('etf')?'open':''} ontoggle="comutaPlan('etf',this)"><summary><span class="tic" style="--k:var(--acc)">${ic('nucleu')}</span><span class="tx"><b>ETF-uri</b><small>${rec.length?`${rec.length} ${rec.length===1?'idee':'idei'} potrivite cu ce ai`:'nimic nou acum'}</small></span><span class="chev">${ic('jos')}</span></summary><div class="ddb">
     ${rec.length ? rec.slice(0,4).map(cardRec).join('') : `<div class="sub" style="padding:4px 2px 10px">Ai acoperit deja ideile principale${refuz.length?' sau le-ai refuzat':''}.</div>`}
     <div class="sub" style="margin:2px 2px 6px">Toate sunt ETF-uri UCITS, listate în Europa. Înainte să cumperi, caută ISIN-ul în Trading 212.</div></div></details>`;
@@ -1753,7 +1777,7 @@ function sectiuniAnaliza(){
   // 3) De unde vine câștigul
   const cs = [...SNAP.pozitii].sort((a,b)=>b.pnlRON-a.pnlRON), mxc = Math.max(...cs.map(p=>Math.abs(p.pnlRON)),1), tot = cs.reduce((a,p)=>a+p.pnlRON,0);
   h += `<div class="sec"><h2>De unde vine câștigul ${q('castigPoz')}</h2><span class="sub num ${cls(tot)}">${sgL(tot,0)} lei</span></div><div class="card">${cs.map(p=>`
-    <div class="dv" style="grid-template-columns:68px 1fr 74px;cursor:pointer" onclick="detaliu('${esc(p.symbol)}')"><b>${esc(p.symbol)}</b><div class="t"><i style="background:var(${p.pnlRON>=0?'--pos':'--neg'});${p.pnlRON>=0?`left:50%;width:${p.pnlRON/mxc*50}%`:`right:50%;width:${-p.pnlRON/mxc*50}%`}"></i></div><span class="num ${cls(p.pnlRON)}" style="text-align:right">${sgL(p.pnlRON,0)}</span></div>`).join('')}
+    <div class="dv" style="grid-template-columns:68px 1fr 74px;cursor:pointer" onclick="detaliu(${ja(p.symbol)})"><b>${esc(p.symbol)}</b><div class="t"><i style="background:var(${p.pnlRON>=0?'--pos':'--neg'});${p.pnlRON>=0?`left:50%;width:${p.pnlRON/mxc*50}%`:`right:50%;width:${-p.pnlRON/mxc*50}%`}"></i></div><span class="num ${cls(p.pnlRON)}" style="text-align:right">${sgL(p.pnlRON,0)}</span></div>`).join('')}
 </div>`;
   O.castig=h; h='';
   // 4) Riscul și testele de stres
@@ -1796,7 +1820,7 @@ function sectiuniAnaliza(){
   // 7) Calendarul
   const azi = new Date().toISOString().slice(0,10), cal = SNAP.pozitii.filter(p=>p.rezultate && p.rezultate>=azi).sort((a,b)=>a.rezultate.localeCompare(b.rezultate));
   h += `<div class="sec"><h2>Calendar</h2></div><div class="card" style="padding:6px 16px">${cal.length?cal.map(p=>{ const z=Math.round((Date.parse(p.rezultate)-Date.parse(azi))/864e5);
-    return `<div class="row" style="padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="detaliu('${esc(p.symbol)}')"><span><b>${esc(p.symbol)}</b> <span class="sub">rezultate trimestriale</span></span><span class="num ${z<=7?'':'sub'}" style="${z<=7?'color:var(--opor);font-weight:700':''}">${ziRo(p.rezultate,false)} · ${z===0?'azi':z===1?'mâine':`în ${z} ${de(z)}zile`}</span></div>`; }).join('')
+    return `<div class="row" style="padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer" onclick="detaliu(${ja(p.symbol)})"><span><b>${esc(p.symbol)}</b> <span class="sub">rezultate trimestriale</span></span><span class="num ${z<=7?'':'sub'}" style="${z<=7?'color:var(--opor);font-weight:700':''}">${ziRo(p.rezultate,false)} · ${z===0?'azi':z===1?'mâine':`în ${z} ${de(z)}zile`}</span></div>`; }).join('')
     :'<div class="sub" style="padding:10px 0">Nicio dată de rezultate cunoscută. Apar cu cheia Finnhub, pentru acțiunile americane.</div>'}
     <div class="row" style="padding:9px 0"><span><b>Plan</b> <span class="sub">investiția lunară</span></span><span class="num sub">${lunaFacuta()?'făcută luna asta ✓':'luna asta'}</span></div></div>`;
   O.calendar=h; h='';
@@ -1893,11 +1917,11 @@ function alerteHTML(p){
   const al = alerte().filter(a=>a.s===p.symbol), at = atinse(), pr = pretAcum(p), d = DET.ad || 'sub';
   return `<div class="sec"><h2>Alertă de preț</h2></div><div class="card">
     ${al.length?al.map(a=>{ const k=`${a.s}:${a.d}:${a.p}`, dist=pr?(a.p/pr-1)*100:null;
-      return `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><span><b class="${a.d==='sub'?'down':'up'}">${a.d==='sub'?'▼ sub':'▲ peste'} ${nf(a.p)}</b> <span class="sub">${at[k]?`atinsă pe ${ziRo(at[k],false)}`:dist!=null?`mai e ${sg(dist,1)}%`:''}</span></span><button class="link" style="color:var(--mut)" onclick="stergeAlerta('${esc(a.s)}','${a.d}',${a.p})">Șterge</button></div>`; }).join('')
+      return `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><span><b class="${a.d==='sub'?'down':'up'}">${a.d==='sub'?'▼ sub':'▲ peste'} ${nf(a.p)}</b> <span class="sub">${at[k]?`atinsă pe ${ziRo(at[k],false)}`:dist!=null?`mai e ${sg(dist,1)}%`:''}</span></span><button class="link" style="color:var(--mut)" onclick="stergeAlerta(${ja(a.s)},'${a.d}',${a.p})">Șterge</button></div>`; }).join('')
       :'<div class="sub" style="margin-bottom:8px">Primești o notificare când prețul trece pragul. Verificarea se face din oră în oră, în timpul ședinței.</div>'}
-    <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><div class="seg" style="flex:1">${[['sub','Sub'],['peste','Peste']].map(([k,t])=>`<button class="${d===k?'on':''}" onclick="DET.ad='${k}';detaliu('${esc(p.symbol)}',DET.zile)">${t}</button>`).join('')}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><div class="seg" style="flex:1">${[['sub','Sub'],['peste','Peste']].map(([k,t])=>`<button class="${d===k?'on':''}" onclick="DET.ad='${k}';detaliu(${ja(p.symbol)},DET.zile)">${t}</button>`).join('')}</div>
       <input id="apret" type="number" inputmode="decimal" step="0.01" style="flex:1;margin:0" value="${pr?(+(pr*(d==='sub'?0.9:1.1)).toPrecision(4)):''}" aria-label="Prețul alertei, în ${esc(p.moneda||'')}">
-      <button class="btn sm" onclick="adaugaAlerta('${esc(p.symbol)}')">Adaugă</button></div>
+      <button class="btn sm" onclick="adaugaAlerta(${ja(p.symbol)})">Adaugă</button></div>
     <div class="sub" style="margin-top:6px">Preț în ${esc(p.moneda||'moneda acțiunii')}${pr?`, acum ${nf(pr)}`:''}.</div></div>`;
 }
 async function scrieAlerte(lista, sym){
@@ -1953,9 +1977,14 @@ function galaxie(){
   Object.assign(GX, { on:true, D, st });
   const ctx = cv.getContext('2d');
   let W=0, H=0, dpr=1;
-  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 3); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); };
+  const stele = Array.from({length:170},()=>({ x:Math.random(), y:Math.random(), r:Math.random()*1.1+0.2, f:Math.random()*6.28, d:Math.random()*0.8+0.2 }));
+  // fundalul (nebuloase + stelele fixe) se desenează o singură dată, pe un canvas separat; pe fiecare cadru se copiază
+  const fond = document.createElement('canvas'), fc = fond.getContext('2d');
+  const deseneazaFond = () => { fond.width = cv.width; fond.height = cv.height; fc.setTransform(dpr,0,0,dpr,0,0);
+    D.orb.slice(0,4).forEach((o,i)=>{ const a=i*1.7, x=W/2+Math.cos(a)*W*0.28, y=H/2+Math.sin(a*1.3)*H*0.22, g=fc.createRadialGradient(x,y,0,x,y,W*0.45); g.addColorStop(0,o.c+'1f'); g.addColorStop(1,o.c+'00'); fc.fillStyle=g; fc.fillRect(0,0,W,H); });
+    fc.fillStyle=D.ink; stele.forEach((s,i)=>{ if (i%6===0) return; fc.globalAlpha=0.18+0.4*s.d; fc.beginPath(); fc.arc(s.x*W,s.y*H,s.r,0,6.283); fc.fill(); }); fc.globalAlpha=1; };
+  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 3); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
   marime(); GX.marime = marime;
-  const stele = Array.from({length:160},()=>({ x:Math.random(), y:Math.random(), r:Math.random()*1.1+0.2, f:Math.random()*6.28, d:Math.random()*0.8+0.2 }));
   const proj = (R, a) => { const S=Math.min(W*0.41,H*0.62), x=R*S*Math.cos(a+st.yaw), z=R*S*Math.sin(a+st.yaw), y=z*st.tilt, k=1+z/(S*4.5); return { x:W/2+x*k, y:H/2+y*k, z, k }; };
   const rStar = () => (14 + 30*Math.sqrt(Math.max(D.etfP,1)/100)) * Math.min(W,360)/360;
   const rPl = q => Math.max(3.5, (4 + 22*Math.sqrt(q/100)) * Math.min(W,360)/360);
@@ -1968,11 +1997,10 @@ function galaxie(){
     let zi = null; if (st.rel) { const f = Math.min((now-st.rel.t0)/9000, 1); zi = Math.round(f*(D.istoric.zile.length-1)); if (f>=1) { st.rel=null; $('gxp')?.classList.remove('on'); setTimeout(()=>{ if($('gxd')) $('gxd').textContent=''; }, 1600); } }
     const pond = p => zi==null ? p.pondere : D.istoric.w[SNAP.pozitii.indexOf(p)][zi];
     if (zi!=null && $('gxd')) { const tz=D.istoric.tot, ch=(tz[zi]/tz[0]-1)*100; $('gxd').innerHTML = `${ziRo(D.istoric.zile[zi])} <b class="${ch>=0?'pos':'neg'}">${sg(ch,1)}%</b>`; }
-    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
-    // fundal: nebuloase în culorile sectoarelor, stele cu paralaxă
-    D.orb.slice(0,4).forEach((o,i)=>{ const a=t*0.03+i*1.7, x=W/2+Math.cos(a)*W*0.28, y=H/2+Math.sin(a*1.3)*H*0.22, g=ctx.createRadialGradient(x,y,0,x,y,W*0.45);
-      g.addColorStop(0,o.c+'1f'); g.addColorStop(1,o.c+'00'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); });
-    for (const s of stele) { const x=((s.x*W + st.yaw*14*s.d) % W + W) % W, y=s.y*H, a=0.25+0.55*(0.5+0.5*Math.sin(t*1.6*s.d+s.f)); ctx.globalAlpha=a; ctx.fillStyle=D.ink; ctx.beginPath(); ctx.arc(x,y,s.r,0,6.283); ctx.fill(); }
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(fond,0,0);
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    // doar o parte din stele clipesc (cele sărite la fundal), restul stau pe fundalul gata desenat
+    ctx.fillStyle=D.ink; for (let i=0;i<stele.length;i+=6) { const s=stele[i], a=0.2+0.7*(0.5+0.5*Math.sin(t*1.6*s.d+s.f)); ctx.globalAlpha=a; ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r+0.3,0,6.283); ctx.fill(); }
     ctx.globalAlpha=1;
     // orbitele, în două jumătăți (în spatele stelei și în fața ei)
     const orbita = (o, fata) => { ctx.beginPath(); let on=false; for (let i=0;i<=96;i++) { const a=i/96*6.283, q=proj(o.R,a); if ((q.z>=0)===fata) { on?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); on=true; } else on=false; }
@@ -1989,7 +2017,9 @@ function galaxie(){
       const lx=W/2-q.x, ly=H/2-q.y, ln=Math.hypot(lx,ly)||1, g=ctx.createRadialGradient(q.x+lx/ln*r*0.45,q.y+ly/ln*r*0.45,r*0.1,q.x,q.y,r);
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.18,x.c); g.addColorStop(1,'#000000');
       ctx.globalAlpha=dim; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r,0,6.283); ctx.fill();
-      if (x.im?.complete && x.im.naturalWidth && r>=8) { ctx.save(); ctx.beginPath(); ctx.arc(q.x,q.y,r*0.78,0,6.283); ctx.clip(); ctx.fillStyle='#fff'; ctx.fill(); ctx.drawImage(x.im,q.x-r*0.62,q.y-r*0.62,r*1.24,r*1.24); ctx.restore(); }
+      // sigla companiei pe planetă (la orice mărime); fără siglă, inițialele
+      if (x.im?.complete && x.im.naturalWidth) { ctx.save(); ctx.beginPath(); ctx.arc(q.x,q.y,r*0.8,0,6.283); ctx.clip(); ctx.fillStyle='#fff'; ctx.fill(); ctx.drawImage(x.im,q.x-r*0.64,q.y-r*0.64,r*1.28,r*1.28); ctx.restore(); }
+      else if (r>=7) { ctx.fillStyle='#ffffff'; ctx.globalAlpha=dim*0.95; ctx.font=`700 ${Math.max(7,r*0.58)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; const ti=x.p.symbol.replace(/\..*$/,'').slice(0,r>=12?4:2); ctx.lineWidth=Math.max(2,r*0.16); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineJoin='round'; ctx.strokeText(ti, q.x, q.y+0.5); ctx.fillText(ti, q.x, q.y+0.5); ctx.textBaseline='alphabetic'; }
       // inelul semnalului
       ctx.beginPath(); ctx.arc(q.x,q.y,r+2.2,0,6.283); ctx.strokeStyle=x.s; ctx.lineWidth=1.6; ctx.stroke();
       if (st.sel===x.p.symbol) { ctx.beginPath(); ctx.arc(q.x,q.y,r+7+Math.sin(t*4)*1.5,0,6.283); ctx.strokeStyle=D.ink; ctx.globalAlpha=0.8; ctx.lineWidth=1.2; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]);
@@ -2031,7 +2061,7 @@ function gxInfo(){
   if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0); el.innerHTML = `<b>ETF-ul de bază</b><span class="sub"> ${nf(w,1)}% din portofoliu, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
-  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${SEMC[u]})">${SEM[u]}</span><div class="sub">${esc(p.tema)} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div></div><button class="link" onclick="deschideDetaliu('${esc(p.symbol)}')">Fișa ›</button>`;
+  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${SEMC[u]})">${SEM[u]}</span><div class="sub">${esc(p.tema)} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div></div><button class="link" onclick="deschideDetaliu(${ja(p.symbol)})">Fișa ›</button>`;
 }
 function gxReluare(){ if (!GX.st) return; vib(); GX.st.rel = { t0: performance.now() }; $('gxp')?.classList.add('on'); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(GX.cadruF); } }
 addEventListener('resize', ()=>{ if (GX.on && $('gxc')) GX.marime?.(); });
@@ -2133,7 +2163,7 @@ function importJurnal(inp){
 // ===== Raport =====
 function md(t){
   const lines = esc(t).split('\n'); let h='', inUl=false;
-  const inl = s => s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener" style="color:var(--acc)">$1</a>');
+  const inl = s => s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\[([^\]]+)\]\((https:\/\/[^)\s"]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">$1</a>');
   for (const l of lines) {
     const m = l.match(/^(#{1,3})\s+(.*)/), li = l.match(/^\s*[-*]\s+(.*)/);
     if (!li && inUl) { h+='</ul>'; inUl=false; }
@@ -2206,7 +2236,7 @@ function vSetari(){
     <div class="sec"><h2>Securitate</h2></div>
     <div class="card grp">
       ${it('--pos','mana','Deblocare cu amprenta', bio?'Activă pe acest telefon':'Parola rămâne mereu variantă de rezervă', `<span class="sw ${bio?'on':''}"></span>`, bio?'dezactiveazaAmprenta()':'activeazaAmprenta()').replace('class="it"','class="it" id="bact"')}
-      ${it('--acc','lacat','Blochează acum','Se blochează singură după 2 minute în fundal',null,"blocheaza();toast('Blocat.')")}
+      ${it('--acc','lacat','Blochează acum','Se blochează singură după 2 minute în fundal sau 10 minute fără activitate',null,"blocheaza();toast('Blocat.')")}
       ${it('--s5','scut','Schimbă parola','',null,tg('pw'))}
       ${des('pw',`<input id="pwv" type="password" autocomplete="current-password" placeholder="Parola actuală"><input id="pwn1" type="password" autocomplete="new-password" placeholder="Parola nouă (minimum 8 caractere)"><input id="pwn2" type="password" autocomplete="new-password" placeholder="Parola nouă, încă o dată"><button class="btn ghost" onclick="schimbaParola()">Schimbă parola</button>`)}
       ${it('--s4','info','Arată cheia de date','pentru copia de siguranță',null,tg('dk'))}
@@ -2224,18 +2254,18 @@ function vSetari(){
   return `<div class="sec" style="margin-top:6px"><h2>Pornire</h2><span class="sub">~15 minute, o singură dată</span></div>
   <div class="sub" style="margin:0 2px 12px">Aplicația pornește cu datele tale după pasul 3. Fiecare pas e explicat în detaliu în documentație.</div>
   ${pasH(1,'repo','Creează două repo-uri goale',`<div class="sub" style="margin-bottom:10px">Doar le creezi, fără fișiere. Codul îl publică Claude, după ce îi spui în chat că sunt create.</div>
-    <div style="display:flex;gap:8px"><a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist-date&visibility=private" target="_blank" rel="noopener">analist-date (privat) ↗</a>
-    <a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist&visibility=public" target="_blank" rel="noopener">analist (public) ↗</a></div>`)}
+    <div style="display:flex;gap:8px"><a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist-date&visibility=private" target="_blank" rel="noopener noreferrer">analist-date (privat) ↗</a>
+    <a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist&visibility=public" target="_blank" rel="noopener noreferrer">analist (public) ↗</a></div>`)}
   ${pasH(2,'chei','Pune cheile în GitHub',`<div class="sub" style="margin-bottom:6px">Pentru fiecare cheie: New repository secret, apoi numele exact și valoarea. Atinge numele ca să-l copiezi.</div>
-    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:6px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener">Deschide pagina de secrete ↗</a>
+    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:6px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener noreferrer">Deschide pagina de secrete ↗</a>
     ${SECRETE.map(([n,b,tip,cum,url])=>`<div style="padding:9px 0;border-bottom:1px solid var(--line)"><div class="row"><button class="chip" style="color:var(--acc)" onclick="copiaza('${n}')">${n} ⧉</button><span class="sub" style="color:var(${tip==='obligatoriu'?'--neg':tip==='recomandat'?'--warn':'--mut'})">${tip}</span></div>
-      <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a href="${url}" target="_blank" rel="noopener" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
-      ${n==='NTFY_TOPIC'?(PORN().topic?`<div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost sm" style="flex:1" onclick="copiaza('${PORN().topic}')">${PORN().topic} ⧉</button><a class="btn ghost sm" style="text-decoration:none" href="https://ntfy.sh/${PORN().topic}" target="_blank" rel="noopener">Abonează-te ↗</a></div>`:`<button class="btn ghost sm" style="margin-top:6px" onclick="topicNou()">Generează un nume</button>`):''}
+      <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
+      ${n==='NTFY_TOPIC'?(PORN().topic?`<div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost sm" style="flex:1" onclick="copiaza('${PORN().topic}')">${PORN().topic} ⧉</button><a class="btn ghost sm" style="text-decoration:none" href="https://ntfy.sh/${PORN().topic}" target="_blank" rel="noopener noreferrer">Abonează-te ↗</a></div>`:`<button class="btn ghost sm" style="margin-top:6px" onclick="topicNou()">Generează un nume</button>`):''}
       ${n==='DATA_KEY'?(PORN().dataKey?`<button class="btn ghost sm num" style="margin-top:6px;width:100%;word-break:break-all;font-size:12.5px" onclick="copiaza('${PORN().dataKey}')">${PORN().dataKey} ⧉</button>${PORN().existenta?'<div class="sub pos" style="margin-top:4px">Cheie existentă, preluată. Nu o pune din nou în GitHub dacă e deja acolo.</div>':''}`
         :`<div style="display:flex;gap:8px;margin-top:6px"><button class="btn ghost sm" style="flex:1" onclick="cheieNoua()">Generează cheia de date</button></div>
           <details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Am deja o cheie de date (telefon nou)</summary><input id="fdk" autocomplete="off" placeholder="Cheia de date (43 de caractere)"><button class="btn ghost sm" onclick="cheieExistenta()">Folosește cheia</button></details>`):''}</div>`).join('')}`)}
   ${pasH(3,null,'Conectează telefonul',`<div class="sub">La crearea tokenului alegi:</div><ul class="m" style="font-size:13.5px"><li>Repository access: <b class="ink2">Only select repositories → analist-date</b></li><li>Permissions: <b class="ink2">Contents: Read-only</b> și <b class="ink2">Actions: Read and write</b></li><li>Expiration: <b class="ink2">1 an</b></li></ul><div class="sub">Tokenul nu poate citi alt repo și nu poate modifica fișiere.</div>
-    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin:10px 0" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Creează tokenul ↗</a>
+    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin:10px 0" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Creează tokenul ↗</a>
     <input id="ft" type="password" autocomplete="off" placeholder="Lipește tokenul aici (github_pat_…)">
     <details style="margin-bottom:8px"><summary class="sub" style="cursor:pointer">Alt repo decât ${esc(R)}?</summary><input id="fu" value="${esc(R)}"></details>
     <div class="sub" style="margin-top:6px">Alege o parolă pentru aplicație. Cu ea se criptează pe telefon tokenul, cheia de date și jurnalul. Minimum 8 caractere. O frază din câteva cuvinte e cea mai sigură.</div>
@@ -2273,23 +2303,29 @@ function deconecteaza(){
   <div class="sub" style="font-size:14px;line-height:1.6;margin-bottom:12px">Se șterg de pe telefon seiful, tokenul și datele salvate. Datele din GitHub rămân criptate. Pentru reconectare îți trebuie cheia de date.</div>
   <button class="btn red" onclick="stergeSeif()">Deconectează</button><button class="btn ghost" onclick="closeSheet()">Renunță</button>`);
 }
+// Analiza la cerere: pornește rularea în GitHub și urmărește-o pas cu pas (la 3 secunde), cu timpul scurs pe ecran.
+function progres(t){ const el=$('prog'); if (!el) return; if (t==null) { el.classList.remove('on'); return; } el.innerHTML=`<i></i><span>${esc(t)}</span>`; el.classList.add('on'); }
+let RULEAZA = false;
 async function ruleaza(test){
+  if (RULEAZA) return; RULEAZA = true;
+  const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
     await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:V.pub}:{mod:'zi'}})});
-    toast(test?'Testez conexiunile. Durează în jur de un minut…':'Analiza a pornit. Durează în jur de un minut…');
-    for (let i=0;i<30;i++) {
-      await new Promise(r=>setTimeout(r,10000));
+    progres(test?'Testez conexiunile…':'Pornește analiza…');
+    let run = null;
+    for (let i=0;i<120;i++) {
+      await new Promise(r=>setTimeout(r, i<3?2000:3000));
       const j = await gh('/actions/workflows/analiza.yml/runs?event=workflow_dispatch&per_page=1');
-      const run = j.workflow_runs?.[0];
-      if (run && run.created_at >= inainte.slice(0,19) && run.status==='completed') {
-        await new Promise(r=>setTimeout(r,3000)); await reincarca();
-        if (test || run.conclusion!=='success') { go('setari'); toast(run.conclusion==='success'?'Testul s-a terminat. Rezultatul e mai jos.':'O conexiune nu merge. Detaliile sunt mai jos.'); return; }
-        go('azi'); toast('Analiză actualizată.'); return;
-      }
+      run = j.workflow_runs?.[0]; if (!run || run.created_at < inainte.slice(0,19)) { progres(`GitHub pregătește rularea… ${sec()} s`); continue; }
+      if (run.status!=='completed') { progres(`${run.status==='in_progress'?'Citesc brokerii și prețurile':'În așteptare la GitHub'}… ${sec()} s`); continue; }
+      progres('Aduc rezultatele…'); await new Promise(r=>setTimeout(r,1200)); await reincarca(); progres(null);
+      if (test || run.conclusion!=='success') { go('setari'); toast(run.conclusion==='success'?`Testul s-a terminat în ${sec()} s. Rezultatul e mai jos.`:'O conexiune nu merge. Detaliile sunt mai jos.'); return; }
+      go('azi'); toast(`Analiză actualizată în ${sec()} s.`); return;
     }
-    toast('Încă rulează. Reîncarcă peste un minut.');
-  } catch(e){ toast(e.message); }
+    progres(null); toast('Încă rulează. Reîncarcă peste un minut.');
+  } catch(e){ progres(null); toast(e.message); }
+  finally { RULEAZA = false; }
 }
 
 // ===== Foi: trage în jos ca să închizi =====
@@ -2331,8 +2367,10 @@ LOADED = !are_seif() ? true : LOADED;
 const T_START = performance.now();
 $('splash').querySelector('.spl').innerHTML = LOGO('spl-logo', true, false);
 function ascundeSplash(){ const sp=$('splash'); if (!sp || sp.dataset.gata) return; sp.dataset.gata=1;
-  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  setTimeout(()=>{ sp.classList.add('iese'); setTimeout(()=>sp.remove(), 700); }, calm ? 0 : Math.max(0, 1700-(performance.now()-T_START))); }
+  // cu amprenta, nu mai așteptăm animația: deblocarea are prioritate
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches, rapid = are_seif() && !V && !!citesteSeif()?.bio;
+  setTimeout(()=>{ sp.classList.add('iese'); setTimeout(()=>sp.remove(), 600); }, calm ? 0 : Math.max(0, (rapid?700:1700)-(performance.now()-T_START))); }
+motor().catch(()=>{}); // motorul se încarcă din timp, cât aștepți amprenta
 render(); reincarca();
 setTimeout(ascundeSplash, 3500); // în orice caz, nu mai mult
 setInterval(()=>{ if(!document.hidden) stare(); }, 60e3);

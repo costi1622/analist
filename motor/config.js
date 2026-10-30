@@ -1,5 +1,5 @@
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.15.0';
+export const VERSION = '0.16.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -47,8 +47,23 @@ export const THEMES = {
 // Aceeași companie, simboluri diferite (clase de acțiuni).
 export const ALIASES = { GOOG: 'GOOGL' };
 
-// ETF-uri: nucleul portofoliului. Fără semnale de vânzare sau de protecție.
-export const ETFS = ['VWCE'];
+// Catalogul de ETF-uri pe care analistul le cunoaște și le poate recomanda (toate UCITS, acumulare, listate pe Xetra în EUR).
+// Date verificate în octombrie 2026 (justETF, emitenți). rol: nucleu (global), obligatiuni, regional, tematic.
+// tema = tema din THEMES în care intră (o expunere tematică prin ETF se adună la aceeași temă ca acțiunile).
+// detine = acțiuni din portofoliul tău pe care ETF-ul le conține printre cele mai mari poziții (pentru „similar cu ce ai”).
+export const ETF_CATALOG = {
+  VWCE: { nume: 'Vanguard FTSE All-World', isin: 'IE00BK5BQT80', ter: 0.14, rol: 'nucleu', indice: 'FTSE All-World', companii: '~3.700', despre: 'Companii mari și mijlocii din toată lumea, inclusiv piețe emergente.' },
+  EUNL: { nume: 'iShares Core MSCI World', isin: 'IE00B4L5Y983', ter: 0.20, rol: 'nucleu', indice: 'MSCI World', companii: '~1.300', despre: 'Companii mari și mijlocii din 23 de țări dezvoltate, fără piețe emergente.' },
+  SXR8: { nume: 'iShares Core S&P 500', isin: 'IE00B5BMR087', ter: 0.07, rol: 'regional', tema: 'SUA (indice)', indice: 'S&P 500', companii: '~500', despre: 'Cele mai mari 500 de companii din SUA. Foarte ieftin, dar concentrat pe o singură țară și pe tehnologie.', detine: ['NVDA', 'AAPL', 'GOOGL', 'AMD', 'GE', 'GEV', 'PWR'] },
+  IS3N: { nume: 'iShares Core MSCI EM IMI', isin: 'IE00BKM4GZ66', ter: 0.18, rol: 'regional', tema: 'Piețe emergente', indice: 'MSCI EM IMI', companii: '~3.100', despre: 'Companii din piețele emergente (Taiwan, India, China, Coreea și altele), inclusiv cele mici.', detine: ['TSM'] },
+  VVSM: { nume: 'VanEck Semiconductor', isin: 'IE00BMC38736', ter: 0.35, rol: 'tematic', tema: 'AI și infrastructura ei', indice: 'MVIS US Listed Semiconductor 10% Capped', companii: '~25', despre: 'Producătorii de cipuri: TSMC, Nvidia, ASML, AMD, Broadcom și alții. Aceeași idee ca acțiunile tale de AI, împărțită pe mai multe companii.', detine: ['TSM', 'NVDA', 'AMD'] },
+  DFEN: { nume: 'VanEck Defense', isin: 'IE000YYE6WK5', ter: 0.55, rol: 'tematic', tema: 'Aviație', indice: 'MarketVector Global Defense Industry', companii: '~30', despre: 'Industria de apărare din SUA și Europa (Rheinmetall, Thales, Leonardo, Saab și alții).', detine: ['GE', 'AIR.PA'] },
+  EUNA: { nume: 'iShares Core Global Aggregate Bond EUR Hedged', isin: 'IE00BDBRDM35', ter: 0.10, rol: 'obligatiuni', tema: 'Obligațiuni', indice: 'Bloomberg Global Aggregate', companii: '~23.000 de obligațiuni', despre: 'Obligațiuni de stat și de companii din toată lumea, cu riscul valutar acoperit în euro. Se mișcă mult mai puțin decât acțiunile.' },
+};
+// ETF-uri tratate ca nucleu: fără semnale de vânzare sau de protecție; împart ținta ETF.
+export const ETFS = Object.keys(ETF_CATALOG).filter(k => ['nucleu', 'obligatiuni'].includes(ETF_CATALOG[k].rol));
+// Toate ETF-urile din catalog (și cele tematice), pentru recunoaștere.
+export const TOATE_ETF = Object.keys(ETF_CATALOG);
 
 // Reguli de risc.
 export const RISK = {
@@ -71,8 +86,8 @@ export const IMPOZIT = { cota: 16, termen: '25 mai' };
 
 // Sufixe Trading 212 -> sufixe de bursă. "VWCEd_EQ" = VWCE pe Xetra.
 export const T212_SUFFIX = { d: '.DE', p: '.PA', l: '.L', a: '.AS', e: '.MC', m: '.MI', s: '.SW' };
-export const SYMBOL_OVERRIDES = { 'VWCEd_EQ': 'VWCE' };
-export const ETORO_SYMBOL = { VWCE: 'VWCE.DE' };
+export const SYMBOL_OVERRIDES = { 'VWCEd_EQ': 'VWCE', 'EUNLd_EQ': 'EUNL', 'SXR8d_EQ': 'SXR8', 'IS3Nd_EQ': 'IS3N', 'VVSMd_EQ': 'VVSM', 'DFENd_EQ': 'DFEN', 'EUNAd_EQ': 'EUNA' };
+export const ETORO_SYMBOL = { VWCE: 'VWCE.DE', EUNL: 'EUNL.DE', SXR8: 'SXR8.DE', IS3N: 'IS3N.DE', VVSM: 'VVSM.DE', DFEN: 'DFEN.DE', EUNA: 'EUNA.DE' };
 
 // Moneda de listare după sufix (pentru expunerea valutară).
 export const MONEDA_SUFIX = { '.PA': 'EUR', '.DE': 'EUR', '.AS': 'EUR', '.MC': 'EUR', '.MI': 'EUR', '.L': 'GBP', '.SW': 'CHF' };
@@ -84,7 +99,7 @@ export const ORAR = {
   USD: { text: '16:30–23:00', interval: 'între 16:30 și 23:00', motiv: 'în timpul ședinței americane, nu înainte de deschidere sau după închidere' },
 };
 // Costul anual al ETF-urilor (TER, % pe an), din documentul cu informații cheie al fondului.
-export const TER = { VWCE: 0.22 };
+export const TER = Object.fromEntries(Object.entries(ETF_CATALOG).map(([k, v]) => [k, v.ter])); // VWCE: 0,14% din 28 iulie 2026
 
 // Paza la date ciudate: peste aceste praguri, datele sunt marcate „de verificat” și nu trimitem notificări pe ele.
 export const PAZA = { miscareZi: 40, totalZi: 15, dif_broker: 0.5 };

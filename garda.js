@@ -1,0 +1,1 @@
+/* aplicația nu se deschide în interiorul altui site (protecție la clickjacking: GitHub Pages nu trimite antetul frame-ancestors) */ if (window.top !== window.self) { document.documentElement.style.display='none'; try { window.top.location = window.self.location.href; } catch(e) {} }

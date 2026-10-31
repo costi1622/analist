@@ -674,3 +674,56 @@ export function raportAnual(an, tranzactii = [], dividende = []) {
   return { an, tranzactii: t.length, faraCurs: t.filter(x => x.lei == null).length, peBroker, net, impozitCastig, dividende: d.length, tari, divBrut, divNet, impozitDiv,
     venituri, praguri, treapta, cass, total: impozitCastig + impozitDiv + cass, depune: net !== 0 || d.length > 0 || cass > 0 };
 }
+
+// Evoluția fiecărui cont, zi cu zi, pe ultimele n zile de bursă, reconstituită din ce ai acum și din ce ai cumpărat/vândut:
+//   valoare(zi) = unități deținute în ziua aceea × prețul de închidere × cursul BNR al zilei.
+//   Trading 212: unitățile de azi minus execuțiile de după acea zi (suma în lei / prețul unității în ziua execuției).
+//   eToro: unitățile de azi împărțite pe loturi după data deschiderii (lotul intră în ziua în care l-ai deschis).
+//   f = banii intrați (+) sau ieșiți (−) în fiecare zi; vw = prețul VWCE în lei. Comparația se face cu comparaVWCE pe fereastra aleasă.
+// Prețul unității e calibrat pe valoarea de azi a poziției (acoperă moneda de listare, pence etc.).
+// poz: [{ cont, sym, qty, valueRON, d:[], c:[], moneda, loturi }]; exec: [{ data, sym, tip, lei }] (Trading 212);
+// curs(d, m) = lei pentru 1 unitate din moneda m la data d; vw = { d:[], c:[] } (VWCE în EUR).
+export function evolutieConturi(poz, exec, curs, vw, n = 260) {
+  const zile = [...new Set(poz.flatMap(p => p.d || []))].filter(Boolean).sort().slice(-n);
+  if (zile.length < 2) return null;
+  const ffill = (d, c) => { const m = new Map(d.map((x, i) => [x, c[i]])); let ult = c.find(x => x != null) ?? null; return zile.map(z => { const v = m.get(z); if (v != null) ult = v; return ult; }); };
+  const fx = (z, m) => !m || m === 'RON' ? 1 : curs(z, m);
+  const out = { d: zile, cont: {} }, fin = zile.length - 1;
+  const vwL = vw?.d?.length ? ffill(vw.d, vw.c).map((c, i) => { const e = fx(zile[i], 'EUR'); return c && e ? c * e : null; }) : null;
+  for (const cont of [...new Set(poz.map(p => p.cont))]) {
+    const val = zile.map(() => 0), cumparat = zile.map(() => 0); let bune = 0;
+    for (const p of poz.filter(x => x.cont === cont)) {
+      const cl = ffill(p.d || [], p.c || []); if (cl[fin] == null || !(p.valueRON > 0)) continue;
+      const fxNow = fx(zile[fin], p.moneda) || 1, qn = p.qty > 0 ? p.qty : 1;
+      const k = p.valueRON / (qn * cl[fin] * fxNow);
+      const unit = zile.map((z, i) => cl[i] == null ? null : cl[i] * (fx(z, p.moneda) || fxNow) * k);
+      const idx = d => { let i = zile.findIndex(z => z >= d); return i < 0 ? fin + 1 : i; };
+      let q;
+      if (cont === 'eToro' && p.loturi?.length) {
+        const tot = p.loturi.reduce((a, l) => a + (l.usd || 0), 0) || 1;
+        q = zile.map(z => qn * p.loturi.reduce((a, l) => a + (!l.data || l.data <= z ? (l.usd || 0) : 0), 0) / tot);
+      } else {
+        q = zile.map(() => qn);
+        for (const e of exec.filter(x => x.sym === p.sym)) {
+          const i = idx(e.data); if (i > fin) continue; const u = unit[i]; if (!u) continue;
+          const du = (e.tip === 'vanzare' ? -1 : 1) * e.lei / u;
+          for (let j = 0; j < i; j++) q[j] -= du; // înainte de execuție aveai cu atât mai puțin (sau mai mult, la vânzare)
+        }
+        q = q.map(x => Math.max(0, x));
+      }
+      zile.forEach((z, i) => { if (unit[i] == null) return; val[i] += q[i] * unit[i]; cumparat[i] += (q[i] - (i ? q[i - 1] : 0)) * unit[i]; });
+      bune++;
+    }
+    if (!bune) continue;
+    out.cont[cont] = { v: val.map(x => +x.toFixed(2)), f: cumparat.map(x => +x.toFixed(2)) };
+  }
+  if (vwL) out.vw = vwL.map(x => x == null ? null : +x.toFixed(4));
+  return Object.keys(out.cont).length ? out : null;
+}
+// Comparația cu VWCE pe orice fereastră: în prima zi, aceeași valoare ca tine; apoi fiecare cumpărare/vânzare (f) intră în VWCE
+// la prețul zilei (vw, în lei). Așa „1 lună” compară doar luna, nu tot anul.
+export function comparaVWCE(v, f, vw) {
+  if (!vw || !v?.length) return null;
+  let u = 0, rest = 0;
+  return v.map((x, i) => { rest += i ? (f[i] || 0) : x; if (!vw[i]) return null; u += rest / vw[i]; rest = 0; return +(u * vw[i]).toFixed(2); });
+}

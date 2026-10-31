@@ -455,6 +455,24 @@ p{margin:12px 0}.stepper .ib{flex:none}.btn.sm{min-height:44px}
 .bila{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;min-width:var(--w);min-height:var(--w);padding:8px 12px;border-radius:999px;font:700 var(--t1)/1.2 system-ui,sans-serif;text-align:center;color:var(--ink);background:color-mix(in srgb,var(--k) 18%,var(--panel2));border:1px solid color-mix(in srgb,var(--k) 45%,transparent)}
 .bila small{font-weight:600;color:var(--ink2);margin-top:2px}
 .crit{margin-top:12px;display:flex;flex-direction:column;gap:4px;font-size:var(--t2)}.crit>div:not(.sub){display:grid;grid-template-columns:48px 1fr;gap:8px;color:var(--ink2)}.crit b{font-size:var(--t1);color:var(--mut)}.crit .up b{color:var(--pos)}.crit .down b{color:var(--neg)}
+.pasdu{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}.pasdu .nivn{width:32px;height:32px;flex:none}.pasdu b{font-size:var(--t3)}
+/* ===== v0.23: verificare vizuală — nimic tăiat, nimic ieșit din căsuță ===== */
+.kpi3 .mv.lg{font-size:var(--t1);padding:2px 8px}.kpi3>div{overflow:hidden}.kpi3 small{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
+.pr .n{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+.ali span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
+.tile .sub{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:clip}
+.tile .tv small{white-space:nowrap}
+/* butoane: textul rămâne pe un rând */
+.rec .btn,.acts .btn,.btn.sm{font-size:var(--t2);white-space:nowrap}
+.btn{line-height:1.3;text-wrap:balance}
+.seg button{white-space:nowrap}
+.brk b,.brk small{white-space:nowrap}
+@media (max-width:400px){
+  .eye{font-size:0;gap:0;padding:8px 12px}.eye .ico{width:18px;height:18px}
+  .seg.mini button{font-size:var(--t1)}
+  .brk{gap:8px;padding:12px 8px}.brk .ex{display:none}.brk .bm{width:32px;height:32px}
+  .btn{padding-left:12px;padding-right:12px}
+}
 </style>
 </head>
 <body>

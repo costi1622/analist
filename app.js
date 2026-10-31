@@ -1,5 +1,5 @@
 // Analist: logica aplicației. Separată de index.html ca politica de securitate (CSP) să interzică orice cod inline.
-const APP_VER = '0.23.0';
+const APP_VER = '0.24.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -257,7 +257,7 @@ const dataRo = iso => iso ? new Date(iso).toLocaleString('ro-RO',{day:'numeric',
 const ziRo = (iso,an=true) => iso ? new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',an?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short'}) : '–';
 const P = () => SNAP?.profil || {tintaETF:60,maxActiune:10,maxTema:25,contributieMin:350,contributieMax:350,contributieTipica:350,orizontAni:10,anTinta:new Date().getFullYear()+10,treapta:'lung',brokerPreferat:'Trading 212'};
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function aplicaTema(){ const r=document.documentElement; if(S.tema==='auto') delete r.dataset.theme; else r.dataset.theme=S.tema; }
+function aplicaTema(){ const r=document.documentElement; if(S.tema==='auto') delete r.dataset.theme; else r.dataset.theme=S.tema; r.classList.toggle('fx-redus', S.fx==='redus'); }
 aplicaTema();
 
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
@@ -424,7 +424,7 @@ function stare(){
   document.body.classList.toggle('nolive', !live());
   $('blk').style.display = live() ? '' : 'none';
   const ultim = intraValid() ? INTRA.generat : SNAP?.generat;
-  $('stare').textContent = ultim ? cand(ultim) : '';
+  $('stare').textContent = ultim ? cand(ultim) : ''; $('stare').classList.toggle('viu', !!ultim && Date.now()-Date.parse(ultim) < 90*60e3);
   const imp = (SNAP?.schimbari||[]).some(x=>x.important);
   document.querySelector('nav button[data-v=azi]').querySelector('.dot')?.remove();
   if (imp) document.querySelector('nav button[data-v=azi]').insertAdjacentHTML('beforeend','<span class="dot"></span>');
@@ -461,7 +461,7 @@ function render(){
   if (!SNAP && VIEW!=='setari') { $('v').innerHTML = LOADED ? ecranFaraDate() : skeleton(); opresteIlustratii(); return; }
   const v=$('v'), intra = !!TRANZ || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
   $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.</footer>`;
-  montaGrafice(); countUp(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
+  montaGrafice(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
 }
 const skeleton = () => `<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:110px;margin-bottom:12px"></div>${'<div class="sk" style="height:58px;margin-bottom:8px"></div>'.repeat(5)}`;
 const intraValid = () => INTRA && SNAP && INTRA.generat > SNAP.generat && INTRA.generat.slice(0,10) === new Date().toISOString().slice(0,10);
@@ -483,6 +483,26 @@ function randPerioada(anual, dela){
   return { v:(Math.pow(1+anual/100, Math.max(zile,1)/365)-1)*100, an:false, et:`din ${lunaRo(dela)}`, zile };
 }
 const lunaRo = iso => ['ian.','feb.','mar.','apr.','mai','iun.','iul.','aug.','sept.','oct.','nov.','dec.'][+iso.slice(5,7)-1] + (iso.slice(0,4)!==String(new Date().getFullYear())?' '+iso.slice(0,4):'');
+// ===== Orbital (v0.24): contorul mecanic, starea zilei, lumina de sub deget =====
+// Contorul: fiecare cifră e o coloană 0–9 care se rotește până la cifra nouă (de la valoarea de data trecută).
+let ODO_PREV = '';
+// Cifra reală rămâne textul elementului (cititoare de ecran, copiere); coloana 0–9 e desenată de CSS (::before).
+function odo(txt){ return `<span class="odo" data-v="${esc(txt)}">${[...txt].map((ch,i)=>/\d/.test(ch)?`<span><span class="c" data-d="${ch}" data-i="${i}">${ch}</span></span>`:`<span>${esc(ch)}</span>`).join('')}</span>`; }
+function animaOdo(){
+  const el = document.querySelector('.odo'); if (!el) return; const v = el.dataset.v, prev = ODO_PREV.padStart(v.length,'0'), lin = matchMedia('(prefers-reduced-motion: reduce)').matches || S.fx==='redus';
+  el.querySelectorAll('.c').forEach(c=>{ const d=+c.dataset.d, p=/\d/.test(prev[+c.dataset.i])?+prev[+c.dataset.i]:0;
+    c.style.transition='none'; c.style.transform=`translateY(calc(${-(lin?d:p)} * var(--t6)))`; });
+  if (!lin && v !== ODO_PREV) requestAnimationFrame(()=>requestAnimationFrame(()=>el.querySelectorAll('.c').forEach((c,k)=>{ c.style.transition=`transform ${0.9+k*0.06}s cubic-bezier(.2,.9,.15,1)`; c.style.transform=`translateY(calc(${-c.dataset.d} * var(--t6)))`; })));
+  ODO_PREV = v;
+}
+// Starea zilei colorează aurora: plus → verde-turcoaz, minus → magenta, aproape zero → albastrul obișnuit.
+function stareZi(){ if (!SNAP?.pozitii) return; const z = SNAP.pozitii.reduce((a,p)=>a+(p.ind?.r1z!=null&&!p.virtual?p.pondere*p.ind.r1z/100:0),0);
+  document.documentElement.dataset.mood = z > 0.15 ? 'sus' : z < -0.15 ? 'jos' : ''; }
+// Lumina de sub deget: un reflex moale pe card, exact unde atingi.
+document.addEventListener('pointerdown', ev=>{ const c = ev.target.closest?.('.card,.tile,.it,.pr'); if (!c || S.fx==='redus') return;
+  const r = c.getBoundingClientRect(); c.style.setProperty('--mx', (ev.clientX-r.left)+'px'); c.style.setProperty('--my', (ev.clientY-r.top)+'px'); c.classList.add('lumina');
+  const stop = () => { setTimeout(()=>c.classList.remove('lumina'), 120); removeEventListener('pointerup', stop); removeEventListener('pointercancel', stop); };
+  addEventListener('pointerup', stop); addEventListener('pointercancel', stop); }, {passive:true});
 // ===== Ecrane ilustrate (D4): fără date, fără internet, analiza rulează. Desene mici, în stilul galaxiei. =====
 const ILU_ORB = 'M30,74 a70,24 0 1,0 140,0 a70,24 0 1,0 -140,0', ILU_ORB2 = 'M54,74 a46,15 0 1,0 92,0 a46,15 0 1,0 -92,0';
 function ilustratie(tip){
@@ -521,7 +541,7 @@ const SERIE_TU = (v, nume='Portofoliul tău') => ({name:nume, short:'Tu', v, col
 const SERIE_VWCE = (v, nume='Aceleași depuneri, numai în VWCE') => ({name:nume, short:'VWCE', v, color:'--vwce', dash:1, w:1.6});
 const GR = {}; let grId = 0;
 // series: [{name, v:[], color:'--s1', dash, w}], x: [date], h: [{v,color,label,dash}], fmt
-const CHART_PREV = {};
+const CHART_PREV = {}, CHART_VAZUT = new Set();
 function lineChart(o){
   const id='g'+(grId++); GR[id]=o; o.H=GRAFIC_H; // aceeași înălțime, aceleași axe și aceeași citire peste tot (D6)
   return `<div class="chart" id="${id}" data-noswipe><div class="ro num" aria-live="polite"></div></div>`;
@@ -542,7 +562,9 @@ function montaGrafice(){
     const {t:ticks, pas} = praguri(Math.min(...all), Math.max(...all)), lo=ticks[0], hi=ticks[ticks.length-1];
     const fA = o.fmtAxa || (v => S.privat&&o.privat ? '•••' : nf(v, pas>=1?0:pas>=0.1?1:2));
     const n=o.series[0].v.length, X=i=>pl+(W-pl-pr)*(n<2?0:i/(n-1)), Y=v=>pt+(H-pt-pb)*(1-(v-lo)/(hi-lo||1));
-    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'grafic')}"><defs>${o.series.map((se,k)=>`<linearGradient id="${id}g${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(${se.color});stop-opacity:.24"/><stop offset="1" style="stop-color:var(${se.color});stop-opacity:0"/></linearGradient>`).join('')}</defs>`;
+    // prima apariție a unui grafic: liniile se desenează (o singură dată pe sesiune, nu la fiecare redesenare)
+    const cheieG = o.anim || o.aria || ''; if (!CHART_VAZUT.has(cheieG)) { CHART_VAZUT.add(cheieG); el.classList.add('intra'); }
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'grafic')}" style="--c0:var(${o.series[0].color})"><defs>${o.series.map((se,k)=>`<linearGradient id="${id}g${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(${se.color});stop-opacity:.24"/><stop offset="1" style="stop-color:var(${se.color});stop-opacity:0"/></linearGradient>`).join('')}</defs>`;
     s+=ticks.map(t=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--grid)" stroke-width="1" ${t===lo?'':'stroke-dasharray="2 4"'}/><text x="${W-pr+8}" y="${Y(t)+4}" fill="var(--mut)" font-size="12" class="num">${esc(fA(t))}</text>`).join('');
     const fX = o.xfmt || (d=>ziRo(d,false));
     if (o.x) { const mid=Math.floor((n-1)/2); s+=[[0,'start'],[mid,'middle'],[n-1,'end']].map(([i,a])=>`<text x="${X(i)}" y="${H-5}" fill="var(--mut)" font-size="12" text-anchor="${a}">${esc(fX(o.x[i]))}</text>`).join(''); }
@@ -550,9 +572,9 @@ function montaGrafice(){
     o.series.forEach((se,k)=>{
       let d='',on=false; se.v.forEach((v,i)=>{ if(v==null){on=false;return;} d+=(on?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1); on=true; });
       if (k===0 && o.area) s+=`<path d="${d}L${X(n-1)} ${H-pb}L${X(0)} ${H-pb}Z" fill="url(#${id}g0)"/>`;
-      s+=`<path d="${d}" fill="none" stroke="var(${se.color})" stroke-width="${se.w||2}" ${se.dash?'stroke-dasharray="4 4"':''} stroke-linejoin="round" stroke-linecap="round"/>`;
+      s+=`<path d="${d}" fill="none" ${se.dash?'stroke-dasharray="4 4"':`class="ln ln${k}" pathLength="1"`} stroke="var(${se.color})" stroke-width="${se.w||2}" stroke-linejoin="round" stroke-linecap="round"/>`;
     });
-    o.series.forEach((se,k)=>{ const li=se.v.length-1; if(se.v[li]!=null&&k===0) s+=`<circle cx="${X(li)}" cy="${Y(se.v[li])}" r="7" fill="var(${se.color})" opacity=".18"/><circle cx="${X(li)}" cy="${Y(se.v[li])}" r="3.6" fill="var(${se.color})" stroke="var(--panel)" stroke-width="1.6"/>`; });
+    o.series.forEach((se,k)=>{ const li=se.v.length-1; if(se.v[li]!=null&&k===0) s+=`<circle class="cap" cx="${X(li)}" cy="${Y(se.v[li])}" r="7" fill="var(${se.color})" opacity=".18"/><circle cx="${X(li)}" cy="${Y(se.v[li])}" r="3.6" fill="var(${se.color})" stroke="var(--panel)" stroke-width="1.6"/>`; });
     s+=`<line class="xh" y1="${pt}" y2="${H-pb}" stroke="var(--ink2)" stroke-width="1" opacity="0"/>${o.series.map((se,k)=>`<circle class="xd${k}" r="4.5" fill="var(${se.color})" stroke="var(--panel)" stroke-width="2" opacity="0"/>`).join('')}<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" class="hit"/></svg>`;
     el.insertAdjacentHTML('beforeend', s);
     const svg=el.querySelector('svg'), ro=el.querySelector('.ro');
@@ -562,6 +584,7 @@ function montaGrafice(){
       CHART_PREV[o.anim]=nou; CHART_PREV[o.anim+'W']=W;
     }
     const fV = v => S.privat&&o.privat ? '•••' : (o.fmt||nf)(v);
+    if (o.series.length > 2) ro.classList.add('multe');
     const citire = i => ro.innerHTML = `<span class="d">${o.x?esc(fX(o.x[i])):''}</span>`+o.series.map(se=>`<span class="v"><span class="k"><i class="${se.dash?'d':''}" style="color:var(${se.color});background:var(${se.color})"></i>${esc(se.short||se.name)}</span><b>${esc(fV(se.v[i]))}</b></span>`).join('');
     citire(n-1);
     const show=ev=>{
@@ -723,7 +746,7 @@ const PLAY = k => 'https://play.google.com/store/apps/details?id='+BROKER[k].pkg
 function linkBroker(k){ const b=BROKER[k]; if (!eAndroid()) return b.web;
   return b.prinPlay ? `intent://launch?id=${b.pkg}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end`
     : `intent://${b.cale}#Intent;scheme=https;package=${b.pkg};S.browser_fallback_url=${encodeURIComponent(PLAY(k))};end`; }
-const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener noreferrer"'} data-c="${A('vib')}"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>${eAndroid()&&BROKER[k].prinPlay?'Magazin Play → Deschide':'Deschide aplicația'}</small></span>${ic('extern','ex')}</a>`;
+const butonBroker = k => `<a class="brk ${k}" href="${esc(linkBroker(k))}" ${eAndroid()?'':'target="_blank" rel="noopener noreferrer"'} data-c="${A('vib')}"><span class="bm">${k==='t212'?'212':'eT'}</span><span><b>${BROKER[k].nume}</b><small>${eAndroid()&&BROKER[k].prinPlay?'prin Magazin Play':'Deschide aplicația'}</small></span>${ic('extern','ex')}</a>`;
 const butoaneBrokeri = () => `<div class="brks">${butonBroker('t212')}${butonBroker('etoro')}</div>`;
 
 // ===== Mișcarea: crește, scade, stagnează =====
@@ -854,7 +877,7 @@ function vAzi(){
     <div class="row" style="gap:8px"><div class="seg mini" data-noswipe>${CONTURI.map(([k,tt])=>`<button class="${C===k?'on':''}" data-c="${A('setCont',k)}">${tt}</button>`).join('')}</div>
       <button class="eye" aria-label="${S.privat?'Arată sumele':'Ascunde sumele'}" data-c="${A('comutaPrivat')}">${ic('ochi')}${S.privat?'Arată':'Ascunde'}</button></div>
     <div class="lbl" style="margin-top:16px">Valoare totală</div>
-    <div class="hero num big" ${S.privat?'':`data-count="${VC.total.toFixed(2)}"`}>${S.privat?'•••••':nf(VC.total)}<small>lei</small></div>
+    <div class="hero num big">${S.privat?'•••••':odo(nf(VC.total))}<small>lei</small></div>
     <div class="kpi3 num">
       <div><span>${momentZi()==='azi'?'Azi':'Ultima zi'}</span>${mv(ziP,1,0.15)}<small>${sgL(zi,0)} lei</small></div>
       <div><span>Câștig total</span>${mv(pc,1,0.5)}<small>${S.privat?'•••':sg(pnl)} lei</small></div>
@@ -884,7 +907,7 @@ function vAzi(){
       ${avatar(p)}
       <div style="min-width:0"><div class="s">${p.oportunitate||iv?.[p.symbol]?.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div><div class="n"><span class="sd" style="color:var(${SEMC[s]})">● ${SEM[s]}</span> ${esc(p.name||'')}</div>
         ${p.deVerificat?'<div class="sub" style="color:var(--warn)">⚠ date de verificat</div>':''}
-        ${p.peCont?`<div class="sub num" style="margin-top:4px">${nf(p.pondere,1)}% din cont${p.valueUSD!=null&&!S.privat?` · $${nf(p.valueUSD)}`:''}</div>`:`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;white-space:nowrap">${wbar(p).replace('class="wb"','class="wb" style="width:48px;flex:none"')}<span class="sub num">${nf(p.pondere,1)}% / ${nf(p.tinta,0)}%</span></div>`}</div>
+        ${p.peCont?`<div class="sub num" style="margin-top:4px">${nf(p.pondere,1)}% din cont${p.valueUSD!=null&&!S.privat?` · $${nf(p.valueUSD)}`:''}</div>`:`<div style="display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;row-gap:4px;margin-top:8px">${wbar(p).replace('class="wb"','class="wb" style="width:48px;flex:none"')}<span class="sub num" style="white-space:nowrap">${nf(p.pondere,1)}% / ${nf(p.tinta,0)}%</span></div>`}</div>
       ${spark(p.serie?.c?.slice(-30))}
       <div class="r"><b class="num fd" style="font-size:var(--t3)">${lei(p.valueRON,0)}</b>${mv(m)}<span class="sub num ${cls(p.pnlPct)}">${sg(p.pnlPct,1)}% total</span></div>
     </div>`; }).join('') + `</div>`:''}`;
@@ -964,7 +987,7 @@ function detaliu(sym, zile){
   const html = `<div class="fisa" style="${stil}"><div class="dh"><div class="grab"></div>
     <div style="display:flex;gap:16px;align-items:center">${avatar(p,'lg')}<div style="flex:1;min-width:0"><div class="row"><div class="fd" style="font-size:var(--t5);font-weight:700">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>${chip(u)}</div>
       <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'')}</div><div class="sub" style="color:var(${col})">● ${esc(p.tema)}</div></div></div>
-    <div class="row" style="margin-top:16px;align-items:flex-end"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">preț de închidere</div></div>
+    <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">preț de închidere</div></div>
       <div style="text-align:right">${mv(MISC(p),1)}<div class="sub" style="margin-top:4px">${momentZi()}</div></div></div></div>
   <div class="vd" style="--k:var(${SEMC[u]})">${ic(VIC[u])}<div>${link(verdict(p))}</div></div>
   ${graf}
@@ -1386,7 +1409,7 @@ function proiectieHTML(pr){
   const ser = k => ani.map(a=>M.proiectie(T, s, a, M.SCENARII_RATE?.[k] ?? sc[k].rata).valoare);
   const dep = ani.map(a=>T+s*12*a);
   return `<div class="sec"><h2>Unde poți ajunge în ${n} ${de(n)}${n===1?'an':'ani'} ${q('proiectie')}</h2></div><div class="card">
-    <div class="tier num" style="margin-top:0">${[['prudent','Prudent'],['mediu','Mediu'],['bun','Bun']].map(([k,t])=>`<div style="${k==='mediu'?'outline:1px solid color-mix(in srgb,var(--acc) 50%,transparent)':''}"><span>${t}, ${sc[k].rata}%/an</span><b style="font-size:var(--t3);margin-top:4px">${S.privat?'•••':nf(sc[k].valoare/1000,0)+' mii'}</b></div>`).join('')}</div>
+    <div class="tier num" style="margin-top:0">${[['prudent','Prudent'],['mediu','Mediu'],['bun','Bun']].map(([k,t])=>`<div style="${k==='mediu'?'outline:1px solid color-mix(in srgb,var(--acc) 50%,transparent)':''}"><span><span style="display:block">${t}</span>${sc[k].rata}% pe an</span><b style="font-size:var(--t3);margin-top:4px">${S.privat?'•••':nf(sc[k].valoare/1000,0)+' mii'}</b></div>`).join('')}</div>
     <div style="margin-top:12px">${lineChart({series:[{name:'Scenariul mediu',short:'Mediu',v:ser('mediu'),color:'--s1'},{name:'Scenariul bun',short:'Bun',v:ser('bun'),color:'--pos',w:1.4},{name:'Scenariul prudent',short:'Prudent',v:ser('prudent'),color:'--warn',w:1.4},{name:'Doar depunerile',short:'Depus',v:dep,color:'--mut',dash:1,w:1.3}],
       x:ani.map(a=>an0+a), xfmt:a=>String(a), area:1, privat:1, anim:'proiectie', fmt:x=>nf(x,0)+' lei', aria:'Proiecția portofoliului la orizont'})}</div>
     <div class="sub num" style="margin-top:8px">Depui în total ${S.privat?'•••':nf(dep.at(-1),0)} lei.</div></div>`;
@@ -1492,7 +1515,7 @@ function sectiuniAnaliza(){
     <div class="row sub"><span>Acum</span></div>${bar(n=>SNAP.teme[n])}
     <div class="row sub" style="margin-top:8px"><span>Ținta ta</span></div>${bar(tintaTema)}
     <div style="margin-top:12px">${B.map(b=>{const a=SNAP.teme[b.n],t=tintaTema(b.n),over=!b.n.startsWith('ETF')&&a>pr.maxTema;return `<div class="row" style="padding:4px 0;font-size:var(--t2);border-bottom:1px solid var(--line)">
-      <span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:10px;height:10px;border-radius:3px;background:var(${b.c});flex:none"></i><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.n)}</span></span>
+      <span style="display:flex;align-items:center;gap:8px;min-width:0"><i style="width:10px;height:10px;border-radius:3px;background:var(${b.c});flex:none"></i><span>${esc(b.n)}</span></span>
       <span class="num" style="white-space:nowrap"><b class="${over?'neg':''}">${nf(a,1)}%</b> <span class="mut">/ ${nf(t,0)}%</span></span></div>`}).join('')}</div>
 </div>`;
   O.alocare=h; h='';
@@ -1678,7 +1701,7 @@ function galaxie(){
   const deseneazaFond = () => { fond.width = cv.width; fond.height = cv.height; fc.setTransform(dpr,0,0,dpr,0,0);
     D.orb.slice(0,4).forEach((o,i)=>{ const a=i*1.7, x=W/2+Math.cos(a)*W*0.28, y=H/2+Math.sin(a*1.3)*H*0.22, g=fc.createRadialGradient(x,y,0,x,y,W*0.45); g.addColorStop(0,o.c+'1f'); g.addColorStop(1,o.c+'00'); fc.fillStyle=g; fc.fillRect(0,0,W,H); });
     fc.fillStyle=D.ink; stele.forEach((s,i)=>{ if (i%6===0) return; fc.globalAlpha=0.18+0.4*s.d; fc.beginPath(); fc.arc(s.x*W,s.y*H,s.r,0,6.283); fc.fill(); }); fc.globalAlpha=1; };
-  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 3); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
+  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 4); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
   marime(); GX.marime = marime;
   const proj = (R, a) => { const S=Math.min(W*0.41,H*0.62), x=R*S*Math.cos(a+st.yaw), z=R*S*Math.sin(a+st.yaw), y=z*st.tilt, k=1+z/(S*4.5); return { x:W/2+x*k, y:H/2+y*k, z, k }; };
   const rStar = () => (14 + 30*Math.sqrt(Math.max(D.etfP,1)/100)) * Math.min(W,360)/360;
@@ -1946,7 +1969,7 @@ function conexiuniHTML(){
     + (SNAP.ultimaIncercare?`<div class="sub" style="margin-top:8px">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>`:'');
 }
 function vSetari(){
-  const aspect = `<div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div></div>`;
+  const aspect = `<div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div><div class="lbl" style="margin:12px 0 8px">Efecte vizuale</div><div class="seg">${[['complet','Complete'],['redus','Reduse']].map(([k,t])=>`<button class="${(S.fx||'complet')===k?'on':''}" data-c="${A('setFx',k)}">${t}</button>`).join('')}</div><div class="sub" style="margin-top:8px">Aurora din fundal, granulația și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div></div>`;
   const ver = `<div class="card sub">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>`;
   if (live()) {
     const c = STARE?.conexiuni || SNAP?.conexiuni || {}, bio = !!citesteSeif()?.bio;
@@ -1976,7 +1999,7 @@ function vSetari(){
       ${it('--s4','info','Arată cheia de date','pentru copia de siguranță',null,tg('dk'))}
       ${des('dk',`<input id="pwa" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('aratăCheia')}">Arată</button><div id="dkv"></div>`)}
       <div class="det sub" style="padding-top:12px;line-height:1.55">Datele din GitHub sunt criptate. Pe telefon, totul stă criptat cu parola ta (sau cu amprenta). Notificările nu conțin simboluri sau sume.</div></div>
-    <div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div></div>
+    <div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div><div class="lbl" style="margin:12px 0 8px">Efecte vizuale</div><div class="seg">${[['complet','Complete'],['redus','Reduse']].map(([k,t])=>`<button class="${(S.fx||'complet')===k?'on':''}" data-c="${A('setFx',k)}">${t}</button>`).join('')}</div><div class="sub" style="margin-top:8px">Aurora din fundal, granulația și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div></div>
     <div class="sec"><h2>Gesturi</h2></div><div class="card sub" style="font-size:var(--t2);line-height:1.7">Trage în jos de sus ca să reîncarci · glisează între tab-uri · atinge un termen subliniat sau „?” · atinge un grafic ca să citești valorile · trage o fereastră în jos ca s-o închizi.</div>
     <div class="card grp">${it('--neg','extern','Deconectează telefonul','șterge seiful de pe acest telefon',null,['deconecteaza'])}</div>
     <div class="sub" style="text-align:center;margin:8px 0 4px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''} · construită de Costi, cu Claude</div>`;
@@ -2359,6 +2382,7 @@ function comutaPrivat(){ S.privat=!S.privat; save(); vib(); render(); }
 function setViz(k){ S.vizAzi=k; save(); vib(); render(); }
 function setSort(k){ S.sort=k; save(); vib(); render(); }
 function setTema(k){ S.tema=k; save(); aplicaTema(); render(); }
+function setFx(k){ S.fx=k; save(); aplicaTema(); render(); }
 function comutaDesc(k){ S.desc = S.desc===k ? '' : k; render(); }
 function comutaPas(k){ const p=S.pasi||{}; S.pasi={...p, [k]:!p[k]}; save(); render(); }
 function detComuta(sym){ DET.det=!DET.det; detaliu(sym, DET.zile); }
@@ -2384,7 +2408,7 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan,
   deschideLectie, arataModul, quiz, cautaTermen, deschideSect, gxReluare, avErr,
   blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, comutaPrivat, setViz, setSort, setTema, comutaDesc, comutaPas,
-  detComuta, detNota, detAd, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, renuntaProfil,
+  detComuta, detNota, detAd, setFx, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, renuntaProfil,
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,
   exportSeif, importSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
   deschideLectiePotrivita, arataRecap, raspundeRecap, simulator, verificaInainte, verifRasp, verifGata

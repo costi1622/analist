@@ -81,7 +81,7 @@ nav button.pop .ico{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
 nav button.pop .ico path:not(.f),nav button.pop .ico rect:not(.f),nav button.pop .ico circle:not(.f){stroke-dasharray:80;animation:draw .6s ease both}
 @keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.18) translateY(-2px)}100%{transform:none}}
 @keyframes draw{from{stroke-dashoffset:80}to{stroke-dashoffset:0}}
-nav .dot{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--verifica);box-shadow:0 0 0 2px var(--panel);animation:puls 2s infinite}
+nav .dot{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--verifica);box-shadow:0 0 0 2px var(--panel);animation:puls 2s 4}
 @keyframes puls{0%{box-shadow:0 0 0 2px var(--panel),0 0 0 2px color-mix(in srgb,var(--verifica) 60%,transparent)}70%{box-shadow:0 0 0 2px var(--panel),0 0 0 9px transparent}100%{box-shadow:0 0 0 2px var(--panel),0 0 0 2px transparent}}
 main{padding:16px 16px calc(var(--navh,84px) + 36px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;overflow-x:clip}
 html,body{overflow-x:clip}
@@ -286,7 +286,7 @@ input[type=range]{padding:0;margin:16px 0 4px;accent-color:var(--acc);background
 .brk .bm{width:34px;height:34px;border-radius:var(--r2);display:grid;place-items:center;font-weight:900;font-size:var(--t2);letter-spacing:-.3px;background:rgba(255,255,255,.18);flex:none}
 .brk b{display:block;font-size:var(--t2);line-height:1.1}.brk small{display:block;font-size:var(--t1);opacity:.85}
 .brk .ex{width:16px;height:16px;stroke:#fff;margin-left:auto;opacity:.8}
-.brk::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.22) 45%,transparent 60%);transform:translateX(-120%);animation:luciu 3.5s 1s infinite}
+.brk::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.22) 45%,transparent 60%);transform:translateX(-120%);animation:luciu 3.5s 1s 2}
 @keyframes luciu{40%,100%{transform:translateX(120%)}}
 /* setări: listă grupată */
 .grp{padding:0;overflow:hidden}
@@ -395,11 +395,11 @@ html[data-vt] .sheet,html[data-vt] .veil{transition:none!important}
 #splash.iese{opacity:0;transform:scale(1.08);pointer-events:none}
 @media (prefers-reduced-motion:reduce){#splash *,#splash::before,#splash::after{animation:none!important}}
 /* iconițe vii: satelitul tabului activ se rotește încet, titlurile secțiunilor își desenează iconița */
-nav button.on .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:orbitaLenta 7s linear infinite}
+nav button.on .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:orbitaLenta 2.4s cubic-bezier(.4,0,.2,1) 1}
 @keyframes orbitaLenta{to{transform:rotate(360deg)}}
 .sec h2 .sic path,.sec h2 .sic rect,.sec h2 .sic ellipse,.sec h2 .sic circle:not(.s){stroke-dasharray:80;animation:draw 1s cubic-bezier(.3,.7,.3,1) both}
 .sec h2 .sic .s{animation:sicIn .6s .5s cubic-bezier(.3,1.6,.5,1) both}
-.tile .th .ico .s,.tic .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:respira 3.2s ease-in-out infinite}
+.tile .th .ico .s,.tic .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:respira 3.2s ease-in-out 1}
 @keyframes respira{50%{transform:scale(1.35);opacity:.75}}
 /* progresul analizei la cerere */
 #prog{position:fixed;top:calc(68px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-12px);z-index:31;display:flex;gap:12px;align-items:center;padding:8px 16px;border-radius:999px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(12px);border:1px solid var(--line);box-shadow:var(--shadow);font-size:var(--t2);font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.22,1,.36,1),transform .3s cubic-bezier(.22,1,.36,1);white-space:nowrap}
@@ -496,15 +496,10 @@ div[style*="display:flex"]:has(>.btn){flex-wrap:wrap}div[style*="display:flex"]>
 :root[data-mood="jos"]{--m1:#e0457b;--m2:#8b5cf6;--m3:#f59e0b}
 :root[data-theme="light"]{--sticla:color-mix(in srgb,#fff 78%,transparent);--muchie:rgba(255,255,255,.9)}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--sticla:color-mix(in srgb,#fff 78%,transparent);--muchie:rgba(255,255,255,.9)}}
-#aur{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden}
-#aur i{position:absolute;width:90vmax;height:90vmax;border-radius:50%;opacity:.3;will-change:transform;transition:background 1.6s ease}
-#aur i:nth-child(1){left:-35vmax;top:-45vmax;background:radial-gradient(closest-side,var(--m1),transparent 70%);animation:aur1 26s ease-in-out infinite alternate}
-#aur i:nth-child(2){right:-40vmax;top:5vmax;background:radial-gradient(closest-side,var(--m2),transparent 70%);animation:aur2 32s ease-in-out infinite alternate;opacity:.22}
-#aur i:nth-child(3){left:-20vmax;bottom:-55vmax;background:radial-gradient(closest-side,var(--m3),transparent 70%);animation:aur3 38s ease-in-out infinite alternate;opacity:.2}
-@keyframes aur1{to{transform:translate3d(18vmax,12vmax,0) scale(1.15)}}@keyframes aur2{to{transform:translate3d(-16vmax,20vmax,0) scale(.9)}}@keyframes aur3{to{transform:translate3d(12vmax,-18vmax,0) scale(1.2)}}
-:root[data-theme="light"] #aur i{opacity:.12}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) #aur i{opacity:.12}}
-body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+#aur{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;contain:strict}
+#aur canvas{display:block;width:100%;height:100%;opacity:.9}
+:root[data-theme="light"] #aur canvas{opacity:.45}@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) #aur canvas{opacity:.45}}
+#aur::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 html,body{background-color:var(--bg)}
 /* sticlă */
 .card,.tile,.dd,.kpi3>div{background:var(--sticla) padding-box,linear-gradient(160deg,color-mix(in srgb,var(--ink) 18%,transparent),color-mix(in srgb,var(--ink) 4%,transparent) 40%,color-mix(in srgb,var(--m1) 22%,transparent)) border-box!important;border:1px solid transparent!important;box-shadow:inset 0 1px 0 var(--muchie),var(--sh2);position:relative}
@@ -518,17 +513,17 @@ html,body{background-color:var(--bg)}
 .odo{display:inline-flex;overflow:hidden;line-height:1;vertical-align:bottom}.odo>span{display:inline-block;height:1em;overflow:hidden}
 .odo>span{line-height:1}.odo .c{display:block;font-size:0;color:transparent;will-change:transform}
 .odo .c::before{content:"0\A 1\A 2\A 3\A 4\A 5\A 6\A 7\A 8\A 9";white-space:pre;display:block;font-size:var(--t6);line-height:1;color:var(--ink);-webkit-text-fill-color:var(--ink)}
-.hero.big{color:var(--ink)}.hero.big .odo{filter:drop-shadow(0 0 12px color-mix(in srgb,var(--m2) 30%,transparent))}html.fx-redus .hero.big .odo{filter:none}
+.hero.big{color:var(--ink)}
 .hero.big small{-webkit-text-fill-color:var(--ink2)}
 /* grafice: liniile se desenează și strălucesc */
 .chart path.ln{stroke-dasharray:1;stroke-dashoffset:0}
 .chart.intra path.ln{animation:deseneaza 1.2s cubic-bezier(.3,.7,.2,1) both}
 @keyframes deseneaza{from{stroke-dashoffset:1}}
-.chart path.ln0{filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c0) 75%,transparent)) drop-shadow(0 0 12px color-mix(in srgb,var(--c0) 35%,transparent))}
-.chart circle.cap{animation:capPuls 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.chart path.glow{fill:none;stroke:var(--c0);stroke-width:7;opacity:.16;stroke-linecap:round;stroke-linejoin:round}html.fx-redus .chart path.glow{display:none}
+.chart circle.cap{animation:capPuls 2.4s ease-in-out 2;transform-box:fill-box;transform-origin:center}
 @keyframes capPuls{50%{transform:scale(1.9);opacity:.05}}
 /* antetul: punct viu când datele sunt proaspete */
-.stamp.viu::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pos);margin-right:8px;vertical-align:1px;box-shadow:0 0 0 0 color-mix(in srgb,var(--pos) 60%,transparent);animation:viu 2s infinite}
+.stamp.viu::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pos);margin-right:8px;vertical-align:1px;box-shadow:0 0 0 0 color-mix(in srgb,var(--pos) 60%,transparent);animation:viu 2s 3}
 @keyframes viu{70%{box-shadow:0 0 0 6px transparent}}
 /* foile: muchie de lumină în culoarea zilei */
 .sheet{background:linear-gradient(180deg,color-mix(in srgb,var(--m1) 9%,var(--panel)),var(--panel) 160px)!important;box-shadow:0 -1px 0 color-mix(in srgb,var(--m2) 45%,transparent),0 -20px 60px -20px color-mix(in srgb,var(--m1) 45%,transparent)}
@@ -537,25 +532,32 @@ html,body{background-color:var(--bg)}
 nav .in{box-shadow:inset 0 1px 0 var(--muchie),0 20px 40px -12px rgba(0,0,0,.6),0 0 0 1px color-mix(in srgb,var(--m1) 18%,transparent)}
 nav .ind{box-shadow:0 0 24px -4px color-mix(in srgb,var(--m1) 70%,transparent)}
 /* efecte reduse */
-html.fx-redus #aur i,html.fx-redus .chart.intra path.ln,html.fx-redus .chart circle.cap,html.fx-redus .stamp.viu::before{animation:none!important}
-html.fx-redus body::after{display:none}html.fx-redus .chart path.ln0{filter:none}
-@media (prefers-reduced-motion: reduce){#aur i{animation:none}.odo .c{transition:none}}
+html.fx-redus .chart.intra path.ln,html.fx-redus .chart circle.cap,html.fx-redus .stamp.viu::before{animation:none!important}
+html.fx-redus #aur::after{display:none}
+@media (prefers-reduced-motion: reduce){.odo .c{transition:none}}
 /* v0.24: rândul de poziție încape și cu text mărit: avatarul crește cu textul, eticheta nu se rupe, graficul mic iese când nu e loc */
 .pr{grid-template-columns:2.5rem 1fr 62px auto}.pr .av{width:2.5rem;height:2.5rem}
 .card.list{container:lst / inline-size}
 @container lst (max-width: 20rem){.pr{grid-template-columns:2.5rem 1fr auto}.pr>svg{display:none}}
+/* v0.25: graficul de pe Acasă, pe cont și pe perioadă */
+.perioade{display:flex;align-items:center;gap:4px;margin-top:16px;flex-wrap:wrap}
+.perioade button{min-height:44px;min-width:44px;padding:0 12px;border-radius:999px;border:1px solid transparent;background:none;color:var(--mut);font:600 var(--t1)/1 inherit;font-family:inherit;cursor:pointer;transition:background .25s,color .25s}
+.perioade button.on{background:color-mix(in srgb,var(--m1) 16%,transparent);border-color:color-mix(in srgb,var(--m1) 38%,transparent);color:var(--ink)}
+.perioade .pdif{margin-left:auto}
+.odo{font-variant-numeric:tabular-nums}
+nav .in{background:color-mix(in srgb,var(--panel) 97%,var(--m1))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;
   background:conic-gradient(from var(--orb),transparent 0 62%,color-mix(in srgb,var(--m2) 90%,#fff) 72%,var(--m1) 80%,transparent 90%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:orbita2 9s linear infinite;opacity:.9}
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.9}.card.hcard.orb::before{animation:orbita2 5s cubic-bezier(.4,0,.2,1) 1}
 @keyframes orbita2{to{--orb:360deg}}
 html.fx-redus .card.hcard::before{animation:none;opacity:.35}
 @media (prefers-reduced-motion: reduce){.card.hcard::before{animation:none}}
 </style>
 </head>
 <body>
-<div id="aur" aria-hidden="true"><i></i><i></i><i></i></div>
+<div id="aur" aria-hidden="true"><canvas id="aurc" width="72" height="144"></canvas></div>
 <div id="splash" aria-hidden="true"><div class="spc"><div class="spl"></div><div class="spw">Analist</div><div class="spt">analistul tău personal pe bursă</div></div></div>
 <header><div class="hrow">
   <div class="brand"><span id="blogo"></span><div>Analist<small>portofoliul lui Costi</small></div></div><span class="pill" id="pill">…</span>

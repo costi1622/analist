@@ -728,3 +728,68 @@ export function comparaVWCE(v, f, vw) {
   let u = 0, rest = 0;
   return v.map((x, i) => { rest += i ? (f[i] || 0) : x; if (!vw[i]) return null; u += rest / vw[i]; rest = 0; return +(u * vw[i]).toFixed(2); });
 }
+
+// ---- v0.30 ----
+// Versiuni „0.29.0” < „0.30.0”: comparație pe numere, nu pe text.
+export function versiuneMaiMica(a, b) {
+  const x = String(a || '0').split('.').map(Number), y = String(b || '0').split('.').map(Number);
+  for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); }
+  return false;
+}
+
+// Lunile în care fiecare companie a plătit dividende în ultimele 13 luni (din istoricul Trading 212), ca să știm când vin următoarele.
+// lista: [{ data, symbol, lei }]; canonic: funcția care aduce simbolul la forma din portofoliu.
+export function luniDividende(lista, azi, canonic = s => s) {
+  const de = new Date(Date.parse(azi) - 400 * 864e5).toISOString().slice(0, 10), out = {};
+  for (const d of lista || []) { if (!d?.data || d.data < de || d.data > azi || !d.symbol) continue;
+    const s = canonic(d.symbol), l = +d.data.slice(5, 7); (out[s] ||= new Set()).add(l); }
+  return Object.fromEntries(Object.entries(out).map(([s, v]) => [s, [...v].sort((a, b) => a - b)]));
+}
+
+// Calendarul dividendelor pe următoarele 12 luni, în lei net.
+// peActiune: [{ symbol, net }] (net pe an, estimat); luni: { SYM: [1, 4, 7, 10] }.
+// O companie fără plăți în istoric nu primește o lună inventată: apare separat, „fără dată”.
+export function calendarDividende(peActiune, luni, azi) {
+  const y = +azi.slice(0, 4), m = +azi.slice(5, 7), z = +azi.slice(8, 10);
+  const urm = Array.from({ length: 12 }, (_, i) => { const k = m - 1 + i + (z > 20 ? 1 : 0), an = y + Math.floor(k / 12), l = k % 12 + 1; return { cheie: `${an}-${String(l).padStart(2, '0')}`, luna: l, plati: [], total: 0 }; });
+  const faraLuna = [];
+  for (const p of peActiune || []) {
+    if (!(p.net > 0)) continue;
+    const L = luni?.[p.symbol];
+    if (!L?.length) { faraLuna.push({ symbol: p.symbol, net: +p.net.toFixed(2) }); continue; }
+    const pe = p.net / L.length;
+    for (const u of urm) if (L.includes(u.luna)) { u.plati.push({ symbol: p.symbol, net: +pe.toFixed(2) }); u.total += pe; }
+  }
+  for (const u of urm) { u.total = +u.total.toFixed(2); u.plati.sort((a, b) => b.net - a.net); }
+  return { luni: urm, faraLuna, total: +urm.reduce((a, u) => a + u.total, 0).toFixed(2) };
+}
+
+// Cât impozit (și CASS) economisești dacă vinzi până la sfârșitul anului pozițiile aflate pe pierdere.
+// tranzactii/dividende: ca la raportAnual; pierderi: [{ symbol, broker, lei }] (lei < 0, câștigul nerealizat al poziției).
+// Se aleg pierderile, de la cea mai mare, doar cât să acopere câștigul net realizat: mai mult nu scade impozitul.
+export function optimizareImpozit(an, tranzactii, dividende, pierderi) {
+  const inainte = raportAnual(an, tranzactii, dividende);
+  const lista = (pierderi || []).filter(p => p.lei < -0.5).sort((a, b) => a.lei - b.lei), alese = [];
+  let rest = inainte.net;
+  for (const p of lista) { if (rest <= 0) break; alese.push(p); rest += p.lei; }
+  const ziua = `${an}-12-31`;
+  const dupa = raportAnual(an, [...tranzactii, ...alese.map(p => ({ broker: p.broker, data: ziua, symbol: p.symbol, lei: p.lei }))], dividende);
+  return { inainte, dupa, alese, economie: +Math.max(0, inainte.total - dupa.total).toFixed(2), pierdereFolosita: +alese.reduce((a, p) => a + p.lei, 0).toFixed(2) };
+}
+
+// Raportul unei perioade (lună sau an) din evoluția zilnică a conturilor: valoarea la început și la sfârșit, banii depuși,
+// câștigul pieței și comparația cu VWCE pe aceiași bani. ev = snap.evolutie; de/pana = 'YYYY-MM-DD' inclusiv.
+export function raportPerioada(ev, de, pana, conturi = null) {
+  if (!ev?.d?.length) return null;
+  const cs = Object.entries(ev.cont || {}).filter(([k]) => !conturi || conturi.includes(k)).map(([, c]) => c);
+  if (!cs.length) return null;
+  const idx = ev.d.map((d, i) => [d, i]).filter(([d]) => d >= de && d <= pana).map(([, i]) => i);
+  if (idx.length < 2) return null;
+  const i0 = idx[0] > 0 ? idx[0] - 1 : idx[0], i1 = idx[idx.length - 1]; // începutul = închiderea dinaintea perioadei
+  const v = ev.d.map((_, i) => cs.reduce((a, c) => a + (c.v[i] || 0), 0)), f = ev.d.map((_, i) => cs.reduce((a, c) => a + (c.f?.[i] || 0), 0));
+  const start = v[i0], fin = v[i1], depus = f.slice(i0 + 1, i1 + 1).reduce((a, x) => a + x, 0), castig = fin - start - depus;
+  const baza = start + depus / 2, rand = baza > 0 ? castig / baza * 100 : null;
+  const b = ev.vw ? comparaVWCE(v.slice(i0, i1 + 1), f.slice(i0, i1 + 1), ev.vw.slice(i0, i1 + 1)) : null;
+  return { de: ev.d[idx[0]], pana: ev.d[i1], start: +start.toFixed(2), fin: +fin.toFixed(2), depus: +depus.toFixed(2), castig: +castig.toFixed(2),
+    rand: rand == null ? null : +rand.toFixed(2), vwce: b?.at(-1) != null ? +b.at(-1).toFixed(2) : null, peZi: { d: ev.d.slice(i0, i1 + 1), v: v.slice(i0, i1 + 1).map(x => +x.toFixed(2)) } };
+}

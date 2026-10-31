@@ -1,3 +1,4 @@
+// © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență: vezi LICENSE.
 // Motorul analistului: funcții pure, fără rețea. Testabil în node.
 // Orientare: investitor pe termen lung (nucleu ETF + sateliți), care reechilibrează din depuneri.
 import { THEMES, ALIASES, ETFS, RISK, PROFIL, TINTE, PROTECTIE, MONEDA_SUFIX, COMISION_FX, ORAR, TREPTE_ORIZONT, SCENARII, ETF_CATALOG, ACTIUNI_CATALOG, IMPOZIT, CASS, RETINERE_DIV, MSCI_WORLD } from './config.js';

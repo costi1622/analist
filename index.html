@@ -667,6 +667,62 @@ header.compact .ib.ha{min-width:44px;padding:4px 4px!important}header.compact .i
 .surse{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
 .surse .sch{font-size:var(--t1);color:var(--ink2);padding:4px 8px;border-radius:999px;background:color-mix(in srgb,var(--ink) 6%,transparent);border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);white-space:nowrap}
 .kvp{font-size:var(--t2);grid-template-columns:auto 1fr}.kvp>span:nth-child(even){text-align:right;color:var(--ink2)}
+/* v0.30: calendarul dividendelor */
+.dcal{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;align-items:end;height:112px}
+.dcl{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;min-width:0}
+.dcl i{display:block;width:100%;max-width:20px;border-radius:4px 4px 2px 2px;background:var(--pos)}
+.dcl.gol i{background:var(--line)}
+.dcl small{font-size:var(--t1);color:var(--mut);white-space:nowrap}
+.dcl .num{font-size:var(--t1);color:var(--ink2);min-height:16px}
+/* v0.30: impozit mai mic */
+.opt{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0;padding:12px 16px;border-radius:var(--r2);background:color-mix(in srgb,var(--pos) 12%,var(--panel2))}
+.opt span{color:var(--ink2);font-size:var(--t2)}.opt b{color:var(--pos);font-size:var(--t4)}
+/* v0.30: indiciile din modul începător */
+.inc{display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;padding:12px 16px;border-radius:var(--r2);background:color-mix(in srgb,var(--acc) 10%,var(--panel2));color:var(--ink2);font-size:var(--t2);line-height:1.5}
+.inc .ico,.inc svg{flex:none;width:20px;height:20px;color:var(--acc)}
+/* v0.30: turul ghidat (nu blochează aplicația: atingerile trec prin fundal) */
+#tur{position:fixed;inset:0;z-index:90;pointer-events:none}
+.turh{position:fixed;border-radius:var(--r3);box-shadow:0 0 0 9999px rgba(3,6,12,.62),0 0 0 2px var(--acc);transition:all .3s var(--ease)}
+.turb{position:fixed;left:16px;right:16px;max-width:480px;margin:0 auto;pointer-events:auto;padding:16px;border-radius:var(--r3);background:var(--panel);border:1px solid var(--line);box-shadow:var(--sh3)}
+.turb b{display:block;margin:4px 0;font-size:var(--t3);color:var(--ink)}.turb p{margin:0 0 12px;font-size:var(--t2);color:var(--ink2);line-height:1.5}
+.turn{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.turn .btn{margin:0;flex:none}
+/* v0.30: verificarea pornirii */
+.vp{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.vp:last-child{border-bottom:0}
+.vp b{font-size:var(--t2);color:var(--ink)}.vp .sub{line-height:1.5;margin-top:4px}
+.vpi{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:var(--t1);color:#fff}
+.vp.ok .vpi{background:var(--pos)}.vp.nu .vpi{background:var(--neg)}.vp.atentie .vpi{background:var(--warn)}
+.vps{padding:12px 16px;border-radius:var(--r2);margin-bottom:4px;font-size:var(--t3)}
+.vps.ok{background:color-mix(in srgb,var(--pos) 14%,var(--panel2));color:var(--pos)}.vps.nu{background:color-mix(in srgb,var(--neg) 14%,var(--panel2));color:var(--neg)}.vps.atentie{background:color-mix(in srgb,var(--warn) 14%,var(--panel2));color:var(--warn)}
+/* v0.30: rapoartele lunare și anuale */
+.raportp .rph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.raportp h2{margin:4px 0;font-size:var(--t5);color:var(--ink)}.raportp .rplogo{width:44px;height:44px;flex:none}
+.raportp .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.raportp .chips button{flex:none}
+.rpk{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.rpk>div{padding:12px;border-radius:var(--r2);background:var(--panel2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.rpk span{font-size:var(--t1);color:var(--mut)}.rpk b{font-size:var(--t4);color:var(--ink)}.rpk b.pos{color:var(--pos)}.rpk b.neg{color:var(--neg)}.rpk small{font-size:var(--t1);color:var(--mut)}
+.rpl{display:block;width:100%;height:120px;margin:4px 0 8px}.rpl .l{fill:none;stroke:var(--acc);stroke-width:2;vector-effect:non-scaling-stroke}.rpl .a{fill:color-mix(in srgb,var(--acc) 14%,transparent);stroke:none}
+.rps{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}.rps h3{margin:0 0 8px;font-size:var(--t3);color:var(--ink)}
+.rpm{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:8px}.rpm span{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:var(--r2);background:var(--panel2);font-size:var(--t2)}.rpm i{font-style:normal}
+.rpb{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;height:144px}
+.rpb>div{display:flex;flex-direction:column;align-items:center;height:100%;gap:4px;min-width:0}
+.rpb em{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.rpb span{min-height:16px}
+.rpb i{display:block;width:100%;max-width:20px;border-radius:2px}.rpb .up i{background:var(--pos)}.rpb .down i{background:var(--neg)}
+.rpb small,.rpb span{font-size:var(--t1);color:var(--mut);white-space:nowrap}
+.rpf{margin-top:16px;line-height:1.5}
+@media print{
+  .noprint{display:none!important}
+  html.tiparesc,html.tiparesc body{background:#fff!important;color:#111!important;color-scheme:light!important;height:auto!important;overflow:visible!important}
+  html.tiparesc body::before,html.tiparesc body::after{display:none!important}
+  html.tiparesc body>*:not(.sheet){display:none!important}
+  html.tiparesc .sheet:not(:has(.raportp)){display:none!important}
+  html.tiparesc .sheet:has(.raportp){position:static!important;inset:auto!important;transform:none!important;max-height:none!important;height:auto!important;overflow:visible!important;width:auto!important;max-width:none!important;margin:0!important;visibility:visible!important;padding:0!important;border:0!important;box-shadow:none!important;background:#fff!important;backdrop-filter:none!important}
+  html.tiparesc .sheet:has(.raportp)::before,html.tiparesc .sheet:has(.raportp)::after{display:none!important}
+  html.tiparesc .raportp{--ink:#111;--ink2:#333;--mut:#555;--line:#ddd;--panel2:#f3f5f8;--acc:#1f5fd6;--pos:#147a3d;--neg:#b42318;--warn:#a15c00;color:#111}
+  html.tiparesc .raportp *{animation:none!important;transition:none!important}
+  html.tiparesc .rps,html.tiparesc .rpk{break-inside:avoid}
+  @page{margin:16mm}
+}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;

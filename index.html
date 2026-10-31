@@ -1,6 +1,8 @@
 <!DOCTYPE html>
+<!-- © 2026 Constantin Enache. Toate drepturile rezervate. Analist: fără licență pentru terți (vezi LICENSE). -->
 <html lang="ro">
 <head>
+<meta name="author" content="Constantin Enache"><meta name="copyright" content="© 2026 Constantin Enache. Toate drepturile rezervate.">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'none'; frame-src 'none'; child-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
@@ -540,9 +542,12 @@ html.fx-redus #aur::after{display:none}
 .card.list{container:lst / inline-size}
 @container lst (max-width: 20rem){.pr{grid-template-columns:2.5rem 1fr auto}.pr>svg{display:none}}
 /* v0.25: graficul de pe Acasă, pe cont și pe perioadă */
-.perioade{display:flex;align-items:center;gap:4px;margin-top:16px;flex-wrap:wrap}
-.perioade button{min-height:44px;min-width:44px;padding:0 12px;border-radius:999px;border:1px solid transparent;background:none;color:var(--mut);font:600 var(--t1)/1 inherit;font-family:inherit;cursor:pointer;transition:background .25s,color .25s}
-.perioade button.on{background:color-mix(in srgb,var(--m1) 16%,transparent);border-color:color-mix(in srgb,var(--m1) 38%,transparent);color:var(--ink)}
+.perioade{display:flex;align-items:center;column-gap:12px;row-gap:8px;margin-top:16px;flex-wrap:wrap}
+.pseg{display:flex;padding:4px;border-radius:var(--r2);background:color-mix(in srgb,var(--panel2) 85%,transparent);border:1px solid color-mix(in srgb,var(--ink) 12%,transparent)}
+.pseg button{position:relative;min-height:44px;min-width:48px;padding:0 12px;border:0;border-radius:var(--r1);background:none;color:var(--mut);font:600 var(--t2)/1 inherit;font-family:inherit;cursor:pointer;transition:background .25s,color .25s}
+.pseg button+button::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:1px;background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.pseg button.on::before,.pseg button.on+button::before{opacity:0}
+.pseg button.on{background:color-mix(in srgb,var(--m1) 22%,var(--panel));color:var(--ink);box-shadow:var(--sh1)}
 .perioade .pdif{margin-left:auto}
 .odo{font-variant-numeric:tabular-nums}
 nav .in{background:color-mix(in srgb,var(--panel) 97%,var(--m1))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
@@ -569,6 +574,15 @@ nav .in{background:color-mix(in srgb,var(--panel) 97%,var(--m1))!important;backd
 .tleg i{width:96px;height:6px;border-radius:999px;background:linear-gradient(90deg,var(--neg),var(--flat),var(--pos))}
 .tleg small{margin-left:auto;font-size:var(--t1)}
 .dots i{position:relative;transition:width .3s cubic-bezier(.3,1.3,.5,1),background .3s}.dots{gap:8px;min-height:44px;align-items:center;margin-top:0;cursor:pointer}
+/* v0.27: celulele de sub sumă, clar separate */
+.kpi3>div{background:color-mix(in srgb,var(--panel2) 80%,transparent)!important;border:1px solid color-mix(in srgb,var(--ink) 14%,transparent)!important;box-shadow:inset 0 1px 0 var(--muchie)!important}
+/* v0.27: benzile de pază */
+.card.pz{margin-top:12px;border-left:3px solid var(--acc)!important}
+.card.pz.rosu{border-left-color:var(--neg)!important;background:color-mix(in srgb,var(--neg) 10%,var(--panel)) padding-box!important}
+.card.pz.galben{border-left-color:var(--warn)!important}
+.pzt{display:flex;align-items:center;gap:8px;margin-bottom:4px}.pzt .ico{width:20px;height:20px;flex:none}.pzt b{font-size:var(--t3)}
+.pz.rosu .pzt{color:var(--neg)}.pz.galben .pzt{color:var(--warn)}
+.pzb{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.pzb .btn{flex:1 1 9rem;margin:0}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;

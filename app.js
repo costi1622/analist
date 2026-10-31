@@ -1,5 +1,8 @@
 // Analist: logica aplicației. Separată de index.html ca politica de securitate (CSP) să interzică orice cod inline.
-const APP_VER = '0.26.0';
+// © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
+// fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
+if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
+const APP_VER = '0.27.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -344,7 +347,7 @@ async function dinCache(){
   const d = async f => { try { return J_(await decDate(FIS[f]?.text)); } catch(e) { return null; } };
   [, SNAP, INTRA, IST, RAP] = await Promise.all([motor().catch(()=>null), d('date/snapshot.enc'), d('date/intraday.enc'), d('date/istoric.enc'), decRaport(FIS['rapoarte/ultimul.enc']?.text).catch(()=>null)]);
   STARE = J_(FIS['date/stare.json']?.text);
-  aplicaProfil(); pregatesteCulori();
+  aplicaProfil(); pregatesteCulori(); setTimeout(pazaAuto, 0);
 }
 // ===== Motorul (exact același cod care rulează în GitHub Actions) și profilul tău =====
 let M = null, ED = null; // ED = profilul în curs de editare (previzualizare, nesalvat)
@@ -397,7 +400,7 @@ async function reincarca(manual) {
     if (live()) {
       const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
-      saveFIS(); await dinCache(); ULTIM=Date.now();
+      saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{});
       if (manual) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
       $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); return;
     }
@@ -570,9 +573,138 @@ function graficCont(C, ist){
   const ev = evolutieCont(C);
   if (!ev) return C==='toate'&&ist.length>5 ? `<div style="margin-top:16px">${lineChart({series:[SERIE_TU(ist.map(x=>x.totalRON),'Valoarea ta'),SERIE_VWCE(ist.map(x=>x.bench),'Totul în VWCE')],x:ist.map(x=>x.azi),area:1,privat:1,fmt:x=>nf(x,0)+' lei',aria:'Valoarea ta față de VWCE'})}</div>` : '';
   const nume = C==='toate' ? 'ambele conturi' : C, dif = ev.b?.at(-1)!=null ? ev.v.at(-1)-ev.b.at(-1) : null;
-  return `<div class="perioade" data-noswipe role="group" aria-label="Perioada graficului">${PERIOADE.map(([k,,t])=>`<button class="${ev.per[0]===k?'on':''}" aria-label="${t}" data-c="${A('setPerioada',k)}">${k}</button>`).join('')}
+  return `<div class="perioade" data-noswipe><div class="pseg" role="group" aria-label="Perioada graficului">${PERIOADE.map(([k,,t])=>`<button class="${ev.per[0]===k?'on':''}" aria-label="${t}" data-c="${A('setPerioada',k)}">${k}</button>`).join('')}</div>
       ${dif!=null&&!S.privat?`<span class="sub num pdif">față de VWCE <b class="${cls(dif)}">${sgL(dif,0)} lei</b></span>`:''}</div>
     <div style="margin-top:8px">${lineChart({series:[SERIE_TU(ev.v,'Valoarea ta'),...(ev.b?[SERIE_VWCE(ev.b,'Aceiași bani în VWCE')]:[])],x:ev.x,area:1,privat:1,anim:'acasa',fmt:x=>nf(x,0)+' lei',aria:`Valoarea din ${nume} față de VWCE, ${ev.per[2]}`})}</div>`;
+}
+// ===== Paza conturilor și oprirea de urgență =====
+// Ce vede analiza (alarmele, activitatea nouă din conturi) + ce verifică telefonul singur (codul din GitHub). Dacă apare
+// un ordin trimis prin API sau o încercare de scriere la broker, aplicația oprește singură analiza automată (oprirea de urgență)
+// și îți arată pașii. Oprirea e reversibilă: „Repornește analiza” o pornește la loc.
+const ALARME_OPRIRE = ['ordin-api','scriere-blocata'];
+// Înlocuiește conținutul foii deschise (fără să deschidă una peste alta); dacă nu e niciuna deschisă, o deschide.
+function foaie(html){ const sus = ['sheet2','sheet'].map($).find(x=>x.classList.contains('on'));
+  if (!sus) return openSheet(html); sus.innerHTML = html; iconiteSectiuni(sus); sus.scrollTop = 0; }
+const SEC = () => SNAP?.securitate || null;
+const alarmeActive = () => (SEC()?.alarme||[]).filter(a=>!(S.alVazute||[]).includes(a.id));
+const activitateNeconf = () => (SEC()?.activitate||[]).filter(x=>!(S.actConf||[]).includes(x.id));
+const codNou = () => Object.entries(S.codNou||{}).filter(([,v])=>v?.lista?.length);
+const TIP_TR = {cumparare:'Cumpărare', vanzare:'Vânzare', 'vanzare-short':'Poziție short deschisă', inchidere:'Poziție închisă'};
+const randAct = x => `<div class="sub" style="margin:4px 0;line-height:1.5"><b class="ink2">${esc(x.broker)}</b> · ${esc(TIP_TR[x.tip]||x.tip)} ${esc(x.symbol||'')}${x.lei!=null&&!S.privat?` · ${nf(x.lei)} lei`:x.usd!=null&&!S.privat?` · $${nf(x.usd)}`:''} · ${esc(ziRo(x.data,false))}${/api/i.test(x.din||'')?' · <b style="color:var(--neg)">trimis prin API</b>':''}</div>`;
+function pazaAuto(){
+  if (!live() || OFFLINE || S.kill) return;
+  const crit = alarmeActive().filter(a=>a.nivel==='critic' && ALARME_OPRIRE.includes(a.tip) && !(S.alAuto||[]).includes(a.id));
+  if (!crit.length) return;
+  S.alAuto = [...(S.alAuto||[]), ...crit.map(a=>a.id)].slice(-50); save();
+  opresteUrgenta(true, crit[0].text);
+}
+async function opresteUrgenta(auto=false, motiv=''){
+  if (S.kill?.ok) { pasiOprire(); return; }
+  let ok=false, eroare='';
+  try { await gh('/actions/workflows/analiza.yml/disable', {method:'PUT'}); ok=true; } catch(e){ eroare=e.message||String(e); }
+  S.kill = {cand:new Date().toISOString(), auto:!!auto, motiv:String(motiv||(auto?'Alarmă de securitate':'Oprită de tine')).slice(0,300), ok, eroare}; save(); vib(); render(); pasiOprire();
+}
+function confirmaOprire(){
+  openSheet(`${capFoaie('alerta','Oprire de urgență','Pentru când crezi că cineva a intrat în conturi','--neg')}
+    <p style="color:var(--ink2);font-size:var(--t2);line-height:1.6;margin:0 0 16px">Oprește imediat analiza automată din GitHub: nu mai rulează nimic care folosește cheile brokerilor. Apoi îți arată, pas cu pas, cum ștergi cheile și cum îți securizezi contul. Se poate reporni oricând.</p>
+    <button class="btn red" data-c="${A('opresteUrgenta',false,'Oprită de tine')}">Oprește acum</button><button class="btn ghost" data-c="${A('closeSheet')}">Renunță</button>`);
+}
+function pasiOprire(){
+  const k = S.kill, li = (n,t,x) => `<div style="display:flex;gap:12px;margin:12px 0"><b class="num" style="flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);font-size:var(--t1)">${n}</b><div><b class="ink" style="font-size:var(--t2)">${t}</b><div class="sub" style="line-height:1.55;margin-top:2px">${x}</div></div></div>`;
+  foaie(`${capFoaie('alerta','Oprire de urgență', k?`${k.auto?'pornită automat':'pornită de tine'} · ${esc(cand(k.cand))}`:'', '--neg')}
+    ${k?.motiv?`<div class="al err" style="margin:0 0 12px">${esc(k.motiv)}</div>`:''}
+    ${li(1, k?.ok?'Analiza automată e oprită ✓':'Oprește analiza din GitHub', k?.ok?'Nu mai pornește nicio rulare cu cheile brokerilor, nici programată, nici din aplicație.':`Nu am putut-o opri de aici (${esc(k?.eroare||'')}). Deschide GitHub → analist-date → Actions → Analiza → „⋯” → Disable workflow.`)}
+    ${li(2,'Șterge cheia Trading 212','În aplicația Trading 212: Setări → API → cheia → Ștergere. Fără ea nimeni nu mai poate citi sau folosi contul prin API.')}
+    ${li(3,'Șterge cheia eToro','Pe eToro: Settings → Trading → API Key Management → șterge cheia.')}
+    ${li(4,'Verifică tranzacțiile','În ambele aplicații, la Istoric. Dacă vezi ceva ce n-ai făcut, sună imediat la broker.')}
+    ${li(5,'Securizează GitHub','Schimbă parola, deconectează toate sesiunile (Settings → Sessions), revocă tokenurile (Developer settings), pune o cheie de acces (passkey) pentru autentificare.')}
+    ${li(6,'Pornește din nou, cu chei noi doar de citire','Trading 212: doar Account data, Metadata, Portfolio și History (fără „Orders execute”). eToro: doar „Read”. Pune-le în GitHub → Secrets, apoi „Repornește analiza”.')}
+    ${butoaneBrokeri()}
+    ${k?`<button class="btn" style="margin-top:12px" data-c="${A('pornesteDinNou')}">Repornește analiza</button>`:''}<button class="btn ghost" data-c="${A('closeSheet')}">Închide</button>`);
+}
+async function pornesteDinNou(){
+  try { await gh('/actions/workflows/analiza.yml/enable', {method:'PUT'}); S.kill=null; save(); closeSheet(); render(); toast('Analiza automată a pornit din nou.'); }
+  catch(e){ toast('Nu am putut-o porni: '+(e.message||e)); }
+}
+function alarmaVazuta(id){ S.alVazute=[...(S.alVazute||[]), id].slice(-100); save(); render(); }
+function activitateConfirmata(){ S.actConf=[...(S.actConf||[]), ...activitateNeconf().map(x=>x.id)].slice(-300); save(); vib(); render(); toast('Confirmat. Mulțumesc!'); }
+function codConfirmat(){ const c=S.cod||{}; for (const [k,v] of codNou()) c[k]={sha:v.head, cand:new Date().toISOString()}; S.cod=c; S.codNou={}; save(); vib(); render(); }
+// Codul din GitHub: telefonul ține minte ultima versiune pe care ai confirmat-o. O versiune nouă pe care n-ai urcat-o tu
+// (cod strecurat de altcineva) apare aici, independent de ce raportează analiza.
+async function verificaCod(fortat){
+  if (!live() || (!fortat && Date.now()-(S.codVerif||0) < 30*60e3)) return; S.codVerif = Date.now(); save();
+  const zone = [['runner','Codul analizei',()=>gh('/commits?path=runner&per_page=8')], ['gh','Programarea analizei',()=>gh('/commits?path=.github&per_page=8')]];
+  const h = location.hostname, r = location.pathname.split('/')[1];
+  if (/^[a-z0-9-]+\.github\.io$/i.test(h) && /^[A-Za-z0-9._-]+$/.test(r||'')) zone.push(['pwa','Aplicația de pe telefon',()=>fetch(`https://api.github.com/repos/${h.split('.')[0]}/${r}/commits?per_page=8`,{cache:'no-store'}).then(x=>x.ok?x.json():null)]);
+  const cod = {...(S.cod||{})}, nou = {}; let schimbat = false;
+  for (const [k, nume, f] of zone) {
+    try { const c = await f(); if (!Array.isArray(c) || !c.length || !c[0]?.sha) continue; const head = String(c[0].sha);
+      if (!cod[k]) { cod[k] = {sha:head, cand:new Date().toISOString()}; continue; }
+      if (cod[k].sha === head) continue;
+      const i = c.findIndex(x=>x.sha===cod[k].sha);
+      nou[k] = {head, nume, maiMulte:i<0, lista:(i<0?c:c.slice(0,i)).slice(0,8).map(x=>({mesaj:String(x.commit?.message||'').split('\n')[0].slice(0,90), cand:String(x.commit?.committer?.date||x.commit?.author?.date||''), autor:String(x.commit?.author?.name||x.author?.login||'').slice(0,40)}))};
+    } catch(e){ /* fără rețea sau limită GitHub: se reîncearcă la următoarea deschidere */ }
+  }
+  schimbat = JSON.stringify(nou) !== JSON.stringify(S.codNou||{});
+  S.cod = cod; S.codNou = nou; save(); if (schimbat) render();
+}
+// Benzile de pe Acasă: oprire activă, alarme, cod schimbat, tranzacții de confirmat.
+function pazaBanner(){
+  let h = '';
+  if (S.kill) h += `<div class="card pz rosu"><div class="pzt">${ic('alerta')}<b>Analiza e oprită de urgență</b></div><div class="sub">${esc(S.kill.motiv||'')}</div>
+    <div class="pzb"><button class="btn sm" data-c="${A('pasiOprire')}">Pașii de urmat</button></div></div>`;
+  const al = alarmeActive(), crit = al.filter(a=>a.nivel==='critic'), at = al.filter(a=>a.nivel!=='critic');
+  if (crit.length) h += `<div class="card pz rosu"><div class="pzt">${ic('alerta')}<b>Alarmă de securitate</b></div>${crit.map(a=>`<div class="sub" style="margin:4px 0">${esc(a.text)}</div>`).join('')}
+    <div class="pzb">${S.kill?'':`<button class="btn red sm" data-c="${A('confirmaOprire')}">Oprire de urgență</button>`}<button class="btn ghost sm" data-c="${A('alarmeVazute','critic')}">Am verificat, e în regulă</button></div></div>`;
+  if (at.length) h += `<div class="card pz galben"><div class="pzt">${ic('scut')}<b>De făcut pentru siguranță</b></div>${at.map(a=>`<div class="sub" style="margin:4px 0">${esc(a.text)}</div>`).join('')}
+    <div class="pzb"><button class="btn ghost sm" data-c="${A('alarmeVazute','atentie')}">Am înțeles</button></div></div>`;
+  const cn = codNou();
+  if (cn.length) h += `<div class="card pz galben"><div class="pzt">${ic('scut')}<b>Codul aplicației s-a schimbat</b></div>
+    ${cn.map(([,v])=>`<div class="sub" style="margin:8px 0 2px"><b class="ink2">${esc(v.nume)}</b></div>${v.lista.map(c=>`<div class="sub" style="margin:2px 0">• ${esc(c.mesaj||'(fără mesaj)')} · ${esc(c.autor)} · ${esc(cand(c.cand))}</div>`).join('')}${v.maiMulte?'<div class="sub">• și modificări mai vechi</div>':''}`).join('')}
+    <div class="sub" style="margin-top:8px">Ai urcat tu aceste fișiere în GitHub? Dacă nu, cineva ți-a schimbat codul.</div>
+    <div class="pzb"><button class="btn sm" data-c="${A('codConfirmat')}">Da, eu le-am urcat</button><button class="btn red sm" data-c="${A('confirmaOprire')}">Nu eu</button></div></div>`;
+  const an = activitateNeconf();
+  if (an.length) h += `<div class="card pz"><div class="pzt">${ic('scut')}<b>${an.length===1?'O tranzacție nouă':an.length+' tranzacții noi'} în conturi</b></div>${an.slice(0,4).map(randAct).join('')}${an.length>4?`<div class="sub">și încă ${an.length-4}</div>`:''}
+    <div class="sub" style="margin-top:8px">Le-ai făcut tu?</div>
+    <div class="pzb"><button class="btn sm" data-c="${A('activitateConfirmata')}">Da, eu</button><button class="btn red sm" data-c="${A('confirmaOprire')}">Nu toate</button></div></div>`;
+  return h;
+}
+function alarmeVazute(nivel){ const ids = alarmeActive().filter(a=>nivel==='critic'?a.nivel==='critic':a.nivel!=='critic').map(a=>a.id); S.alVazute=[...(S.alVazute||[]), ...ids].slice(-100); save(); render(); }
+// Setări → Paza tranzacțiilor: tot ce se verifică, pe scurt.
+function pazaDetalii(){
+  const s = SEC(), r = (ok, t, x) => `<div style="display:flex;gap:12px;margin:12px 0"><span style="flex:none;font-size:var(--t3);color:var(${ok===true?'--pos':ok===false?'--neg':'--warn'})">${ok===true?'✓':ok===false?'✗':'!'}</span><div><b class="ink" style="font-size:var(--t2)">${t}</b><div class="sub" style="line-height:1.55;margin-top:2px">${x}</div></div></div>`;
+  const ultim = (s?.activitate||[]).slice(-10).reverse();
+  foaie(`${capFoaie('scut','Paza tranzacțiilor','Analist doar citește. Aici vezi ce se verifică.')}
+    ${r(s?.garda?true:null,'Paza rețelei în analiză', s?.garda?`Activă: la brokeri pleacă doar citiri, orice încercare de cumpărare sau vânzare e blocată și devine alarmă. Ultima verificare: ${esc(cand(s.verificat))}.`:'Apare după prima analiză cu versiunea 0.27 a motorului.')}
+    ${r(s?.etoroScrie===false?true:s?.etoroScrie===true?false:null,'Cheia eToro', s?.etoroScrie===false?'Doar citire: nu poate tranzacționa, nici dacă ar fi furată.':s?.etoroScrie===true?'Are drept de scriere. Generează una nouă doar cu „Read” și șterge-o pe cea veche.':'Nu s-a putut verifica automat. Pe eToro: Settings → Trading → API Key Management, cheia trebuie să aibă doar „Read”.')}
+    ${r(S.t212Citire?true:null,'Cheia Trading 212', S.t212Citire?`Ai verificat pe ${esc(dataRo(S.t212Citire))}: doar permisiuni de citire.`:'Trading 212 nu spune prin API ce drepturi are cheia. Verifică în aplicația Trading 212: Setări → API. Cheia trebuie să aibă doar Account data, Metadata, Portfolio și History, fără „Orders execute”.')}
+    ${S.t212Citire?'':`<button class="btn ghost sm" data-c="${A('t212Verificat')}">Am verificat: fără „Orders execute”</button>`}
+    ${r(codNou().length?false:S.cod?true:null,'Codul din GitHub', codNou().length?'S-a schimbat și n-ai confirmat încă. Vezi banda de pe Acasă.':S.cod?`Neschimbat față de versiunea confirmată. Verificat ${esc(cand(new Date(S.codVerif||Date.now()).toISOString()))}.`:'Se verifică la următoarea deschidere.')}
+    ${r(ALARME_OPRIRE.length?true:null,'Oprirea automată','Un ordin trimis prin API sau o încercare de scriere la broker opresc singure analiza automată.')}
+    <div class="lbl" style="margin-top:16px">Ultimele tranzacții văzute</div>
+    ${ultim.length?ultim.map(randAct).join(''):'<div class="sub" style="margin:8px 0">Nimic nou de la pornirea pazei.</div>'}
+    <button class="btn red" style="margin-top:16px" data-c="${A('confirmaOprire')}">Oprire de urgență</button><button class="btn ghost" data-c="${A('closeSheet')}">Închide</button>`);
+}
+function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
+// Drepturi de autor și licență: avizul complet, deschis din Setări.
+function drepturiAutor(){
+  const an = new Date().getFullYear(), ani = an > 2026 ? '2026–'+an : '2026';
+  const li = a => `<ul class="m" style="font-size:var(--t2);color:var(--ink2);line-height:1.6;margin:8px 0 16px;padding-left:20px">${a.map(x=>`<li style="margin:4px 0">${x}</li>`).join('')}</ul>`;
+  const h3 = t => `<div class="lbl" style="margin-top:16px">${t}</div>`;
+  openSheet(`${capFoaie('lacat','Drepturi de autor și licență',`© ${ani} Constantin Enache`)}
+    <p style="color:var(--ink2);font-size:var(--t3);line-height:1.6;margin:0 0 8px"><b class="ink">Analist</b> este creația lui <b class="ink">Constantin Enache</b>, care deține toate drepturile asupra ei. Toate drepturile rezervate.</p>
+    ${h3('Ce este protejat')}
+    ${li(['Codul aplicației și al motorului de analiză, inclusiv regulile, calculele și modul în care sunt legate între ele.','Designul, ecranele, sigla, iconițele, animațiile și grafica.','Textele, explicațiile, lecțiile și întrebările din „Învață”.'])}
+    <p class="sub" style="margin:0 0 8px">Dreptul de autor ia naștere din momentul creării operei, fără înregistrare. Programele pentru calculator sunt protejate ca opere prin Legea nr. 8/1996 privind dreptul de autor și drepturile conexe (republicată) și prin Directiva 2009/24/CE.</p>
+    ${h3('Licență')}
+    <p style="color:var(--ink2);font-size:var(--t2);line-height:1.6;margin:8px 0">Aplicația este de uz personal, exclusiv pentru autor. Nu se acordă nicio licență altor persoane. Faptul că o parte din cod se poate vedea public nu înseamnă că poate fi folosit.</p>
+    ${h3('Fără acordul scris al autorului este interzis')}
+    ${li(['copierea sau reproducerea aplicației, integral ori parțial;','publicarea, distribuirea, închirierea sau vânzarea ei;','modificarea, traducerea, adaptarea sau crearea unei versiuni derivate;','decompilarea, în afara excepțiilor permise expres de lege;','îndepărtarea sau ascunderea acestui aviz și a numelui autorului.'])}
+    ${h3('Consecințe în caz de furt sau copiere')}
+    ${li(['<b class="ink">Răspundere civilă:</b> încetarea încălcării, retragerea și distrugerea copiilor, plata de despăgubiri. Legea permite despăgubiri egale cu triplul sumelor care ar fi fost datorate pentru o autorizare legală.','<b class="ink">Răspundere penală:</b> reproducerea, distribuirea sau folosirea fără drept a unui program pentru calculator sunt infracțiuni după Legea nr. 8/1996 și se pedepsesc cu închisoare sau amendă.','<b class="ink">Acces fără drept:</b> folosirea tokenurilor, cheilor, parolelor sau datelor din aplicație, ori intrarea în conturile autorului, pot constitui infracțiunile contra siguranței sistemelor și datelor informatice din Codul penal (art. 360–365: acces ilegal la un sistem informatic, transfer neautorizat de date informatice etc.).','<b class="ink">Date personale:</b> datele financiare din aplicație sunt ale autorului. Prelucrarea lor fără drept intră sub incidența GDPR (Regulamentul UE 2016/679).'])}
+    ${h3('Protecții tehnice')}
+    ${li(['Aplicația funcționează doar la adresa ei oficială. O copie publicată în altă parte afișează acest aviz și se oprește.','Datele sunt criptate și pot fi citite doar cu parola și cheia autorului.','Fiecare fișier al aplicației poartă numele autorului și anul.'])}
+    <p class="sub" style="margin:16px 0 4px">Pentru orice utilizare e nevoie de acordul scris al autorului, Constantin Enache.</p>`);
 }
 function setPerioada(k){ S.perioada=k; save(); vib(); render(); }
 const SERIE_TU = (v, nume='Portofoliul tău') => ({name:nume, short:'Tu', v, color:'--tu', w:2.2});
@@ -769,7 +901,7 @@ const ic = (n, c='') => `<svg class="ico ${c}" viewBox="0 0 24 24" aria-hidden="
 // Titlurile secțiunilor primesc automat iconița potrivită.
 const SEC_ICO = [[/ETF-uri pentru/,'nucleu'],[/Lecția zilei/,'bec'],[/Bazele/,'carte'],[/Strategia/,'nucleu'],[/Cum citești/,'puls'],[/Costuri și taxe/,'monede'],[/Psihologia/,'inima'],[/Instrumente/,'scut'],[/Dicționar/,'carte'],[/Harta/,'harta'],[/De știut/,'bec'],[/Poziți/,'lista'],[/Probleme/,'alerta'],[/Profilul/,'profil'],[/Ce cumperi/,'portofel'],[/Unde poți ajunge/,'racheta'],[/ETF-ul de bază/,'nucleu'],[/De ce/,'carte'],
   [/Sănătatea/,'inima'],[/față de totul|față de VWCE/i,'trofeu'],[/De unde vine/,'monede'],[/se mișcă/,'puls'],[/Alocare/,'tinta'],[/Calendar/,'calendar'],[/Monede/,'glob'],[/Școala/,'carte'],[/Decizii/,'raport'],[/Impozit/,'raport'],[/Conturi/,'portofel'],[/ambele conturi/,'link'],
-  [/Conexiuni/,'link'],[/Securitate/,'scut'],[/Aspect/,'paleta'],[/Gesturi/,'mana'],[/Pornire/,'racheta']];
+  [/Conexiuni/,'link'],[/Securitate/,'scut'],[/Drepturi de autor/,'carte'],[/Aspect/,'paleta'],[/Gesturi/,'mana'],[/Pornire/,'racheta']];
 function iconiteSectiuni(root=document){
   root.querySelectorAll('.sec h2').forEach(h=>{ if (h.dataset.ic) return; const t=h.textContent, m=SEC_ICO.find(([re])=>re.test(t)); if (m) { h.insertAdjacentHTML('afterbegin', ic(m[1],'sic')); h.dataset.ic=1; } });
 }
@@ -943,6 +1075,7 @@ function vAzi(){
   const c = ceFac(), ist = (IST||[]).filter(x=>x.totalRON).slice(-60);
   const tIst = ist.length>5 ? tr((ist.at(-1).totalRON/ist[0].totalRON-1)*100, 0.5) : 'flat';
   let h = '';
+  h += pazaBanner();
   if (RULEAZA) h += bandaIlustrata('ruleaza', 'Analiza rulează', `<span class="pt">${esc(PROGRES_TEXT||'Pornește analiza…')}</span>`, 'rulc');
   else if (OFFLINE) h += bandaIlustrata('offline', 'Fără internet', `Vezi datele din ${esc(cand(SNAP.generat))}. Se actualizează singur când revine conexiunea.`);
   // 1) Portofoliul: totalul, ziua, câștigul, luna
@@ -1148,7 +1281,7 @@ function vPlan(){
   let h = '';
   // Profilul: suma lunară și orizontul
   h += `<div class="sec" style="margin-top:8px"><h2>Profilul tău</h2>${ED?'<span class="sub" style="color:var(--warn)">previzualizare, nesalvat</span>':u.sincronizat===false?'<button class="link" data-c="[&quot;sincronizeazaProfil&quot;]">Trimite în GitHub ↻</button>':''}</div>
-  <div class="card" data-noswipe>
+  <div class="card">
     <div class="lbl">Cât investești pe lună</div>
     <div class="stepper" style="margin-top:8px"><button class="ib" style="width:46px;height:46px;font-size:var(--t4)" aria-label="Mai puțin" data-c="${A('sumaPas',-1)}">−</button>
       <input id="psuma" type="number" inputmode="numeric" min="10" step="10" value="${e.suma}" data-ch="${A('setSuma','$val')}" aria-label="Suma lunară în lei">
@@ -1452,7 +1585,7 @@ function alocareHTML(pr, s){
   const b = alocareDate(pr), E = arce(b,'tinta',ALOC_R.e), I = arce(b,'acum',ALOC_R.i), et = b.find(x=>x.k==='ETF'), etf = SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.valueRON,0);
   const luni = M ? M.luniPanaLaTinta(etf, SNAP.totalRON, pr, s) : null, prev = ALOC_PREV; ALOC_PREV = {E, I};
   const seg = (o,k,r,cls,x,p) => `<circle class="arc ${cls}" data-k="${k}" r="${r}" cx="100" cy="100" fill="none" stroke="var(${x.c})" stroke-width="${cls==='e'?13:11}" ${cls==='i'?'opacity=".55"':''} stroke-dasharray="${(p||o).len.toFixed(2)} ${ALOC_C(r).toFixed(2)}" stroke-dashoffset="${(p||o).off.toFixed(2)}" data-to="${o.len.toFixed(2)}|${o.off.toFixed(2)}" transform="rotate(-90 100 100)"/>`;
-  return `<div class="card aloc" data-noswipe>
+  return `<div class="card aloc">
     <div class="alw"><svg viewBox="0 0 200 200" class="alsvg" aria-label="Alocarea acum (inelul interior) și ținta (exterior)">
       <circle r="${ALOC_R.e}" cx="100" cy="100" fill="none" stroke="var(--panel2)" stroke-width="13"/><circle r="${ALOC_R.i}" cx="100" cy="100" fill="none" stroke="var(--panel2)" stroke-width="11"/>
       ${b.map((x,k)=>seg(E[k],x.k,ALOC_R.e,'e',x,prev?.E?.[k])).join('')}${b.map((x,k)=>seg(I[k],x.k,ALOC_R.i,'i',x,prev?.I?.[k])).join('')}
@@ -2080,12 +2213,16 @@ function vSetari(){
       ${des('bk',`<div class="sub" style="line-height:1.55;margin-bottom:8px">Un fișier criptat cu parola ta: tokenul, cheia de date și jurnalul. Fără parolă nu poate fi citit. Îl restaurezi la Pornire, pe acest telefon sau pe altul. Păstrează-l în afara telefonului (Drive, e-mail către tine).</div><input id="pwbk" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('exportSeif')}">Descarcă copia</button>`)}
       ${it('--s4','info','Arată cheia de date','pentru copia de siguranță',null,tg('dk'))}
       ${des('dk',`<input id="pwa" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('aratăCheia')}">Arată</button><div id="dkv"></div>`)}
+      ${it(SEC()?.alarme?.some(a=>a.nivel==='critic')?'--neg':'--pos','scut','Paza tranzacțiilor', SEC()?.garda?(alarmeActive().length?`<span style="color:var(--warn)">${alarmeActive().length} de verificat</span>`:'activă · analiza doar citește'):'apare după prima analiză nouă',null,['pazaDetalii'])}
+      ${it('--neg','alerta','Oprire de urgență', S.kill?'<span style="color:var(--neg)">activă</span>':'oprește analiza și îți arată pașii',null,[S.kill?'pasiOprire':'confirmaOprire'])}
       <div class="det sub" style="padding-top:12px;line-height:1.55">Datele din GitHub sunt criptate. Pe telefon, totul stă criptat cu parola ta (sau cu amprenta). Notificările nu conțin simboluri sau sume.</div></div>
+    <div class="sec"><h2>Drepturi de autor</h2></div>
+    <div class="card grp">${it('--s4','carte','Drepturi de autor și licență','© Constantin Enache · ce e interzis și ce urmează',null,['drepturiAutor'])}</div>
     <div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div><div class="lbl" style="margin:12px 0 8px">Efecte vizuale</div><div class="seg">${[['complet','Complete'],['redus','Reduse']].map(([k,t])=>`<button class="${(S.fx||'complet')===k?'on':''}" data-c="${A('setFx',k)}">${t}</button>`).join('')}</div><div class="sub" style="margin-top:8px">Aurora din fundal, granulația și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div></div>
     <div class="sec"><h2>Gesturi</h2></div><div class="card sub" style="font-size:var(--t2);line-height:1.7">Trage în jos de sus ca să reîncarci · glisează între tab-uri · atinge un termen subliniat sau „?” · atinge un grafic ca să citești valorile · trage o fereastră în jos ca s-o închizi.</div>
     <div class="card grp">${it('--neg','extern','Deconectează telefonul','șterge seiful de pe acest telefon',null,['deconecteaza'])}</div>
     <div class="sub" style="text-align:center;margin:8px 0 4px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>
-    <div class="sub" style="text-align:center;margin:0 0 4px">© 2026${new Date().getFullYear()>2026?'–'+new Date().getFullYear():''} Constantin Enache. Toate drepturile rezervate.</div>`;
+    <button class="link" style="display:block;margin:0 auto 4px;text-align:center" data-c="${A('drepturiAutor')}">© 2026${new Date().getFullYear()>2026?'–'+new Date().getFullYear():''} Constantin Enache. Toate drepturile rezervate.</button>`;
   }
   const R = S.repo||'costi1622/analist-date', [own] = R.split('/'), pas = S.pasi||{};
   const PR = PORN();
@@ -2149,7 +2286,8 @@ let PROGRES_TEXT = '';
 function progres(t){ PROGRES_TEXT = t||''; document.querySelectorAll('#rulc .pt').forEach(x=>x.textContent=PROGRES_TEXT); const el=$('prog'); if (!el) return; if (t==null) { el.classList.remove('on'); return; } el.innerHTML=`<i></i><span>${esc(t)}</span>`; el.classList.add('on'); }
 let RULEAZA = false;
 async function ruleaza(test){
-  if (RULEAZA) return; RULEAZA = true; if (!test && ['azi'].includes(VIEW) || !SNAP) render();
+  if (RULEAZA) return;
+  if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; if (!test && ['azi'].includes(VIEW) || !SNAP) render();
   const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
@@ -2490,7 +2628,7 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan,
   deschideLectie, arataModul, quiz, cautaTermen, deschideSect, gxReluare, avErr,
-  blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, hartaRest, comutaPrivat, setViz, setSort, setTema, comutaDesc, comutaPas,
+  blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, hartaRest, drepturiAutor, confirmaOprire, opresteUrgenta, pasiOprire, pornesteDinNou, alarmeVazute, activitateConfirmata, codConfirmat, pazaDetalii, t212Verificat, comutaPrivat, setViz, setSort, setTema, comutaDesc, comutaPas,
   detComuta, detNota, detAd, setFx, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, renuntaProfil,
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,
   exportSeif, importSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,

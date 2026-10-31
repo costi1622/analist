@@ -1,18 +1,30 @@
 // Analist: logica aplicației. Separată de index.html ca politica de securitate (CSP) să interzică orice cod inline.
-const APP_VER = '0.21.0';
+const APP_VER = '0.22.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
-const ORD = {uita:0,cumpara:1,las:2};
+const ORD = {uita:0,cumpara:1,reducere:2,las:3};
 // Ce vezi pe ecran: 3 stări. Motorul rămâne cu cele 6 semnale; explicația exactă e în fișa acțiunii.
-const SEM = {cumpara:'Cumpără luna asta', las:'Las-o', uita:'Uită-te la ea'};
-const SEMC = {cumpara:'--adauga', las:'--pastreaza', uita:'--verifica'};
+const SEM = {cumpara:'Cumpără luna asta', reducere:'La reducere', las:'Las-o', uita:'Uită-te la ea'};
+const SEMC = {cumpara:'--adauga', reducere:'--opor', las:'--pastreaza', uita:'--verifica'};
 const sumaPlan = () => P().contributieTipica;
 const inPlan = sym => (SNAP?.planuri?.[sumaPlan()]||[]).find(l=>l.symbol===sym);
-const sem = p => ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
+const sem = p => p.reducere ? 'reducere' : ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
 // Verdictul într-o propoziție, pentru fișa acțiunii.
+// „La reducere” (v0.22): a scăzut mult, dar ca sectorul sau piața, iar firma arată bine. Se cumpără în trei tranșe.
+// Tranșa = o treime din cât lipsește până la ținta ei, cel mult o treime din suma lunară, rotunjită la 10 lei.
+function transeReducere(p){ const pr=P(), T=SNAP.totalRON, s=pr.contributieTipica, lipsa=Math.max(0,(p.tinta-p.pondere)/100*(T+s));
+  const t = Math.round(Math.min(lipsa, s)/3/10)*10; return Math.max(t, Math.min(pr.transaMinima, lipsa)); }
+function textReducere(p){
+  const r = p.reducere, mon = p.moneda||'', z = r.refNume, cmp = `Pe 3 luni: ${sg(r.r3l,1)}%, față de ${sg(r.ref3l,1)}% pentru ${z}.`;
+  const baza = `A scăzut ${nf(r.scadere,1)}% față de maximul pe un an. ${cmp} Scăderea vine de la piață, nu de la companie, iar cifrele firmei arată bine.`;
+  if (r.sectorPeste) return `${baza} Doar informativ: sectorul ${r.tema} are deja ${nf(r.tp,0)}%, peste plafonul de ${P().maxTema}%, așa că banii noi merg în altă parte. Dacă vrei totuși să cumperi, ridică plafonul din Plan.`;
+  const t = transeReducere(p), st = r.etapa==='stabilizat';
+  return `${baza} Poate fi o oportunitate, cumpărată în trei tranșe de câte ~${t} lei: ${st?'tranșele 1 și 2 acum':'tranșa 1 acum'}${st?' (prețul a trecut deja de media de 20 de zile)':`, a doua când prețul trece de ${nf(r.sma20)} ${mon} (media de 20 de zile: nu mai scade)`}, a treia când trece de ${nf(r.sma200)} ${mon} (media de 200 de zile: trendul s-a întors). Banii vin din suma lunară, nu în plus.`;
+}
 function verdict(p){
   if (p.deVerificat) return `Date de verificat: ${SNAP.paza?.motiv||'mișcare neobișnuită'} Semnalele pentru ea au fost oprite azi.`;
   const l = inPlan(p.symbol);
+  if (p.reducere) return textReducere(p);
   if (sem(p)==='uita') return p.atentie[0] || 'Verifică dacă motivul pentru care o ții mai e valabil.';
   const oz = intraValid() ? INTRA.pozitii.find(x=>x.symbol===p.symbol)?.oportunitate : null;
   if (oz) return `★ Azi: ${oz}${l?` E în planul lunii: ${l.suma} ${de(l.suma)}lei la ${l.broker}.`:''}`;
@@ -174,12 +186,20 @@ function blocheaza(){
   stare(); render();
 }
 // Încercări greșite: după 3, așteptare crescătoare (5 s, 10 s, 20 s… maximum 5 minute).
+// O singură deblocare odată (Enter apăsat de două ori, sau amprenta și parola în același timp, nu trebuie să se calce pe picioare).
+// O eroare DUPĂ ce seiful s-a deschis (date, rețea) nu mai e raportată ca „parolă greșită” și nu crește contorul de încercări.
+let DEBLOCARE = false;
 async function deblocheaza(){
+  if (DEBLOCARE || V) return;
   const e = S.esec || {n:0, pana:0}; if (Date.now() < e.pana) { toast(`Așteaptă ${Math.ceil((e.pana-Date.now())/1000)} s.`); return; }
-  const pw = $('pw').value; if (!pw) return;
-  $('bdeb').disabled = true; $('bdeb').textContent = 'Se deschide…';
-  try { await deschideSeif(pw); PAROLA_SCURTA = [...pw].length < PAROLA_MIN; vib(); await dupaDeblocare(); }
-  catch(err) { e.n++; if (e.n>=3) e.pana = Date.now() + Math.min(5000*Math.pow(2,e.n-3), 300000); S.esec=e; save(); vib(); render(); toast(e.n>=3?`Parolă greșită. Următoarea încercare peste ${Math.ceil((e.pana-Date.now())/1000)} s.`:'Parolă greșită.'); }
+  const pw = $('pw')?.value; if (!pw) return;
+  DEBLOCARE = true; $('bdeb').disabled = true; $('bdeb').textContent = 'Se deschide…';
+  try { await deschideSeif(pw); }
+  catch(err) { DEBLOCARE = false; e.n++; if (e.n>=3) e.pana = Date.now() + Math.min(5000*Math.pow(2,e.n-3), 300000); S.esec=e; save(); vib(); render(); toast(e.n>=3?`Parolă greșită. Următoarea încercare peste ${Math.ceil((e.pana-Date.now())/1000)} s.`:'Parolă greșită.'); return; }
+  PAROLA_SCURTA = [...pw].length < PAROLA_MIN; vib();
+  try { await dupaDeblocare(); }
+  catch(err) { console.error(err); toast('Seiful e deschis, dar datele nu s-au putut încărca: ' + (err?.message||err)); LOADED=true; render(); }
+  finally { DEBLOCARE = false; }
 }
 // Sigla: o stea (ETF-ul) cu două orbite și două planete care se mișcă. Vectorială: clară la orice rezoluție.
 let LOGO_N = 0;
@@ -284,6 +304,8 @@ const GLOS = {
   verifica:['Verifică acțiunea','Prețul a coborât sub nivelul de alertă sau și trendul, și fundamentalele s-au deteriorat. Nu e un ordin de vânzare: citește știrile și întreabă-te dacă motivul pentru care ai cumpărat mai e valabil.'],
   reechilibreaza:['Reechilibrează','Poziția a crescut peste dublul plafonului. Varianta fără impozit: nu mai adaugi și o diluează depunerile. Vânzarea parțială grăbește lucrurile, dar câștigul se impozitează cu 16%.'],
   cumpara:['Cumpără luna asta','Acțiunea e în planul tău pentru luna asta. Planul alege cel mult 2 cumpărări: întâi oportunitățile, apoi pozițiile cele mai departe de țintă. Suma exactă e în fișa ei și în tabul Plan.'],
+  reducere:['La reducere','Acțiunea a scăzut mult față de maximul pe un an (cel puțin 15%, sau mai mult la acțiunile agitate), dar cam cât sectorul ei sau piața, iar veniturile și analiștii arată tot bine. Asta o deosebește de o capcană: când scade doar compania, de obicei are un motiv. Se cumpără în trei tranșe: una acum, una când prețul nu mai scade (trece de media de 20 de zile), una când trendul s-a întors (trece de media de 200). Dacă sectorul e peste plafon, e doar informativ.'],
+  scoridee:['Scorul unei idei','Din 100, cu aceleași criterii pentru orice companie: trendul (25), cum a mers față de VWCE pe un an (15), profitabilitatea (20), creșterea veniturilor (15), evaluarea P/E (10), analiștii (15). Se raportează la criteriile pentru care există date; steluța înseamnă date incomplete (de obicei la companiile europene, fără fundamentale gratuite). Scorul decide ordinea ideilor și cât pui la prima cumpărare: 20%, 35% sau 50% din suma lunară, mai puțin dacă prețul e agitat.'],
   las:['Las-o','Nu e nimic de făcut acum. Poate fi în regulă, poate are deja destul loc în portofoliu sau poate e momentul prost pentru cumpărat. Motivul exact e în fișa acțiunii.'],
   uita:['Uită-te la ea','Ceva s-a schimbat și merită 5 minute: prețul a coborât sub nivelul de alertă, trendul și fundamentalele s-au stricat, sau acțiunea a crescut mult peste locul pe care i l-ai dat. Nu e un ordin de vânzare: citește motivul din fișă.'],
   opor:['Oportunitate ★','O acțiune pe care oricum o adaugi a scăzut temporar (RSI sub 35 sau minus 10% față de maximul pe 3 luni), dar trendul lung și fundamentalele sunt în regulă. Un preț mai bun pentru o cumpărare planificată.'],
@@ -431,7 +453,10 @@ function spatiuJos(){ const n=document.querySelector('nav .in'); if(n) document.
 function muta(){ spatiuJos(); const b=document.querySelector('nav button.on'), ind=$('ind'); if(!ind) return; if(!b){ ind.style.opacity=0; return; } ind.style.opacity=1; ind.style.width=b.offsetWidth+'px'; ind.style.transform=`translateX(${b.offsetLeft}px)`; }
 function render(){
   ascundeSplash();
-  if (are_seif() && !V) { $('v').innerHTML = vBlocat(); if(!citesteSeif()?.bio) setTimeout(()=>$('pw')?.focus(),50); return; }
+  if (are_seif() && !V) { // ecranul de blocare se poate redesena (pornire, reîncărcare): nu pierdem ce ai apucat să scrii
+    const pw0 = $('pw')?.value || '', foc = document.activeElement?.id === 'pw';
+    $('v').innerHTML = vBlocat(); if (pw0 && $('pw') && !$('pw').disabled) $('pw').value = pw0;
+    if (foc) $('pw')?.focus(); else if(!citesteSeif()?.bio) setTimeout(()=>$('pw')?.focus(),50); return; }
   if (!live()) VIEW='setari';
   if (!SNAP && VIEW!=='setari') { $('v').innerHTML = LOADED ? ecranFaraDate() : skeleton(); opresteIlustratii(); return; }
   const v=$('v'), intra = !!TRANZ || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
@@ -449,6 +474,15 @@ function countUp(){
   });
 }
 
+// ===== Randamentul real (v0.22): sub un an nu anualizăm =====
+// Un randament anual calculat din câteva luni e umflat (+5% în 4 luni ar apărea ca ~+16% pe an). Standardul (GIPS) e să nu
+// anualizezi perioade sub un an: arătăm cât ai câștigat efectiv în perioadă, cu aceeași metodă (randamentul pe banii tăi, XIRR).
+function randPerioada(anual, dela){
+  if (anual==null) return null; const zile = dela ? (Date.now()-Date.parse(dela))/864e5 : 400;
+  if (zile >= 365) return { v:anual, an:true, et:'pe an', zile };
+  return { v:(Math.pow(1+anual/100, Math.max(zile,1)/365)-1)*100, an:false, et:`din ${lunaRo(dela)}`, zile };
+}
+const lunaRo = iso => ['ian.','feb.','mar.','apr.','mai','iun.','iul.','aug.','sept.','oct.','nov.','dec.'][+iso.slice(5,7)-1] + (iso.slice(0,4)!==String(new Date().getFullYear())?' '+iso.slice(0,4):'');
 // ===== Ecrane ilustrate (D4): fără date, fără internet, analiza rulează. Desene mici, în stilul galaxiei. =====
 const ILU_ORB = 'M30,74 a70,24 0 1,0 140,0 a70,24 0 1,0 -140,0', ILU_ORB2 = 'M54,74 a46,15 0 1,0 92,0 a46,15 0 1,0 -92,0';
 function ilustratie(tip){
@@ -551,7 +585,8 @@ const cumparari = () => (SNAP?.operatiuni||[]).filter(o=>o.tip==='cumparare');
 const investitLuna = (l=LUNA()) => cumparari().filter(o=>o.data.slice(0,7)===l).reduce((a,o)=>a+o.lei,0);
 const lunaFacuta = (l=LUNA()) => investitLuna(l) > 0 || (S.luniFacute||[]).includes(l) || S.planFacut===l;
 function serieLuni(){ // câte luni la rând (până la luna curentă sau cea trecută) ai investit
-  let n=0, d=new Date(); if (!lunaFacuta()) d.setMonth(d.getMonth()-1);
+  // mijlocul lunii: pe 31 octombrie, „o lună înapoi” ar sări din 31 septembrie (care nu există) tot în octombrie; ziua 1 ar putea fi încă luna trecută în UTC
+  let n=0, d=new Date(); d.setDate(15); if (!lunaFacuta()) d.setMonth(d.getMonth()-1);
   for (let i=0;i<120;i++) { const l=d.toISOString().slice(0,7); if(!lunaFacuta(l)) break; n++; d.setMonth(d.getMonth()-1); }
   return n;
 }
@@ -823,7 +858,8 @@ function vAzi(){
     <div class="kpi3 num">
       <div><span>${momentZi()==='azi'?'Azi':'Ultima zi'}</span>${mv(ziP,1,0.15)}<small>${sgL(zi,0)} lei</small></div>
       <div><span>Câștig total</span>${mv(pc,1,0.5)}<small>${S.privat?'•••':sg(pnl)} lei</small></div>
-      ${C==='toate'&&SNAP.randament?.anual!=null?`<div data-c="${A('termen','xirr')}"><span>Pe an, real</span><b class="${cls(SNAP.randament.anual)}">${sg(SNAP.randament.anual,1)}%</b><small>${SNAP.randament.vwce?.anual!=null?`VWCE ${sg(SNAP.randament.vwce.anual,1)}%`:'pe banii tăi'}</small></div>`:''}
+      ${C==='toate'&&SNAP.randament?.anual!=null?(()=>{ const r=randPerioada(SNAP.randament.anual, SNAP.randament.dela), v=SNAP.randament.vwce?.anual!=null?randPerioada(SNAP.randament.vwce.anual, SNAP.randament.dela):null;
+        return `<div data-c="${A('termen','xirr')}"><span>${r.an?'Pe an, real':'Real, '+r.et}</span><b class="${cls(r.v)}">${sg(r.v,1)}%</b><small>${v?`VWCE ${sg(v.v,1)}%`:'pe banii tăi'}</small></div>`; })():''}
     </div>
     ${VC.usd?`<div class="sub num" style="margin-top:8px">În dolari, ca în aplicația eToro: <b class="ink2">$${S.privat?'•••':nf(VC.usd.v)}</b> · <span class="${cls(VC.usd.v-VC.usd.c)}">${S.privat?'•••':(VC.usd.v-VC.usd.c>=0?'+':'−')+'$'+nf(Math.abs(VC.usd.v-VC.usd.c))}</span></div>`:''}
     ${C!=='toate'?`<div class="sub" style="margin-top:8px">${VC.poz.length} ${VC.poz.length===1?'poziție':'poziții'} · ${nf(VC.total/SNAP.totalRON*100,1)}% din portofoliu. Semnalele și planul țin cont de ambele conturi.</div>`:''}
@@ -920,7 +956,7 @@ function detaliu(sym, zile){
           h: prot?[{v:i.protectie,color:'--warn',eticheta:''}]:[], area:1, aria:`Prețul ${p.symbol}`})
       + `<div class="leg"><span><i style="background:var(${lc})"></i>Preț</span><span><i style="background:var(--mut)"></i>Media de 50 de zile</span>${prot?`<span style="color:var(--warn)"><i class="d" style="background:var(--warn)"></i><button class="term" data-c="${A('termen','prot')}">Nivel de alertă</button>&nbsp;<b class="num">${nf(i.protectie)}</b></span>`:''}</div></div>`;
   }
-  const VIC = {uita:'alerta', cumpara:'portofel', las:'scut'};
+  const VIC = {uita:'alerta', cumpara:'portofel', reducere:'stea', las:'scut'};
   const cl = culoriActiune(p.symbol), stil = cl ? `--c:${cl.c};--acc:${cl.c};--acc2:${cl.c2};--accInk:${cl.ink}` : `--c:var(${col})`;
   const html = `<div class="fisa" style="${stil}"><div class="dh"><div class="grab"></div>
     <div style="display:flex;gap:16px;align-items:center">${avatar(p,'lg')}<div style="flex:1;min-width:0"><div class="row"><div class="fd" style="font-size:var(--t5);font-weight:700">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>${chip(u)}</div>
@@ -1160,7 +1196,7 @@ function arataQuiz(){
   openSheet(html);
 }
 function glosar(){
-  openSheet(`${capFoaie('carte','Dicționar','toți termenii din aplicație')}${Object.entries(GLOS).filter(([k])=>!['adauga','pastreaza','nu_adauga','asteapta','verifica','reechilibreaza','cumpara','las','uita','opor'].includes(k)).sort((a,b)=>a[1][0].localeCompare(b[1][0],'ro')).map(([k,g])=>`<button class="it" style="--k:var(--acc)" data-c="${A('termen',k)}"><span class="tx"><b>${esc(g[0])}</b><small>${esc(g[1].slice(0,72))}…</small></span><span class="ch">›</span></button>`).join('')}
+  openSheet(`${capFoaie('carte','Dicționar','toți termenii din aplicație')}${Object.entries(GLOS).filter(([k])=>!['adauga','pastreaza','nu_adauga','asteapta','verifica','reechilibreaza','cumpara','las','uita','opor','reducere'].includes(k)).sort((a,b)=>a[1][0].localeCompare(b[1][0],'ro')).map(([k,g])=>`<button class="it" style="--k:var(--acc)" data-c="${A('termen',k)}"><span class="tx"><b>${esc(g[0])}</b><small>${esc(g[1].slice(0,72))}…</small></span><span class="ch">›</span></button>`).join('')}
     <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button>`);
 }
 function arataModul(id){
@@ -1172,7 +1208,7 @@ function arataModul(id){
 }
 function cautaTermen(v){ const q=v.trim().toLowerCase(), el=$('glr'); if(!el) return;
   if (!q) { el.innerHTML=''; return; }
-  const r = Object.entries(GLOS).filter(([k,g])=>!['adauga','pastreaza','nu_adauga','asteapta','verifica','reechilibreaza','cumpara','las','uita'].includes(k) && (g[0]+' '+g[1]).toLowerCase().includes(q)).slice(0,6);
+  const r = Object.entries(GLOS).filter(([k,g])=>!['adauga','pastreaza','nu_adauga','asteapta','verifica','reechilibreaza','cumpara','las','uita','reducere'].includes(k) && (g[0]+' '+g[1]).toLowerCase().includes(q)).slice(0,6);
   el.innerHTML = r.length ? `<div class="card grp" style="margin-top:8px">${r.map(([k,g])=>`<button class="it" data-c="${A('termen',k)}"><span class="tx"><b>${esc(g[0])}</b><small>${esc(g[1].slice(0,80))}…</small></span><span class="ch">›</span></button>`).join('')}</div>` : `<div class="sub" style="padding:8px 4px">Niciun termen găsit.</div>`; }
 function vInvata(){
   const t = TOATE_LECTIILE(), n = t.filter(l=>citit(l.id)).length, lz = lectiaZilei(), ord = MODULE_ORD(), niv = nivelTau();
@@ -1196,7 +1232,7 @@ function vInvata(){
 const TIP_REC = { similar:['Similar cu ce ai','--acc'], completeaza:['Completează portofoliul','--pos'], orizont:['Pentru orizontul tău','--warn'] };
 const decizii = () => (ED?.decizii) || V?.profil?.decizii || {};
 const aleseAcum = () => (ED?.alese) || V?.profil?.alese || P().alese || [];
-function recomandari(){ if (!M || !SNAP?.pozitii) return []; const d={...decizii()}; for (const k of aleseAcum()) d[k]=d[k]||{r:'da'}; try { return M.recomandaETF(SNAP.pozitii, SNAP.teme||{}, P(), d); } catch(e) { return []; } }
+function recomandari(){ if (!M || !SNAP?.pozitii) return []; const d={...decizii()}; for (const k of aleseAcum()) d[k]=d[k]||{r:'da'}; try { return M.recomandaETF(SNAP.pozitii, SNAP.teme||{}, P(), d, Object.fromEntries((SNAP.candidati||[]).map(c=>[c.symbol,c])), SNAP.etfRef||{}); } catch(e) { return []; } }
 function cardRec(r){
   const [tip, col] = TIP_REC[r.tip] || ['Recomandare','--acc'];
   return `<div class="card rec" style="--k:var(${col})">
@@ -1206,31 +1242,44 @@ function cardRec(r){
     ${r.despre?`<div class="sub" style="margin-top:8px">${esc(r.despre)}</div>`:''}
     <div class="meta num"><span><b>${esc(String(r.companii||''))}</b> companii</span><span>indice <b>${esc(r.indice||'')}</b></span><span>ISIN <b>${esc(r.isin)}</b> ${q('isin')}</span></div>
     ${r.nota?`<div class="al" style="margin:12px 0 0">${esc(r.nota)}</div>`:''}
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-c="${A('decideETF',r.ticker,'da')}">Da, investesc</button><button class="btn ghost" style="flex:1" data-c="${A('decideETF',r.ticker,'nu')}">Nu, mulțumesc</button></div>
+    ${r.acum!==false?`<div class="sug">${ic('portofel')}<span>${sugestie(r).text}</span></div>`:''}
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-c="${A('decideETF',r.ticker,'da')}">Da, investesc</button><button class="btn ghost" style="flex:1" data-c="${A('decideETF',r.ticker,'nu')}">Nu, arată alta</button></div>
   </div>`;
 }
-// Suma sugerată pentru o idee nouă: ținta ei în lei și o primă cumpărare rezonabilă din suma lunară.
-function sugestie(tinta){ const pr=P(), T=SNAP.totalRON, s=pr.contributieTipica, lei=tinta/100*(T+s), prima=Math.max(Math.min(Math.round(Math.min(lei, s*0.4)/10)*10, s), Math.min(pr.transaMinima, s));
-  return { lei, prima, text:`Ținta ei ar fi ${nf(tinta,1)}% din portofoliu, adică ${S.privat?'•••':nf(lei,0)} lei. Începe cu ${prima} ${de(prima)}lei, iar restul vine din depunerile lunare, când are loc în plan.` }; }
+// Suma pentru prima cumpărare dintr-o idee nouă (v0.22): din scor, din cât de agitat e prețul și din bugetul tău lunar.
+// Calculul e în motor (sumaStart); aici doar îl explicăm, pas cu pas, cu cifrele lui.
+function sugestie(r){
+  const pr=P(), T=SNAP.totalRON, s=pr.contributieTipica, etf=!!r.isin, scor=etf?(r.scorTehnic ?? 60):r.scor;
+  const tintaLei = r.tinta ? r.tinta/100*(T+s) : Infinity;
+  const x = M?.sumaStart ? M.sumaStart({scor, vol:r.vol, incomplet:!etf&&r.incomplet, etf}, s, pr.transaMinima, tintaLei) : null;
+  if (!x) return { lei:0, text:'' };
+  const pasi = [`${etf?'ETF':'scor '+scor+'/100'} → ${Math.round(x.treapta*100)}% din cei ${s} lei pe lună`];
+  if (!etf && x.risc<1) pasi.push(`prețul se mișcă de ${nf(r.vol/M.VOL_PIATA,1)} ori mai mult decât piața → × ${nf(x.risc,2)}`);
+  if (!etf && r.incomplet) pasi.push('date incomplete: cel mult 35%');
+  if (Math.abs(x.lei - x.brut) >= 10) pasi.push(x.lei < x.brut ? `plafonat la ${x.lei} lei (jumătate din suma lunară${isFinite(tintaLei)?' sau cât lipsește până la țintă':''})` : `ridicat la minimul de ${x.lei} lei pentru o cumpărare`);
+  return { lei:x.lei, text:`Începe cu <b>${x.lei} ${de(x.lei)}lei</b>${r.tinta?`, din ținta de ${nf(r.tinta,1)}% (${S.privat?'•••':nf(tintaLei,0)} lei)`:''}. Restul vine din depunerile lunare, când are loc în plan.<span class="sub" style="display:block;margin-top:4px">${pasi.map(esc).join(' · ')}</span>` };
+}
 function recomandariActiuni(){ if (!M || !SNAP?.pozitii) return []; const d={...decizii()}; for (const k of aleseAcum()) d[k]=d[k]||{r:'da'};
-  try { return M.recomandaActiuni(SNAP.candidati||[], SNAP.pozitii, SNAP.teme||{}, P(), d); } catch(e) { return []; } }
+  try { return M.recomandaActiuni(SNAP.candidati||[], SNAP.pozitii, SNAP.teme||{}, P(), d, SNAP.etfRef||{}); } catch(e) { return []; } }
 function cardActiune(r){
-  const i = r.ind||{}, f = r.fund||{}, plus = (r.motive||[]).filter(m=>m[0]==='+').slice(0,3), minus = (r.motive||[]).filter(m=>m[0]==='−').slice(0,2), sg2 = sugestie(r.tinta);
+  const i = r.ind||{}, f = r.fund||{}, plus = (r.motive||[]).filter(m=>m[0]==='+').slice(0,3), minus = (r.motive||[]).filter(m=>m[0]==='−').slice(0,2), sg2 = sugestie(r);
   return `<div class="card rec" style="--k:var(--s3)">
-    <div class="row" style="align-items:flex-start;gap:12px">${avatar({symbol:r.ticker, tema:r.sector, logo:r.logo})}<div style="flex:1;min-width:0"><span class="tag" style="color:var(--s3)">${esc(r.sector)}</span><div style="font-size:var(--t4);font-weight:800;margin-top:2px">${esc(r.nume)}</div><div class="sub">${esc(r.ticker)}${i.pret?` · ${nf(i.pret)} ${esc(M?.monedaOf?M.monedaOf(r.ticker):'')}`:''}</div></div></div>
+    <div class="row" style="align-items:flex-start;gap:12px">${avatar({symbol:r.ticker, tema:r.sector, logo:r.logo})}<div style="flex:1;min-width:0"><span class="tag" style="color:var(--s3)">${esc(r.sector)}</span><div style="font-size:var(--t4);font-weight:800;margin-top:2px">${esc(r.nume)}</div><div class="sub">${esc(r.ticker)}${i.pret?` · ${nf(i.pret)} ${esc(M?.monedaOf?M.monedaOf(r.ticker):'')}`:''}</div></div>${scorBadge(r.scor, r.incomplet)}</div>
     <p style="margin:12px 0 0;font-size:var(--t2);line-height:1.55;color:var(--ink2)">${esc(r.motiv)}</p>
     <div class="sub" style="margin-top:8px">${esc(r.despre)}</div>
     <div class="meta num">${i.sma200?`<span>față de media de 200 de zile <b>${sg((i.pret/i.sma200-1)*100,0)}%</b></span>`:''}${i.rsi!=null?`<span>RSI <b>${nf(i.rsi,0)}</b></span>`:''}${f.pe?`<span>P/E <b>${nf(f.pe,0)}</b></span>`:''}${i.r1a!=null?`<span>un an <b>${sg(i.r1a,0)}%</b></span>`:''}</div>
-    ${plus.length||minus.length?`<div class="pc">${plus.map(m=>`<div class="up">${link(m.slice(2))}</div>`).join('')}${minus.map(m=>`<div class="down">${link(m.slice(2))}</div>`).join('')}</div>`:''}
+    ${(r.criterii||[]).length?`<div class="crit">${r.criterii.map(c=>`<div class="${c.pts>=c.din*0.6?'up':c.pts<=c.din*0.2?'down':''}"><b class="num">${c.pts}/${c.din}</b><span>${link(c.text)}</span></div>`).join('')}${r.incomplet?'<div class="sub" style="margin-top:4px">* Date incomplete: scorul e calculat doar din criteriile de mai sus.</div>':''}</div>`:''}
     ${r.nota?`<div class="al" style="margin:12px 0 0">${esc(r.nota)}</div>`:''}
     <div class="sug">${ic('portofel')}<span>${sg2.text}</span></div>
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-c="${A('decideETF',r.ticker,'da')}">Da, investesc</button><button class="btn ghost" style="flex:1" data-c="${A('decideETF',r.ticker,'nu')}">Nu, mulțumesc</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-c="${A('decideETF',r.ticker,'da')}">Da, investesc</button><button class="btn ghost" style="flex:1" data-c="${A('decideETF',r.ticker,'nu')}">Nu, arată alta</button></div>
   </div>`;
 }
+const scorBadge = (sc, inc) => sc==null ? '' : `<div style="text-align:center;flex:none"><div class="fd num" style="font-size:var(--t4);font-weight:700;color:var(${sc>=70?'--pos':sc>=50?'--acc':'--warn'})">${sc}</div><div class="sub">scor${inc?'*':''} ${q('scoridee')}</div></div>`;
 // Acțiunile pe care le ai deja: care pot primi bani noi și de ce celelalte nu.
 function stareActiune(p, pr){
   const l = inPlan(p.symbol), sub = p.pondere < p.tinta, tp = SNAP.teme[p.tema]||0;
   if (l) return {o:0, k:'--adauga', t:'În planul lunii', d:`${l.suma} ${de(l.suma)}lei luna asta.`};
+  if (p.reducere && !p.reducere.sectorPeste) return {o:1, k:'--opor', t:'La reducere', d:`A scăzut ${nf(p.reducere.scadere,0)}% ca sectorul sau piața. Prima tranșă: ~${transeReducere(p)} lei.`};
   if (sem(p)==='uita') return {o:5, k:'--verifica', t:'Verifică întâi', d: p.semnal==='reechilibreaza' ? `Are ${nf(p.pondere,1)}% din portofoliu, mult peste ținta de ${nf(p.tinta,1)}%. Nu mai cumpăra din ea.`
     : p.ind?.subProtectie ? 'A scăzut sub nivelul de alertă. Citește știrile înainte de orice decizie.' : 'Trendul și cifrele companiei s-au înrăutățit. Citește știrile înainte de orice decizie.'};
   if (p.semnal==='asteapta') return {o:2, k:'--asteapta', t:'Așteaptă', d:p.atentie.find(a=>/RSI|Rezultate/.test(a))||'Momentul nu e bun acum.'};
@@ -1248,23 +1297,24 @@ function portofoliuHTML(pr){
 }
 const PLAN_DESC = k => (S.planDesc||{})[k] ?? false;
 function comutaPlan(k, el){ S.planDesc = {...(S.planDesc||{}), [k]: el.open}; save(); }
+const VITRINA = 5, UNIV_N = () => (SNAP.candidati||[]).filter(c=>!c.symbol.match(/^(VWCE|EUNL|XDW|SXR8|IS3N|VVSM|DFEN|EUNA)/)).length, UNIV_DATA = () => (SNAP.candidati||[]).map(c=>c.actualizat).filter(Boolean).sort().pop();
 function recomandariHTML(pr){
   const rec = recomandari(), ra = recomandariActiuni(), al = aleseAcum(), d = decizii(), refuz = Object.keys(d).filter(k=>d[k]?.r==='nu');
   let h = `<div class="sec"><h2>Idei noi de investit ${q('etfrec')}</h2>${refuz.length?`<button class="link" data-c="${A('refuzuri')}">Refuzate (${refuz.length}) ›</button>`:''}</div>`;
   if (al.length) h += `<div class="card grp">${al.map(k=>{ const v=SNAP.virtuale?.find(x=>x.symbol===k); return `<div class="it" style="--k:var(--pos)"><span class="ib2">${ic(v&&!v.etf?'stea':'nucleu')}</span><span class="tx"><b>${esc(k)} · ales de tine</b><small>${v?`În planul lunar, cu ținta de ${nf(v.tinta||0,1)}%. Dispare de aici când apare în cont.`:'Îl ai deja în cont.'}</small></span><button class="link" data-c="${A('decideETF',k,'anuleaza')}">Anulează</button></div>`; }).join('')}</div>`;
-  h += `<details class="dd" ${PLAN_DESC('etf')?'open':''} data-tg="${A('comutaPlan','etf','$el')}"><summary><span class="tic" style="--k:var(--acc)">${ic('nucleu')}</span><span class="tx"><b>ETF-uri</b><small>${rec.length?`${rec.length} ${rec.length===1?'idee':'idei'} potrivite cu ce ai`:'nimic nou acum'}</small></span><span class="chev">${ic('jos')}</span></summary><div class="ddb">
-    ${rec.length ? rec.slice(0,4).map(cardRec).join('') : `<div class="sub" style="padding:4px 2px 12px">Ai acoperit deja ideile principale${refuz.length?' sau le-ai refuzat':''}.</div>`}
+  h += `<details class="dd" ${PLAN_DESC('etf')?'open':''} data-tg="${A('comutaPlan','etf','$el')}"><summary><span class="tic" style="--k:var(--acc)">${ic('nucleu')}</span><span class="tx"><b>ETF-uri</b><small>${rec.length?`${Math.min(rec.length,VITRINA)} ${Math.min(rec.length,VITRINA)===1?'idee':'idei'}${rec.length>VITRINA?`, încă ${rec.length-VITRINA} în rezervă`:''}`:'nimic nou acum'}</small></span><span class="chev">${ic('jos')}</span></summary><div class="ddb">
+    ${rec.length ? rec.slice(0,VITRINA).map(cardRec).join('') : `<div class="sub" style="padding:4px 2px 12px">Ai acoperit deja ideile principale${refuz.length?' sau le-ai refuzat':''}.</div>`}
     <div class="sub" style="margin:2px 2px 8px">Toate sunt ETF-uri UCITS, listate în Europa. Înainte să cumperi, caută ISIN-ul în Trading 212.</div></div></details>`;
   const scurt = pr.orizontAni < 5;
-  h += `<details class="dd" ${PLAN_DESC('act')?'open':''} data-tg="${A('comutaPlan','act','$el')}"><summary><span class="tic" style="--k:var(--s3)">${ic('stea')}</span><span class="tx"><b>Acțiuni pentru diversificare</b><small>${ra.length?`${ra.length} ${ra.length===1?'sector':'sectoare'} pe care nu le ai`:SNAP.candidati?.length?'ai deja toate sectoarele din catalog':'apar după următoarea analiză de seară'}</small></span><span class="chev">${ic('jos')}</span></summary><div class="ddb">
+  h += `<details class="dd" ${PLAN_DESC('act')?'open':''} data-tg="${A('comutaPlan','act','$el')}"><summary><span class="tic" style="--k:var(--s3)">${ic('stea')}</span><span class="tx"><b>Acțiuni pentru diversificare</b><small>${ra.length?`${Math.min(ra.length,VITRINA)} ${Math.min(ra.length,VITRINA)===1?'idee':'idei'}${ra.length>VITRINA?`, încă ${ra.length-VITRINA} în rezervă`:''}`:SNAP.candidati?.length?'nimic nou acum':'apar după următoarea analiză de seară'}</small></span><span class="chev">${ic('jos')}</span></summary><div class="ddb">
     ${scurt?`<div class="al" style="margin:0 0 12px">Ai ${pr.orizontAni} ${pr.orizontAni===1?'an':'ani'} până ai nevoie de bani. Pe un orizont atât de scurt, acțiunile individuale sunt riscante: ETF-ul și titlurile de stat sunt variantele potrivite.</div>`:''}
-    ${ra.length ? ra.slice(0,5).map(cardActiune).join('') : `<div class="sub" style="padding:4px 2px 12px">${SNAP.candidati?.length?'Nicio idee nouă: ai deja câte ceva în fiecare sector din catalog sau le-ai refuzat.':'Datele pentru aceste acțiuni apar după următoarea analiză de seară.'}</div>`}
-    <div class="sub" style="margin:2px 2px 8px">Câte o companie mare din fiecare sector care îți lipsește, aleasă după trend, evaluare și părerea analiștilor. Nu e un sfat de cumpărare: verifică știrile și decide tu.</div></div></details>`;
+    ${ra.length ? ra.slice(0,VITRINA).map(cardActiune).join('') : `<div class="sub" style="padding:4px 2px 12px">${SNAP.candidati?.length?'Nicio idee nouă: ai deja câte ceva în fiecare sector din catalog sau le-ai refuzat.':'Datele pentru aceste acțiuni apar după următoarea analiză de seară.'}</div>`}
+    <div class="sub" style="margin:2px 2px 8px">Din ${UNIV_N()} companii mari, verificate săptămânal la Trading 212 și eToro${UNIV_DATA()?`, ultima actualizare ${ziRo(UNIV_DATA())}`:''}. Întâi sectoarele care îți lipsesc. Când refuzi una, următoarea îi ia locul. Nu e un sfat de cumpărare: verifică știrile și decide tu.</div></div></details>`;
   return h;
 }
 function refuzuri(){
   const d = decizii(), r = Object.keys(d).filter(k=>d[k]?.r==='nu');
-  openSheet(`${capFoaie('nucleu','ETF-uri refuzate','nu le mai propun până nu anulezi')}<div class="card grp">${r.map(k=>`<div class="it" style="--k:var(--mut)"><span class="ib2">${ic('nucleu')}</span><span class="tx"><b>${esc(k)}</b><small>refuzat pe ${ziRo(d[k].data)}</small></span><button class="link" data-c="${A('dupaInchidere','decideETF',k,'anuleaza')}">Propune din nou</button></div>`).join('')||'<div class="sub" style="padding:12px">Nimic refuzat.</div>'}</div>
+  openSheet(`${capFoaie('nucleu','Idei refuzate','nu le mai propun până nu le ceri înapoi')}<div class="card grp">${r.map(k=>`<div class="it" style="--k:var(--mut)"><span class="ib2">${ic('nucleu')}</span><span class="tx"><b>${esc(k)}</b><small>refuzat pe ${ziRo(d[k].data)}</small></span><button class="link" data-c="${A('dupaInchidere','decideETF',k,'anuleaza')}">Propune din nou</button></div>`).join('')||'<div class="sub" style="padding:12px">Nimic refuzat.</div>'}</div>
     <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button>`);
 }
 async function decideETF(k, r){
@@ -1342,6 +1392,8 @@ function riscPortofoliu(){
   if (!M) return null; const r = M.riscIstoric(SNAP.pozitii); if (!r) return null;
   return { ...r, volP: p => r.volP[p.symbol] ?? null };
 }
+// Piața globală are ~62% în dolari (FTSE All-World). Abia peste 70% e un pariu în plus pe dolar.
+const DOLAR_MAX = 70;
 function sanatate(){
   const pr=P(), etf=SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.pondere,0);
   const [tn,tp] = Object.entries(SNAP.teme).filter(([n])=>!n.startsWith('ETF')&&n!=='Altele').sort((a,b)=>b[1]-a[1])[0]||['',0];
@@ -1350,7 +1402,7 @@ function sanatate(){
     {n:'ETF-ul de bază', v:pr.tintaETF>0?Math.min(etf/pr.tintaETF,1)*25:25, t:`${nf(etf,1)}% din ținta de ${pr.tintaETF}%`, l:'nucleu'},
     {n:'Diversificarea pe sectoare', v:tp<=pr.maxTema?25:25*pr.maxTema/tp, t:tp?`cel mai mare sector: ${nf(tp,1)}% (plafon ${pr.maxTema}%)`:'niciun sector peste plafon', l:'tema'},
     {n:'Mărimea pozițiilor', v:!top||top.pondere<=pr.maxActiune?25:25*pr.maxActiune/top.pondere, t:top?`cea mai mare: ${top.symbol}, ${nf(top.pondere,1)}% (plafon ${pr.maxActiune}%)`:'–', l:'pondere'},
-    {n:'Moneda', v:usd<=60?25:25*60/usd, t:`${nf(usd,1)}% în dolari`, l:'moneda'}];
+    {n:'Moneda', v:usd<=DOLAR_MAX?25:25*DOLAR_MAX/usd, t:`${nf(usd,1)}% în dolari, inclusiv partea americană din ETF-uri`, l:'moneda'}];
   const sc = Math.round(F.reduce((a,f)=>a+f.v,0));
   return { sc, F, et: sc>=80?['Solid','--pos']:sc>=60?['Bun, cu ajustări','--acc']:sc>=40?['Dezechilibrat','--warn']:['Concentrat, riscant','--neg'] };
 }
@@ -1386,7 +1438,8 @@ function sectiuniAnaliza(){
   const sn = sanatate();
   h += `<div class="sec" style="margin-top:8px"><h2>Sănătatea portofoliului</h2></div><div class="card">
     <div class="scor">${inel(sn.sc, sn.et[1])}<div><div style="font-size:var(--t4);font-weight:800;color:var(${sn.et[1]})">${sn.et[0]}</div><div class="sub" style="margin-top:4px">Scor din 100, după regulile profilului tău (orizont ${pr.orizontAni} ${de(pr.orizontAni)}${pr.orizontAni===1?'an':'ani'}). Nu spune cât câștigi, ci cât de echilibrat e riscul.</div></div></div>
-    <div style="margin-top:8px">${sn.F.map(f=>`<div class="fx" style="--k:var(${kF(f.v)})" data-c="${A('termen',f.l)}"><i class="d"></i><div><div style="font-weight:650;font-size:var(--t2)">${f.n}</div><div class="sub">${esc(f.t)}</div></div><b class="num" style="color:var(${kF(f.v)})">${Math.round(f.v)}/25</b></div>`).join('')}</div></div>`;
+    <div style="margin-top:8px">${sn.F.map(f=>`<div class="fx" style="--k:var(${kF(f.v)})" data-c="${A('termen',f.l)}"><i class="d"></i><div><div style="font-weight:650;font-size:var(--t2)">${f.n}</div><div class="sub">${esc(f.t)}</div></div><b class="num" style="color:var(${kF(f.v)})">${Math.round(f.v)}/25</b></div>`).join('')}</div>
+    <div class="sub" style="margin-top:8px">Din pozițiile citite în analiza de ${esc(cand(SNAP.generat))}. După o cumpărare sau o vânzare, scorul se schimbă la următoarea analiză: seara, automat, sau când apeși „Rulează analiza”.</div></div>`;
   O.sanatate=h; h='';
   // 2) Tu față de totul în VWCE
   h += `<div class="sec"><h2>Tu față de totul în VWCE ${q('fantoma')}</h2></div><div class="card">${SNAP.bench||ist.length>5?`
@@ -1400,6 +1453,7 @@ function sectiuniAnaliza(){
   const cs = [...SNAP.pozitii].sort((a,b)=>b.pnlRON-a.pnlRON), mxc = Math.max(...cs.map(p=>Math.abs(p.pnlRON)),1), tot = cs.reduce((a,p)=>a+p.pnlRON,0);
   h += `<div class="sec"><h2>De unde vine câștigul ${q('castigPoz')}</h2><span class="sub num ${cls(tot)}">${sgL(tot,0)} lei</span></div><div class="card">${cs.map(p=>`
     <div class="dv" style="grid-template-columns:68px 1fr 74px;cursor:pointer" data-c="${A('detaliu',p.symbol)}"><b>${esc(p.symbol)}</b><div class="t"><i style="background:var(${p.pnlRON>=0?'--pos':'--neg'});${p.pnlRON>=0?`left:50%;width:${p.pnlRON/mxc*50}%`:`right:50%;width:${-p.pnlRON/mxc*50}%`}"></i></div><span class="num ${cls(p.pnlRON)}" style="text-align:right">${sgL(p.pnlRON,0)}</span></div>`).join('')}
+<div class="sub" style="margin-top:8px">Câștigul pe pozițiile pe care le ai acum (valoarea de azi minus cât ai plătit, în lei, cu comisioanele incluse).${SNAP.realizat?.totalLei?` Din vânzări ai realizat separat ${sgL(SNAP.realizat.totalLei,0)} lei anul ăsta.`:''}${SNAP.dividende?.incasateTot?` Dividende încasate: ${S.privat?'•••':nf(SNAP.dividende.incasateTot,0)} lei.`:''}</div>
 </div>`;
   O.castig=h; h='';
   // 4) Riscul și testele de stres
@@ -1416,6 +1470,7 @@ function sectiuniAnaliza(){
     const mxs = Math.max(...ST.map(x=>x[1]));
     h += `<div class="sec"><h2>Cât de mult se mișcă portofoliul ${q('agitatie')}</h2></div><div class="card">
       <div class="tier num" style="margin-top:0"><div><b>${nf(r.vol,0)}%</b><span>volatilitate pe an</span></div><div><b class="neg">${nf(r.dd,0)}%</b><span>cea mai mare scădere</span></div><div><b class="neg">−${nf(r.luna,0)}%</b><span>o lună proastă</span></div></div>
+      <div class="sub" style="margin-top:8px">Calculate din prețurile ultimului an, cu ponderile tale de azi: cum s-ar fi mișcat portofoliul de acum. Prețurile sunt în moneda fiecărei acțiuni, fără mișcarea cursului.</div>
       <div class="lbl" style="margin:16px 0 4px">Teste de stres</div>
       ${ST.map(([t,v,x])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="row"><span style="font-size:var(--t2);font-weight:600">${esc(t)}</span><b class="num neg" style="white-space:nowrap">−${S.privat?'•••':nf(v,0)} lei</b></div>
         <div class="gauge" style="--k:var(--neg);height:6px"><i style="width:${v/mxs*100}%"></i></div><div class="sub" style="margin-top:4px">${esc(x)} ${nf(v/T*100,1)}% din portofoliu.</div></div>`).join('')}
@@ -1434,7 +1489,9 @@ function sectiuniAnaliza(){
 </div>`;
   O.alocare=h; h='';
   // 6) Pe ultimul an, față de VWCE
-  const rows = SNAP.pozitii.filter(p=>!p.etf&&p.ind?.r1a!=null&&e.r1a!=null).map(p=>({s:p.symbol,d:p.ind.r1a-e.r1a})).sort((a,b)=>b.d-a.d);
+  // în lei, ca să nu amestecăm mișcarea cursului euro/dolar cu cea a acțiunii (analizele vechi: în moneda fiecăreia)
+  const r1 = p => e.r1aLei!=null&&p.ind?.r1aLei!=null ? [p.ind.r1aLei, e.r1aLei] : [p.ind?.r1a, e.r1a];
+  const rows = SNAP.pozitii.filter(p=>!p.etf&&r1(p)[0]!=null&&r1(p)[1]!=null).map(p=>({s:p.symbol,d:r1(p)[0]-r1(p)[1]})).sort((a,b)=>b.d-a.d);
   const mx = Math.max(...rows.map(x=>Math.abs(x.d)),1);
   if (rows.length) h += `<div class="sec"><h2>Pe ultimul an, față de VWCE ${q('pp')}</h2></div><div class="card">${rows.map(x=>`
     <div class="dv"><b>${esc(x.s)}</b><div class="t"><i style="background:var(${x.d>=0?'--pos':'--neg'});${x.d>=0?`left:50%;width:${x.d/mx*50}%`:`right:50%;width:${-x.d/mx*50}%`}"></i></div><span class="num ${cls(x.d)}" style="text-align:right">${sg(x.d,1)}</span></div>`).join('')}</div>`;
@@ -1491,25 +1548,39 @@ function corelatiiPortofoliu(){
   return { K, ne, grupuri, poz };
 }
 const culRho = r => r==null ? 'var(--panel2)' : r>=0.7 ? `color-mix(in srgb,var(--neg) ${Math.round(45+50*(r-0.7)/0.3)}%,var(--panel2))` : r>=0.4 ? `color-mix(in srgb,var(--warn) ${Math.round(30+40*(r-0.4)/0.3)}%,var(--panel2))` : r>=0 ? `color-mix(in srgb,var(--flat) ${Math.round(10+25*r/0.4)}%,var(--panel2))` : `color-mix(in srgb,var(--acc) ${Math.round(20+50*Math.min(-r,1))}%,var(--panel2))`;
+// Diversificarea reală, pe înțeles (v0.22): câte „pariuri” independente ai de fapt, ce grupuri se mișcă împreună,
+// cât te-ar costa o scădere a celui mai mare grup și ce ar ajuta. Harta tuturor perechilor rămâne la „Detalii”.
 function corelatiiHTML(c){
-  if (!c) return `<div class="card sub">Ai nevoie de cel puțin două poziții cu istoric de prețuri.</div>`;
-  const s = c.poz.map(p=>p.symbol), n = s.length, sc = x => esc(x.replace(/\..*$/,'').slice(0,4));
+  if (!c) return `<div class="card sub">Ai nevoie de cel puțin două poziții cu cel puțin 6 luni de prețuri.</div>`;
+  const s = c.poz.map(p=>p.symbol), n = s.length, sc = x => esc(x.replace(/\..*$/,'').slice(0,4)), T = SNAP.totalRON, ne = Math.max(1, Math.round(c.ne));
+  const inGrup = new Set(c.grupuri.flatMap(g=>g.s)), singure = c.poz.filter(p=>!inGrup.has(p.symbol)).map(p=>p.symbol);
+  const g0 = c.grupuri[0], pierd = g0 ? T*g0.pondere/100*0.2 : 0;
+  const bila = (txt, w, k) => `<span class="bila" style="--k:var(${k});--w:${Math.max(28, Math.min(84, 22+Math.sqrt(w)*9))}px">${txt}</span>`;
   return `<div class="sec"><h2>Ce se mișcă împreună ${q('corelatie')}</h2></div><div class="card">
-    <div class="row"><div><div class="lbl">Diversificare reală</div><div class="hero fd" style="font-size:var(--t5)">${nf(c.ne,1)}<small>din ${n}</small></div></div>
-      <div class="sub" style="text-align:right;max-width:52%">${c.ne<n/3?'Multe poziții se comportă ca una singură.':c.ne<n/1.7?'Diversificare parțială.':'Pozițiile se mișcă destul de independent.'}</div></div>
+    <div class="lbl">Diversificare reală</div>
+    <div style="font-size:var(--t3);line-height:1.5;margin:4px 0 12px">Ai <b>${n} poziții</b>, dar se comportă ca <b class="fd" style="font-size:var(--t4)">~${ne}</b> ${ne===1?'pariu independent':'pariuri independente'}.
+      <span class="sub" style="display:block;margin-top:4px">${c.ne<n/3?'Multe poziții urcă și coboară împreună: e ca și cum ai avea mai puține, dar mai mari.':c.ne<n/1.7?'O parte din poziții se mișcă împreună.':'Pozițiile se mișcă destul de independent: o scădere la una nu le trage după ea pe celelalte.'}</span></div>
+    <div class="bile">${c.grupuri.map((g,i)=>bila(`${g.s.map(sc).join(' · ')}<small>${nf(g.pondere,0)}%</small>`, g.pondere, i?'--warn':'--neg')).join('')}${singure.map(x=>bila(`${sc(x)}<small>${nf(c.poz.find(p=>p.symbol===x).pondere,0)}%</small>`, c.poz.find(p=>p.symbol===x).pondere, '--acc')).join('')}</div>
+    <div class="sub" style="margin-top:8px">Fiecare bulă e un pariu: pozițiile din aceeași bulă au urcat și au coborât aproape la fel în ultimul an, săptămână de săptămână.</div>
+    ${g0?`<div class="al" style="margin-top:12px;border-left-color:var(--neg)"><b>Ce înseamnă pentru tine:</b> ${g0.s.map(esc).join(', ')} au împreună ${nf(g0.pondere,1)}% din portofoliu. Dacă grupul scade cu 20% (o corecție obișnuită pentru tehnologie), pierzi aproximativ <b>${S.privat?'•••':nf(pierd,0)} lei</b> dintr-odată, ca și cum ar fi o singură acțiune.</div>
+    <div class="sug">${ic('bec')}<span>Ce ajută: banii noi în VWCE sau într-un sector pe care nu-l ai (Plan → Idei noi). Nu trebuie să vinzi nimic: fiecare depunere în altă parte micșorează bula cea mare.</span></div>`
+    :`<div class="sub" style="margin-top:12px">Nicio grupare de acțiuni care să se miște aproape identic.</div>`}
+    <details class="dd" style="margin:12px 0 0;background:var(--panel2)"><summary><span class="tx"><b>Detalii: toate perechile</b><small>corelația fiecărei perechi, pe ultimul an</small></span><span class="chev">${ic('jos')}</span></summary><div class="ddb">
     <div class="hm" style="grid-template-columns:38px repeat(${n},1fr)"><span></span>${s.map(x=>`<b class="hx">${sc(x)}</b>`).join('')}
       ${s.map(a=>`<b class="hy">${sc(a)}</b>${s.map(b=>`<i title="${esc(a)} · ${esc(b)}: ${nf(c.K.M[a][b],2)}" ${a===b?'':`data-c="${A('arataRho',a,b,nf(c.K.M[a][b],2),rhoText(c.K.M[a][b]))}"`} style="background:${a===b?'var(--line)':culRho(c.K.M[a][b])}"></i>`).join('')}`).join('')}</div>
     <div class="sub num" id="hmv" style="margin-top:8px;min-height:1.4em">Atinge un pătrat ca să vezi perechea și corelația.</div><div class="leg" style="margin-top:8px"><span><i style="background:${culRho(0.9)};height:10px;width:10px;border-radius:3px"></i>se mișcă la fel</span><span><i style="background:${culRho(0.55)};height:10px;width:10px;border-radius:3px"></i>parțial</span><span><i style="background:${culRho(0.15)};height:10px;width:10px;border-radius:3px"></i>independent</span></div>
-    ${c.grupuri.length?c.grupuri.map(g=>`<div class="al" style="margin-top:12px;border-left-color:var(--neg)"><b>${g.s.map(esc).join(', ')}</b> se mișcă aproape la fel (corelație ${nf(g.rho,2)}). Împreună au ${nf(g.pondere,1)}% din portofoliu: se comportă ca o singură poziție.</div>`).join(''):`<div class="sub" style="margin-top:8px">Nicio grupare de acțiuni care să se miște aproape identic.</div>`}
+    <div class="sub" style="margin-top:8px">Corelația merge de la −1 la 1: 1 înseamnă că se mișcă identic, 0 că nu au legătură. Peste 0,7 le socotim în același grup.</div></div></details>
 </div>`;
 }
 function randamentHTML(){
   const r = SNAP.randament, e = SNAP.etfRef||{};
   if (!r || r.anual==null) return `<div class="sec"><h2>Randamentul tău real ${q('xirr')}</h2></div><div class="card sub">${r?.inCurs?'Se adună istoricul tranzacțiilor din Trading 212, câteva pagini la fiecare analiză. Apare după câteva rulări.':'Apare după prima analiză cu istoricul tranzacțiilor.'}</div>`;
   return `<div class="sec"><h2>Randamentul tău real ${q('xirr')}</h2></div><div class="card">
-    <div class="row"><div><div class="lbl">Pe an, pe banii tăi</div><div class="hero fd ${cls(r.anual)}" style="font-size:var(--t6)">${sg(r.anual,1)}<small>%</small></div></div>
-      ${r.vwce?.anual!=null?`<div style="text-align:right"><div class="lbl">VWCE, aceleași depuneri</div><div class="fd ${cls(r.vwce.anual)}" style="font-size:var(--t4);font-weight:700">${sg(r.vwce.anual,1)}%</div></div>`:''}</div>
-    ${r.vwce?.anual!=null?`<div class="al ${r.anual>=r.vwce.anual?'good':''}" style="margin:12px 0 0">${r.anual>=r.vwce.anual?`Alegerile tale au adus <b>${nf(r.anual-r.vwce.anual,1)} puncte procentuale</b> pe an peste varianta „totul în VWCE”.`:`Varianta „totul în VWCE”, cu exact aceleași sume și date, ar fi adus <b>${nf(r.vwce.anual-r.anual,1)} puncte procentuale</b> pe an mai mult.`}${r.vwce.valoare&&!S.privat?` Ar valora azi ${nf(r.vwce.valoare,0)} lei.`:''}</div>`:`<div class="sub" style="margin-top:8px">Comparația cu VWCE pe aceleași depuneri apare când există prețul VWCE pentru toate datele depunerilor.</div>`}
+    ${(()=>{ const a=randPerioada(r.anual, r.dela), b=r.vwce?.anual!=null?randPerioada(r.vwce.anual, r.dela):null, pe=a.an?' pe an':'';
+    return `<div class="row"><div><div class="lbl">${a.an?'Pe an, pe banii tăi':`Pe banii tăi, ${a.et}`}</div><div class="hero fd ${cls(a.v)}" style="font-size:var(--t6)">${sg(a.v,1)}<small>%</small></div></div>
+      ${b?`<div style="text-align:right"><div class="lbl">VWCE, aceleași depuneri</div><div class="fd ${cls(b.v)}" style="font-size:var(--t4);font-weight:700">${sg(b.v,1)}%</div></div>`:''}</div>
+    ${a.an?'':`<div class="sub" style="margin-top:4px">Investești de ${Math.round(a.zile/30.4)} ${Math.round(a.zile/30.4)===1?'lună':'luni'}: sub un an, randamentul nu se anualizează, pentru că ar ieși umflat. Ca procent anual: ${sg(r.anual,1)}%, dar doar orientativ.</div>`}
+    ${b?`<div class="al ${a.v>=b.v?'good':''}" style="margin:12px 0 0">${a.v>=b.v?`Alegerile tale au adus <b>${nf(a.v-b.v,1)} puncte procentuale</b>${pe} peste varianta „totul în VWCE”.`:`Varianta „totul în VWCE”, cu exact aceleași sume și date, ar fi adus <b>${nf(b.v-a.v,1)} puncte procentuale</b>${pe} mai mult.`}`:''}`; })()}${r.vwce?.anual!=null?`${r.vwce.valoare&&!S.privat?` Ar valora azi ${nf(r.vwce.valoare,0)} lei.`:''}</div>`:`<div class="sub" style="margin-top:8px">Comparația cu VWCE pe aceleași depuneri apare când există prețul VWCE pentru toate datele depunerilor.</div>`}
     <div class="sub" style="margin-top:8px">${r.dela?`Din ${ziRo(r.dela)}. `:''}${r.complet?'':'Istoricul Trading 212 încă se adună: cifra se va corecta.'}</div></div>`;
 }
 function costuriHTML(){
@@ -1524,9 +1595,9 @@ function dividendeHTML(){
   const d = SNAP.dividende; if (!d) return `<div class="sec"><h2>Dividende ${q('dividende')}</h2></div><div class="card sub">Apare după prima analiză.</div>`;
   const mx = Math.max(...(d.peActiune||[]).map(x=>x.lei),0.01);
   return `<div class="sec"><h2>Dividende ${q('dividende')}</h2></div><div class="card">
-    <div class="tier num" style="margin-top:0"><div><b>${S.privat?'•••':nf(d.incasateAn,2)}</b><span>lei încasați anul ăsta</span></div><div><b>${S.privat?'•••':nf(d.estimatAn,0)}</b><span>lei pe an, estimat brut</span></div><div><b>${nf(d.randament,2)}%</b><span>randament din dividende</span></div></div>
-    ${(d.peActiune||[]).length?`<div style="margin-top:12px">${d.peActiune.map(x=>`<div class="dv" style="grid-template-columns:58px 1fr auto"><b>${esc(x.symbol)}</b><div class="t" style="--x:0"><i style="background:var(--pos);left:0;width:${x.lei/mx*100}%"></i></div><span class="num sub" style="text-align:right">${nf(x.randDiv,2)}% · ${S.privat?'•••':nf(x.lei,2)} lei</span></div>`).join('')}</div>`:''}
-    <div class="sub" style="margin-top:8px">Estimarea e brută. La acțiunile americane, SUA rețin de obicei 10% la sursă (cu formularul W-8BEN), iar în România mai datorezi diferența până la 16%.</div>
+    <div class="tier num" style="margin-top:0"><div><b>${S.privat?'•••':nf(d.incasateAn,2)}</b><span>lei încasați anul ăsta</span></div><div><b>${S.privat?'•••':nf(d.netAn ?? d.estimatAn*0.84,0)}</b><span>lei pe an, estimat net</span></div><div><b>${nf(d.randament,2)}%</b><span>randament brut din dividende</span></div></div>
+    ${(d.peActiune||[]).length?`<div style="margin-top:12px">${d.peActiune.map(x=>`<div class="dv" style="grid-template-columns:58px 1fr auto"><b>${esc(x.symbol)}</b><div class="t" style="--x:0"><i style="background:var(--pos);left:0;width:${x.lei/mx*100}%"></i></div><span class="num sub" style="text-align:right">${nf(x.randDiv,2)}% · ${S.privat?'•••':nf(x.net ?? x.lei,2)} lei net</span></div>`).join('')}</div>`:''}
+    <div class="sub" style="margin-top:8px">Estimarea: randamentul anunțat de fiecare companie × valoarea poziției de azi${d.netAn!=null?`. Brut ${S.privat?'•••':nf(d.estimatAn,0)} lei, net după impozite`:''}. La acțiunile americane se rețin 10% în SUA (cu W-8BEN) și mai plătești 6% în România; la cele europene, reținerea țării (Germania 26%, Franța 25%) e de obicei mai mare decât cei 16% din România și nu se recuperează. ETF-urile tale sunt cu acumulare: dividendele rămân în fond și cresc prețul, nu apar aici.</div>
     ${d.faraPermisiune?`<div class="al" style="margin-top:12px">Ca să vezi dividendele încasate, bifează la cheia Trading 212 și „History - Dividends”.</div>`:''}
     ${(d.ultimele||[]).length?`<div class="lbl" style="margin:16px 0 4px">Ultimele încasări</div><div class="kv num">${d.ultimele.slice(0,6).map(x=>`<span>${esc(x.symbol)} · ${ziRo(x.data,false)}</span><span class="pos">+${S.privat?'•••':nf(x.lei,2)} lei</span>`).join('')}</div>`:''}
 </div>`;
@@ -1695,7 +1766,7 @@ function vAnaliza(){
   // 1) Galaxia ta
   h += `<div class="sec" style="margin-top:8px"><h2>Galaxia ta ${q('orbita')}</h2><span class="sub">trage, atinge</span></div>
   <div class="card gxc">${galaxieHTML()}
-    <div class="leg" style="justify-content:center;margin-top:8px"><span><i style="background:var(--adauga);height:8px;width:8px;border-radius:50%"></i>Cumpără</span><span><i style="background:var(--pastreaza);height:8px;width:8px;border-radius:50%"></i>Las-o</span><span><i style="background:var(--verifica);height:8px;width:8px;border-radius:50%"></i>Uită-te la ea</span></div></div>`;
+    <div class="leg" style="justify-content:center;margin-top:8px"><span><i style="background:var(--adauga);height:8px;width:8px;border-radius:50%"></i>Cumpără</span><span><i style="background:var(--opor);height:8px;width:8px;border-radius:50%"></i>La reducere</span><span><i style="background:var(--pastreaza);height:8px;width:8px;border-radius:50%"></i>Las-o</span><span><i style="background:var(--verifica);height:8px;width:8px;border-radius:50%"></i>Uită-te la ea</span></div></div>`;
   // 2) Sănătatea, pe scurt
   h += `<button class="card sanc" data-c="${A('deschideSect','sanatate')}">${inel(sn.sc, sn.et[1])}<div style="flex:1;min-width:0;text-align:left"><div class="lbl">Sănătatea portofoliului</div><div class="fd" style="font-size:var(--t4);font-weight:700;color:var(${sn.et[1]})">${sn.et[0]}</div>
     <div class="mini4">${sn.F.map(f=>`<span title="${esc(f.n)}"><i style="width:${f.v/25*100}%;background:var(${kF(f.v)})"></i></span>`).join('')}</div><div class="sub" style="margin-top:4px">${sn.F.map(f=>f.n.split(' ')[0]).join(' · ')}</div></div><span class="ch">›</span></button>`;
@@ -1705,12 +1776,13 @@ function vAnaliza(){
   const piata = r ? (r.volE ? SNAP.pozitii.reduce((a,p)=>{ const v=r.volP(p); const b=v&&r.volE?Math.min(Math.max(v/r.volE,0.8),2.5):1; return a+p.valueRON*0.2*(p.etf?1:b); },0) : T*0.2) : 0;
   const stresMax = r ? Math.max(piata, T*tp/100*0.3, (SNAP.pozitii.filter(p=>!p.etf).sort((a,b)=>b.pondere-a.pondere)[0]?.valueRON||0)*0.4, T*(SNAP.valute?.USD||0)/100*0.1) : null;
   const azi = new Date().toISOString().slice(0,10), urm = SNAP.pozitii.filter(p=>p.rezultate&&p.rezultate>=azi).sort((a,b)=>a.rezultate.localeCompare(b.rezultate))[0];
-  const e = SNAP.etfRef||{}, an = SNAP.pozitii.filter(p=>!p.etf&&p.ind?.r1a!=null&&e.r1a!=null).map(p=>({s:p.symbol,d:p.ind.r1a-e.r1a})).sort((a,b)=>b.d-a.d);
+  const e = SNAP.etfRef||{}, r1t = p => e.r1aLei!=null&&p.ind?.r1aLei!=null ? p.ind.r1aLei-e.r1aLei : p.ind?.r1a!=null&&e.r1a!=null ? p.ind.r1a-e.r1a : null, an = SNAP.pozitii.filter(p=>!p.etf&&r1t(p)!=null).map(p=>({s:p.symbol,d:r1t(p)})).sort((a,b)=>b.d-a.d);
   const usd = SNAP.valute?.USD||0, B = BUCKETE(), tintaTema = n => n.startsWith('ETF') ? pr.tintaETF : SNAP.pozitii.filter(p=>p.tema===n).reduce((a,p)=>a+p.tinta,0);
   const stack = f => `<div class="stack" style="height:10px;margin-top:8px">${B.map(b=>{const v=f(b.n);return v>0.05?`<div style="flex:${v};background:var(${b.c})"></div>`:''}).join('')}</div>`;
   const nJ = jurnalTot_().length, dif = SNAP.bench?.diferenta;
   h += `<div class="sec gsec"><h2>Cum merg banii</h2><span class="sub">randament și comparații</span></div><div class="bento">
-    ${SNAP.randament?.anual!=null?tile('randament','racheta','Randamentul tău real', sg(SNAP.randament.anual,1)+'<small>% pe an</small>', SNAP.randament.vwce?.anual!=null?`VWCE cu aceleași depuneri: ${sg(SNAP.randament.vwce.anual,1)}%`:'pe banii tăi, la data fiecărei depuneri','','lat acc'):tile('randament','racheta','Randamentul tău real','în curând','se adună istoricul tranzacțiilor','','lat')}
+    ${SNAP.randament?.anual!=null?(()=>{ const a=randPerioada(SNAP.randament.anual, SNAP.randament.dela), b=SNAP.randament.vwce?.anual!=null?randPerioada(SNAP.randament.vwce.anual, SNAP.randament.dela):null;
+      return tile('randament','racheta','Randamentul tău real', sg(a.v,1)+`<small>% ${a.et}</small>`, b?`VWCE cu aceleași depuneri: ${sg(b.v,1)}%`:'pe banii tăi, la data fiecărei depuneri','','lat acc'); })():tile('randament','racheta','Randamentul tău real','în curând','se adună istoricul tranzacțiilor','','lat')}
     ${tile('vwce','trofeu','Tu față de VWCE', dif!=null?sgL(dif,0)+' <small>lei</small>':'în curând', dif!=null?(dif>=0?'alegerile tale au adăugat valoare':'varianta simplă ar fi dat mai mult'):'apare după câteva luni de date', ist.length>5?spark(ist.map(x=>x.totalRON/x.bench)):'')}
     ${tile('castig','monede','Câștig total', sgL(tot,0)+' <small>lei</small>', `${cs[0]?.symbol} aduce cel mai mult`, `<div class="minib">${cs.slice(0,6).map(p=>`<i style="height:${Math.max(Math.abs(p.pnlRON)/mx*100,6)}%;background:var(${p.pnlRON>=0?'--pos':'--neg'})"></i>`).join('')}</div>`)}
     ${an.length?tile('an','stea','Pe un an vs VWCE', `${esc(an[0].s)} <small>${sg(an[0].d,0)} pp</small>`, `cea mai slabă: ${esc(an.at(-1).s)} ${sg(an.at(-1).d,0)} pp`,'','lat'):''}
@@ -1718,8 +1790,8 @@ function vAnaliza(){
   h += `<div class="sec gsec"><h2>Riscul</h2><span class="sub">cât de tare se poate mișca</span></div><div class="bento">
     ${r?tile('risc','puls','Volatilitate pe an', nf(r.vol,0)+'%', r.volE?`VWCE: ${nf(r.volE,0)}%`:'', `<div class="gauge" style="--k:var(${r.volE&&r.vol>r.volE*1.3?'--warn':'--acc'})"><i style="width:${Math.min(r.vol/40*100,100)}%"></i>${r.volE?`<b style="left:${Math.min(r.volE/40*100,100)}%"></b>`:''}</div>`):''}
     ${r?tile('risc','alerta','Cel mai rău scenariu', '−'+(S.privat?'•••':nf(stresMax,0))+' <small>lei</small>', 'din testele de stres', `<div class="gauge" style="--k:var(--neg)"><i style="width:${Math.min(stresMax/T*100*2.5,100)}%"></i></div>`):''}
-    ${(()=>{ const c=corelatiiPortofoliu(); return c?tile('corelatii','link','Diversificare reală', nf(c.ne,1)+` <small>din ${c.poz.length}</small>`, c.grupuri[0]?`${c.grupuri[0].s.slice(0,3).join(', ')}… se mișcă la fel`:'nicio grupare puternică', `<div class="minih">${c.poz.slice(0,6).map(a=>c.poz.slice(0,6).map(b=>`<i style="background:${a===b?'var(--line)':culRho(c.K.M[a.symbol][b.symbol])}"></i>`).join('')).join('')}</div>`):''; })()}
-    ${tile('monede','glob','În dolari', nf(usd,0)+'%', usd>60?'risc valutar ridicat':'echilibrat', `<div class="gauge" style="--k:var(${usd>60?'--warn':'--acc'})"><i style="width:${usd}%"></i><b style="left:60%"></b></div>`)}
+    ${(()=>{ const c=corelatiiPortofoliu(); return c?tile('corelatii','link','Diversificare reală', '~'+Math.max(1,Math.round(c.ne))+` <small>pariuri din ${c.poz.length} poziții</small>`, c.grupuri[0]?`${c.grupuri[0].s.length} se mișcă împreună: ${nf(c.grupuri[0].pondere,0)}% din bani`:'nicio grupare puternică', `<div class="minih">${c.poz.slice(0,6).map(a=>c.poz.slice(0,6).map(b=>`<i style="background:${a===b?'var(--line)':culRho(c.K.M[a.symbol][b.symbol])}"></i>`).join('')).join('')}</div>`):''; })()}
+    ${tile('monede','glob','În dolari', nf(usd,0)+'%', usd>DOLAR_MAX?'mai mult decât piața globală':'cam cât piața globală', `<div class="gauge" style="--k:var(${usd>DOLAR_MAX?'--warn':'--acc'})"><i style="width:${usd}%"></i><b style="left:${DOLAR_MAX}%"></b></div>`)}
     ${tile('alocare','tinta','Alocare: acum și ținta', `${nf(SNAP.teme[B[0]?.n]||0,0)}% <small>în ${B[0]?.n.startsWith('ETF')?'ETF':'primul sector'}</small>`, '', `<div class="sub" style="margin-top:8px">Acum</div>${stack(n=>SNAP.teme[n])}<div class="sub" style="margin-top:8px">Ținta ta</div>${stack(tintaTema)}`, 'lat')}
   </div>`;
   h += `<div class="sec gsec"><h2>Costuri și taxe</h2><span class="sub">ce plătești</span></div><div class="bento">
@@ -2065,7 +2137,10 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then
   reg.addEventListener('updatefound', () => { const w = reg.installing; w?.addEventListener('statechange', () => { if (w.state==='installed' && navigator.serviceWorker.controller) arata(w); }); });
   reg.update().catch(()=>{});
 }).catch(()=>{});
-let RELOADING=false; navigator.serviceWorker?.addEventListener('controllerchange',()=>{ if(!RELOADING){ RELOADING=true; location.reload(); } });
+// Reîncărcăm doar când o versiune nouă ia locul celei vechi. La prima vizită (fără service worker înainte), preluarea controlului
+// nu schimbă nimic din pagină: o reîncărcare ar șterge parola pe care tocmai o scrii.
+const AVEA_SW = !!navigator.serviceWorker?.controller;
+let RELOADING=false; navigator.serviceWorker?.addEventListener('controllerchange',()=>{ if(!RELOADING && AVEA_SW){ RELOADING=true; location.reload(); } });
 document.querySelectorAll('.ni[data-i]').forEach(e=>e.innerHTML=ic(e.dataset.i)); $('blogo').innerHTML=LOGO(); setTimeout(muta,50); addEventListener('resize',()=>setTimeout(muta,60));
 LOADED = !are_seif() ? true : LOADED;
 // Ecranul de pornire: rămâne cel puțin 1,7 secunde (cât să se vadă animația), apoi se deschide în aplicație.

@@ -1,5 +1,5 @@
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.22.0';
+export const VERSION = '0.23.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -170,6 +170,18 @@ export const MISCARE_ZI = { prag: 5, multATR: 2.5 };
 
 // Impozit pe câștigul realizat prin brokeri străini, 2026 (Declarația Unică, până la 25 mai).
 export const IMPOZIT = { cota: 16, termen: '25 mai' };
+// CASS (contribuția la sănătate, 10%) pe veniturile din investiții: se datorează doar peste 6 salarii minime pe an, pe trepte fixe
+// de 6, 12 sau 24 de salarii minime. Salariul minim de referință pentru veniturile din 2026: 4.050 lei (pragurile 24.300 / 48.600 / 97.200 lei).
+// Verifică la depunere: dacă ANAF anunță alt salariu minim de referință, se schimbă doar pragurile.
+export const CASS = { cota: 10, salariuMinim: 4050, trepte: [6, 12, 24] };
+// Impozitul reținut la sursă pe dividende, după țara companiei (cota uzuală pentru rezidenți români; SUA: cu formularul W-8BEN).
+// România cere 16% în total și scade ce s-a plătit deja în străinătate, până la 16% (creditul fiscal, cu document de la broker).
+export const RETINERE_DIV = { US: 10, '.DE': 26.375, '.PA': 25, '.MI': 26, '.MC': 19, '.AS': 15, '.SW': 35, '.L': 0 };
+// Randamentul anual al indicelui MSCI World (net, în dolari), pentru simulatorul și lecțiile de istorie din aplicație.
+// Sursa: MSCI (factsheet-uri „MSCI World Index (USD)”, net returns).
+export const MSCI_WORLD = { 2000: -13.18, 2001: -16.82, 2002: -19.89, 2003: 33.11, 2004: 14.72, 2005: 9.49, 2006: 20.07, 2007: 9.04,
+  2008: -40.71, 2009: 29.99, 2010: 11.76, 2011: -5.54, 2012: 15.83, 2013: 26.68, 2014: 4.94, 2015: -0.87, 2016: 7.51, 2017: 22.40,
+  2018: -8.71, 2019: 27.67, 2020: 15.90, 2021: 21.82, 2022: -18.14, 2023: 23.79, 2024: 18.67 };
 
 // Sufixe Trading 212 -> sufixe de bursă. "VWCEd_EQ" = VWCE pe Xetra.
 export const T212_SUFFIX = { d: '.DE', p: '.PA', l: '.L', a: '.AS', e: '.MC', m: '.MI', s: '.SW' };

@@ -1,6 +1,7 @@
 // Motorul analistului: funcții pure, fără rețea. Testabil în node.
 // Orientare: investitor pe termen lung (nucleu ETF + sateliți), care reechilibrează din depuneri.
-import { THEMES, ALIASES, ETFS, RISK, PROFIL, TINTE, PROTECTIE, MONEDA_SUFIX, COMISION_FX, ORAR, TREPTE_ORIZONT, SCENARII, ETF_CATALOG, ACTIUNI_CATALOG } from './config.js';
+import { THEMES, ALIASES, ETFS, RISK, PROFIL, TINTE, PROTECTIE, MONEDA_SUFIX, COMISION_FX, ORAR, TREPTE_ORIZONT, SCENARII, ETF_CATALOG, ACTIUNI_CATALOG, IMPOZIT, CASS, RETINERE_DIV, MSCI_WORLD } from './config.js';
+export { MSCI_WORLD, CASS, IMPOZIT };
 
 // ---------- Indicatori ----------
 export function sma(v, n) {
@@ -648,4 +649,28 @@ export function schimbari(vechi, nou) {
     if (p.oportunitate && !o.oportunitate) out.push({ symbol: p.symbol, din: o.semnal, in: p.semnal, eticheta: 'Oportunitate', important: true });
   }
   return out;
+}
+
+// ---------- Raportul anual pentru Declarația Unică (F5) ----------
+// tranzactii: [{ broker, data, symbol, lei }] (câștigul sau pierderea fiecărei vânzări, în lei; eToro cu cursul BNR din ziua vânzării)
+// dividende: [{ data, symbol, lei }] încasate (net de reținerea din străinătate), în lei.
+// Impozitul pe câștig: 16% din câștigul net al anului (pierderile din același an se scad). Dividende: România cere 16% din brut,
+// minus ce s-a reținut deja în străinătate (cel mult 16%). CASS: 10% din treapta de 6, 12 sau 24 de salarii minime atinsă.
+export const retinereDiv = sym => RETINERE_DIV[Object.keys(RETINERE_DIV).find(k => k !== 'US' && sym.endsWith(k))] ?? RETINERE_DIV.US;
+export function raportAnual(an, tranzactii = [], dividende = []) {
+  const t = tranzactii.filter(x => String(x.data).startsWith(an)), d = dividende.filter(x => String(x.data).startsWith(an));
+  const peBroker = ['Trading 212', 'eToro'].map(b => { const l = t.filter(x => x.broker === b);
+    return { broker: b, n: l.length, castig: l.filter(x => (x.lei || 0) > 0).reduce((a, x) => a + x.lei, 0), pierdere: l.filter(x => (x.lei || 0) < 0).reduce((a, x) => a + x.lei, 0), net: l.reduce((a, x) => a + (x.lei || 0), 0) }; });
+  const net = peBroker.reduce((a, b) => a + b.net, 0), impozitCastig = Math.max(0, net) * IMPOZIT.cota / 100;
+  const peTara = {};
+  for (const x of d) { const r = retinereDiv(x.symbol), brut = x.lei / (1 - r / 100), tara = r === RETINERE_DIV.US && !x.symbol.includes('.') ? 'SUA' : (x.symbol.match(/\.(\w+)$/)?.[1] || 'alta');
+    const g = peTara[tara] ||= { tara, retinere: r, net: 0, brut: 0, retinut: 0, n: 0 };
+    g.net += x.lei; g.brut += brut; g.retinut += brut - x.lei; g.n++; }
+  const tari = Object.values(peTara).map(g => ({ ...g, impozitRO: Math.max(0, g.brut * IMPOZIT.cota / 100 - Math.min(g.retinut, g.brut * IMPOZIT.cota / 100)) }));
+  const divBrut = tari.reduce((a, g) => a + g.brut, 0), divNet = tari.reduce((a, g) => a + g.net, 0), impozitDiv = tari.reduce((a, g) => a + g.impozitRO, 0);
+  // CASS: veniturile din investiții ale anului (câștigul net, dacă e pozitiv, plus dividendele brute), pe trepte
+  const venituri = Math.max(0, net) + divBrut, praguri = CASS.trepte.map(k => k * CASS.salariuMinim);
+  const treapta = [...praguri].reverse().find(p => venituri >= p) || 0, cass = treapta * CASS.cota / 100;
+  return { an, tranzactii: t.length, faraCurs: t.filter(x => x.lei == null).length, peBroker, net, impozitCastig, dividende: d.length, tari, divBrut, divNet, impozitDiv,
+    venituri, praguri, treapta, cass, total: impozitCastig + impozitDiv + cass, depune: net !== 0 || d.length > 0 || cass > 0 };
 }

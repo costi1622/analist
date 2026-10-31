@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.27.0';
+const APP_VER = '0.28.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -704,7 +704,9 @@ function drepturiAutor(){
     ${li(['<b class="ink">Răspundere civilă:</b> încetarea încălcării, retragerea și distrugerea copiilor, plata de despăgubiri. Legea permite despăgubiri egale cu triplul sumelor care ar fi fost datorate pentru o autorizare legală.','<b class="ink">Răspundere penală:</b> reproducerea, distribuirea sau folosirea fără drept a unui program pentru calculator sunt infracțiuni după Legea nr. 8/1996 și se pedepsesc cu închisoare sau amendă.','<b class="ink">Acces fără drept:</b> folosirea tokenurilor, cheilor, parolelor sau datelor din aplicație, ori intrarea în conturile autorului, pot constitui infracțiunile contra siguranței sistemelor și datelor informatice din Codul penal (art. 360–365: acces ilegal la un sistem informatic, transfer neautorizat de date informatice etc.).','<b class="ink">Date personale:</b> datele financiare din aplicație sunt ale autorului. Prelucrarea lor fără drept intră sub incidența GDPR (Regulamentul UE 2016/679).'])}
     ${h3('Protecții tehnice')}
     ${li(['Aplicația funcționează doar la adresa ei oficială. O copie publicată în altă parte afișează acest aviz și se oprește.','Datele sunt criptate și pot fi citite doar cu parola și cheia autorului.','Fiecare fișier al aplicației poartă numele autorului și anul.'])}
-    <p class="sub" style="margin:16px 0 4px">Pentru orice utilizare e nevoie de acordul scris al autorului, Constantin Enache.</p>`);
+    ${h3('Licențe acordate în scris')}
+    ${li(['<b class="ink">Rotea Bebi Dumitru</b>: permisiune de utilizare din 31 octombrie 2026. Uz personal, necomercial și netransferabil, pentru propriile conturi, pe repo-ul lui privat. Poate fi retrasă oricând de autor.'])}
+    <p class="sub" style="margin:16px 0 4px">Pentru orice altă utilizare e nevoie de acordul scris al autorului, Constantin Enache.</p>`);
 }
 function setPerioada(k){ S.perioada=k; save(); vib(); render(); }
 const SERIE_TU = (v, nume='Portofoliul tău') => ({name:nume, short:'Tu', v, color:'--tu', w:2.2});
@@ -2193,7 +2195,7 @@ function vSetari(){
     const D = S.desc || '';
     const des = (k, html) => D===k ? `<div class="det">${html}</div>` : '';
     const tg = k => ['comutaDesc', k];
-    return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO('logo-big',2).replace('logo-big','" style="width:56px;height:56px')}<div><div style="font-size:var(--t4);font-weight:800">Analist</div><div class="sub">Analistul personal pe bursă al lui Costi · ${APP_VER}</div>
+    return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO('logo-big',2).replace('logo-big','" style="width:56px;height:56px')}<div><div style="font-size:var(--t4);font-weight:800">Analist</div><div class="sub">Analistul tău personal pe bursă · ${APP_VER}</div>
       <div class="sub" style="margin-top:4px;color:var(${rau?'--neg':'--pos'})">${rau?`${rau} ${rau===1?'conexiune are':'conexiuni au'} probleme`:`${ok} conexiuni active · date criptate`}</div></div></div>
     <div class="sec"><h2>Conexiuni</h2>${STARE?.generat||SNAP?.generat?`<span class="sub">test ${cand(STARE?.generat||SNAP.generat)}</span>`:''}</div>
     <div class="card grp">${Object.entries(NUMEC).filter(([k])=>c[k]).map(([k,n])=>{ const [sm,col]=STAREI[c[k].stare]||['?','--mut'];
@@ -2229,12 +2231,11 @@ function vSetari(){
   const bif = k => `<button class="q" style="width:22px;height:22px;font-size:var(--t2);${pas[k]?'background:var(--pos);color:#fff;border-color:var(--pos)':''}" aria-label="Bifează" data-c="${A('comutaPas',k)}">${pas[k]?'✓':''}</button>`;
   const pasH = (n,k,t,body) => `<div class="card"><div class="row"><span class="lbl">Pasul ${n}</span>${k?bif(k):''}</div><h3 style="margin:4px 0 8px;font-size:var(--t4)">${t}</h3>${body}</div>`;
   return `<div class="sec" style="margin-top:8px"><h2>Pornire</h2><span class="sub">~15 minute, o singură dată</span></div>
-  <div class="sub" style="margin:0 2px 12px">Aplicația pornește cu datele tale după pasul 3. Fiecare pas e explicat în detaliu în documentație.</div>
-  ${pasH(1,'repo','Creează două repo-uri goale',`<div class="sub" style="margin-bottom:12px">Doar le creezi, fără fișiere. Codul îl publică Claude, după ce îi spui în chat că sunt create.</div>
-    <div style="display:flex;gap:8px"><a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist-date&visibility=private" target="_blank" rel="noopener noreferrer">analist-date (privat) ↗</a>
-    <a class="btn ghost sm" style="flex:1;text-align:center;text-decoration:none" href="https://github.com/new?name=analist&visibility=public" target="_blank" rel="noopener noreferrer">analist (public) ↗</a></div>`)}
+  <div class="sub" style="margin:0 2px 12px">Aplicația pornește cu datele tale după pasul 3. Fiecare pas e explicat în detaliu în ghidul de pornire.</div>
+  ${pasH(1,'repo','Creează repo-ul tău privat',`<div class="sub" style="margin-bottom:12px">Un singur repo, <b class="ink2">privat</b>, numit <b class="ink2">analist-date</b>. În el urci fișierele din kitul de pornire primit de la autor: folderele <b class="ink2">runner</b> și <b class="ink2">.github</b>, plus <b class="ink2">package.json</b>, <b class="ink2">.gitignore</b> și <b class="ink2">LICENSE</b>. Datele tale stau doar aici, criptate.</div>
+    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none" href="https://github.com/new?name=analist-date&visibility=private" target="_blank" rel="noopener noreferrer">Creează analist-date (privat) ↗</a>`)}
   ${pasH(2,'chei','Pune cheile în GitHub',`<div class="sub" style="margin-bottom:8px">Pentru fiecare cheie: New repository secret, apoi numele exact și valoarea. Atinge numele ca să-l copiezi.</div>
-    <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener noreferrer">Deschide pagina de secrete ↗</a>
+    ${R!=='costi1622/analist-date'?`<a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener noreferrer">Deschide pagina de secrete ↗</a>`:'<div class="sub" style="margin-bottom:8px">În repo-ul tău <b class="ink2">analist-date</b>: Settings → Secrets and variables → Actions → New repository secret.</div>'}
     ${SECRETE.map(([n,b,tip,cum,url])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="row"><button class="chip" style="color:var(--acc)" data-c="${A('copiaza',n)}">${n} ⧉</button><span class="sub" style="color:var(${tip==='obligatoriu'?'--neg':tip==='recomandat'?'--warn':'--mut'})">${tip}</span></div>
       <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
       ${n==='NTFY_TOPIC'?(PORN().topic?`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost sm" style="flex:1" data-c="${A('copiaza',PORN().topic)}">${PORN().topic} ⧉</button><a class="btn ghost sm" style="text-decoration:none" href="https://ntfy.sh/${PORN().topic}" target="_blank" rel="noopener noreferrer">Abonează-te ↗</a></div>`:`<button class="btn ghost sm" style="margin-top:8px" data-c="${A('topicNou')}">Generează un nume</button>`):''}
@@ -2244,7 +2245,7 @@ function vSetari(){
   ${pasH(3,null,'Conectează telefonul',`<div class="sub">La crearea tokenului alegi:</div><ul class="m" style="font-size:var(--t2)"><li>Repository access: <b class="ink2">Only select repositories → analist-date</b></li><li>Permissions: <b class="ink2">Contents: Read-only</b> și <b class="ink2">Actions: Read and write</b></li><li>Expiration: <b class="ink2">1 an</b></li></ul><div class="sub">Tokenul nu poate citi alt repo și nu poate modifica fișiere.</div>
     <a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin:12px 0" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Creează tokenul ↗</a>
     <input id="ft" type="password" autocomplete="off" placeholder="Lipește tokenul aici (github_pat_…)">
-    <details style="margin-bottom:8px"><summary class="sub" style="cursor:pointer">Alt repo decât ${esc(R)}?</summary><input id="fu" value="${esc(R)}"></details>
+    <details style="margin-bottom:8px"><summary class="sub" style="cursor:pointer">Repo-ul: se află singur din token (utilizatorul tău/analist-date). Altul?</summary><input id="fu" value="${esc(R)}" autocomplete="off" placeholder="utilizator/analist-date"></details>
     <div class="sub" style="margin-top:8px">Alege o parolă pentru aplicație. Cu ea se criptează pe telefon tokenul, cheia de date și jurnalul. Minimum ${PAROLA_MIN} caractere. O frază din 4-5 cuvinte e cea mai sigură și ușor de ținut minte.</div>
     <input id="pw1" type="password" autocomplete="new-password" placeholder="Parola aplicației" data-in="${A('arataForta','$val','fp1')}">${fortaHTML('fp1')}
     <input id="pw2" type="password" autocomplete="new-password" placeholder="Parola, încă o dată">
@@ -2253,8 +2254,12 @@ function vSetari(){
   ${aspect}${ver}`;
 }
 async function salveaza(test){
-  const r=($('fu')?.value||S.repo).trim(), t=$('ft').value.trim();
+  let r=($('fu')?.value||S.repo).trim(); const t=$('ft').value.trim();
   if (!t) { toast('Lipește tokenul întâi.'); return; }
+  if (!/^[A-Za-z0-9-]{1,39}\/[A-Za-z0-9._-]{1,100}$/.test(r)) { toast('Repo-ul se scrie așa: utilizator/analist-date.'); return; }
+  // repo-ul neschimbat: îl aflăm din token (al cui e), ca un utilizator nou să nu fie nevoit să-l scrie
+  if (!V && r === 'costi1622/analist-date') { try { const u = await fetch('https://api.github.com/user', {cache:'no-store', headers:{Authorization:'Bearer '+t, Accept:'application/vnd.github+json'}});
+    const login = u.ok ? String((await u.json()).login||'') : ''; if (/^[A-Za-z0-9-]{1,39}$/.test(login) && login.toLowerCase() !== 'costi1622') r = login + '/analist-date'; } catch(e){} }
   const pornire = !V;
   if (pornire) {
     const pw1=$('pw1').value, pw2=$('pw2').value, pr=PORN();

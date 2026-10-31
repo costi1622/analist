@@ -1,5 +1,5 @@
 // Analist: logica aplicației. Separată de index.html ca politica de securitate (CSP) să interzică orice cod inline.
-const APP_VER = '0.25.0';
+const APP_VER = '0.26.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -813,12 +813,37 @@ function squarify(items, x, y, w, h){
   }
   return out;
 }
+// Harta „mozaic”: plăci cu spațiu între ele, culoare după ziua fiecăreia (mai intensă = mișcare mai mare), graficul ultimei luni
+// în fundalul plăcilor mari, sigla și valoarea în lei. Pozițiile mici se strâng într-o placă „+N” (atingi și le vezi pe toate).
+const HARTA_MAX = 9;
 function harta(poz){
-  const W=Math.min(innerWidth-28,732), H=210, tot=poz.reduce((a,p)=>a+p.valueRON,0); if(!tot) return '';
-  const it=[...poz].sort((a,b)=>b.valueRON-a.valueRON).map(p=>({p, v:p.valueRON/tot*W*H}));
-  return `<div class="tmap" data-noswipe>${squarify(it,0,0,W,H).map(({p,x,y,w,h})=>{ const m=MISC(p), t=tr(m), k=Math.round(30+60*Math.min(Math.abs(m||0)/3,1));
-    const bg = t==='flat' ? '#3b4757' : `color-mix(in srgb,var(${TCOL[t]}) ${k}%,#1c2430)`;
-    return `<button class="${w<54||h<38?'mic':''}" style="left:${x/W*100}%;top:${y/H*100}%;width:${w/W*100}%;height:${h/H*100}%;background:${bg}" data-c="${A('detaliu',p.symbol)}" aria-label="${esc(p.symbol)} ${sg(m,2)}%"><b>${esc(p.symbol)}</b><span class="num">${m==null?'':sg(m,1)+'%'}</span></button>`; }).join('')}</div>`;
+  const tot = poz.reduce((a,p)=>a+p.valueRON,0); if (!tot) return '';
+  const sort = [...poz].sort((a,b)=>b.valueRON-a.valueRON);
+  let mari = sort.filter((p,i)=>i < HARTA_MAX && p.valueRON/tot >= 0.03), mici = sort.filter(p=>!mari.includes(p));
+  if (mici.length === 1) { mari = [...mari, mici[0]]; mici = []; }
+  const W = Math.min(innerWidth-48, 720), H = poz.length > 6 ? 300 : 240;
+  const it = mari.map(p=>({p, v:p.valueRON/tot*W*H}));
+  if (mici.length) { const v = mici.reduce((a,p)=>a+p.valueRON,0), m = mici.reduce((a,p)=>a+(MISC(p)||0)*p.valueRON,0)/v; it.push({rest:mici, m, v:v/tot*W*H}); }
+  const culoare = m => { const t = tr(m); if (t==='flat') return ['color-mix(in srgb,var(--flat) 55%,#18202b)','color-mix(in srgb,var(--flat) 30%,#121821)'];
+    const k = Math.round(42+48*Math.min(Math.abs(m||0)/3,1)); return [`color-mix(in srgb,var(${TCOL[t]}) ${k}%,#141b25)`, `color-mix(in srgb,var(${TCOL[t]}) ${Math.round(k*0.45)}%,#0e141c)`]; };
+  const placi = squarify(it,0,0,W,H).map(o=>{ const {x,y,w,h} = o, m = o.rest ? o.m : MISC(o.p), [c1,c2] = culoare(m);
+    const mare = w>=120 && h>=96, mediu = w>=64 && h>=52, poz2 = `left:calc(${x/W*100}% + 2px);top:calc(${y/H*100}% + 2px);width:calc(${w/W*100}% - 4px);height:calc(${h/H*100}% - 4px);--c1:${c1};--c2:${c2}`;
+    if (o.rest) return `<button class="pl rest${mediu?'':' mic'}" style="${poz2}" data-c="${A('hartaRest')}" aria-label="Încă ${o.rest.length} poziții mici"><b>+${o.rest.length}</b>${mediu?`<span class="num">${sg(m,1)}%</span>${h>=84?'<small>poziții mici</small>':''}`:''}</button>`;
+    const p = o.p, l = mare ? sigla(p) : '', ser = mare ? p.serie?.c?.slice(-22) : null;
+    let sp = ''; if (ser?.length > 2) { const lo = Math.min(...ser), hi = Math.max(...ser), X = i=>i/(ser.length-1)*100, Y = v=>38-34*((v-lo)/((hi-lo)||1));
+      const d = ser.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join(''); sp = `<svg class="psp" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path d="${d}L100 40L0 40Z"/><path class="l" d="${d}"/></svg>`; }
+    return `<button class="pl${mare?' mare':mediu?'':' mic'}" style="${poz2}" data-c="${A('detaliu',p.symbol)}" aria-label="${esc(p.symbol)} ${sg(m,2)}%">${sp}
+      <span class="pt">${l?`<img src="${l}" alt="">`:''}<b>${esc(p.symbol.replace(/\..*$/,''))}</b></span>
+      ${mediu?`<span class="pj"><span class="num pv">${m==null?'':sg(m,1)+'%'}</span>${mare?`<small class="num">${S.privat?'•••':nf(p.valueRON,0)+' lei'} · ${nf(p.valueRON/tot*100,1)}%</small>`:''}</span>`:''}</button>`; }).join('');
+  return `<div class="tmap2" data-noswipe style="height:${H}px">${placi}</div>
+    <div class="tleg"><span class="num">−3%</span><i></i><span class="num">+3%</span><small>mărimea = cât ai în ea · culoarea = ultima zi</small></div>`;
+}
+function hartaRest(){
+  const C = CONTURI.some(([k])=>k===S.cont) ? S.cont : 'toate', poz = vedereCont(C).poz, tot = poz.reduce((a,p)=>a+p.valueRON,0), sort = [...poz].sort((a,b)=>b.valueRON-a.valueRON);
+  const mari = sort.filter((p,i)=>i < HARTA_MAX && p.valueRON/tot >= 0.03), mici = sort.filter(p=>!mari.includes(p));
+  openSheet(`${capFoaie('harta', 'Pozițiile mici', `${mici.length} poziții, ${nf(mici.reduce((a,p)=>a+p.valueRON,0)/tot*100,1)}% din cont`)}
+    <div class="card list">${mici.map(p=>{ const m = MISC(p); return `<div class="pr" data-c="${A('detaliu',p.symbol)}">${avatar(p)}<div style="min-width:0"><div class="s">${esc(p.symbol)}</div><div class="n">${esc(p.name||'')}</div></div><span></span>
+      <div class="r"><b class="num fd" style="font-size:var(--t3)">${lei(p.valueRON,0)}</b>${mv(m)}</div></div>`; }).join('')}</div>`);
 }
 // „De știut”: cartonașe cu cifra, limita și ce înseamnă pentru tine.
 function deStiut(){
@@ -844,7 +869,7 @@ function deStiut(){
 function deStiutHTML(){
   const c=deStiut(); if(!c.length) return '';
   return `<div class="sec"><h2>De știut · ${c.length}</h2><span class="sub">glisează</span></div>
-  <div class="car" id="car" data-noswipe onscroll="const i=Math.round(this.scrollLeft/(this.firstElementChild.offsetWidth+10));document.querySelectorAll('#dots i').forEach((d,k)=>d.classList.toggle('on',k===i))">${c.map(x=>`
+  <div class="car" id="car" data-noswipe>${c.map(x=>`
     <div class="card ks" style="--k:var(${x.k})" ${x.act?`data-c="${esc(JSON.stringify(x.act))}"`:x.gl?`data-c="${A('termen',x.gl)}"`:''}>
       <div style="display:flex;gap:12px;align-items:center"><span class="ic">${x.ic}</span><h4>${esc(x.titlu)}</h4></div>
       <div class="val num">${esc(x.val)}</div><div class="sub">${esc(x.sub)}</div>
@@ -852,6 +877,15 @@ function deStiutHTML(){
       <p>${link(x.text)}</p></div>`).join('')}</div>
   ${c.length>1?`<div class="dots" id="dots">${c.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:''}`;
 }
+// Punctele de sub „De știut”: urmăresc cartonașul din mijloc (regulile de securitate nu permit cod în HTML, deci ascultăm aici).
+function cartonasActiv(car){ const r = car.getBoundingClientRect(), mij = r.left + r.width/2; let best = 0, dist = Infinity;
+  [...car.children].forEach((c,k)=>{ const b = c.getBoundingClientRect(), d = Math.abs(b.left + b.width/2 - mij); if (d < dist) { dist = d; best = k; } }); return best; }
+document.addEventListener('scroll', e => { const car = e.target; if (car?.id !== 'car') return; const i = cartonasActiv(car);
+  document.querySelectorAll('#dots i').forEach((d,k)=>d.classList.toggle('on', k===i)); }, { capture:true, passive:true });
+// atingi rândul de puncte: merge la cel mai apropiat punct (tot rândul e țintă, punctele sunt prea mici pentru deget)
+document.addEventListener('click', e => { const r = e.target.closest?.('#dots'); if (!r) return; let best = 0, dist = Infinity;
+  [...r.children].forEach((d,k)=>{ const b = d.getBoundingClientRect(), x = Math.abs(b.left + b.width/2 - e.clientX); if (x < dist) { dist = x; best = k; } }); mergiCartonas(best); });
+function mergiCartonas(i){ const car = $('car'), c = car?.children[i]; if (!c) return; car.scrollTo({ left: c.offsetLeft - (car.clientWidth - c.offsetWidth)/2, behavior:'smooth' }); }
 function spark(v){
   if(!v||v.length<2) return '<span></span>';
   const W=70,H=28,lo=Math.min(...v),hi=Math.max(...v),X=i=>i/(v.length-1)*(W-4)+2,Y=x=>H-3-(H-6)*((x-lo)/((hi-lo)||1));
@@ -2050,7 +2084,8 @@ function vSetari(){
     <div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div><div class="lbl" style="margin:12px 0 8px">Efecte vizuale</div><div class="seg">${[['complet','Complete'],['redus','Reduse']].map(([k,t])=>`<button class="${(S.fx||'complet')===k?'on':''}" data-c="${A('setFx',k)}">${t}</button>`).join('')}</div><div class="sub" style="margin-top:8px">Aurora din fundal, granulația și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div></div>
     <div class="sec"><h2>Gesturi</h2></div><div class="card sub" style="font-size:var(--t2);line-height:1.7">Trage în jos de sus ca să reîncarci · glisează între tab-uri · atinge un termen subliniat sau „?” · atinge un grafic ca să citești valorile · trage o fereastră în jos ca s-o închizi.</div>
     <div class="card grp">${it('--neg','extern','Deconectează telefonul','șterge seiful de pe acest telefon',null,['deconecteaza'])}</div>
-    <div class="sub" style="text-align:center;margin:8px 0 4px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''} · construită de Costi, cu Claude</div>`;
+    <div class="sub" style="text-align:center;margin:8px 0 4px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>
+    <div class="sub" style="text-align:center;margin:0 0 4px">© 2026${new Date().getFullYear()>2026?'–'+new Date().getFullYear():''} Constantin Enache. Toate drepturile rezervate.</div>`;
   }
   const R = S.repo||'costi1622/analist-date', [own] = R.split('/'), pas = S.pasi||{};
   const PR = PORN();
@@ -2455,7 +2490,7 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan,
   deschideLectie, arataModul, quiz, cautaTermen, deschideSect, gxReluare, avErr,
-  blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, comutaPrivat, setViz, setSort, setTema, comutaDesc, comutaPas,
+  blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, hartaRest, comutaPrivat, setViz, setSort, setTema, comutaDesc, comutaPas,
   detComuta, detNota, detAd, setFx, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, renuntaProfil,
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,
   exportSeif, importSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,

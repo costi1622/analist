@@ -546,6 +546,29 @@ html.fx-redus #aur::after{display:none}
 .perioade .pdif{margin-left:auto}
 .odo{font-variant-numeric:tabular-nums}
 nav .in{background:color-mix(in srgb,var(--panel) 97%,var(--m1))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* v0.26: harta mozaic */
+.tmap2{position:relative;border-radius:var(--r3);overflow:hidden}
+.tmap2 .pl{position:absolute;border:0;padding:8px;border-radius:var(--r2);text-align:left;color:#fff;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;font:inherit;
+  background:linear-gradient(155deg,var(--c1),var(--c2));box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,255,255,.05),0 8px 20px -12px rgba(0,0,0,.6);transition:transform .2s cubic-bezier(.3,1.4,.5,1),filter .2s}
+.tmap2 .pl:active{transform:scale(.97);filter:brightness(1.15)}
+.tmap2 .pl.mare{padding:12px}
+.tmap2 .pt{display:flex;align-items:center;gap:8px;min-width:0;position:relative}
+.tmap2 .pt b{font-size:var(--t2);font-weight:750;letter-spacing:.3px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.tmap2 .mare .pt b{font-size:var(--t3)}
+.tmap2 .pt img{width:24px;height:24px;border-radius:var(--r1);background:#fff;object-fit:contain;flex:none;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.tmap2 .pj{display:flex;flex-direction:column;gap:2px;position:relative;text-shadow:0 1px 8px rgba(0,0,0,.35)}
+.tmap2 .pv{font-size:var(--t2);font-weight:750}.tmap2 .mare .pv{font-size:var(--t4);letter-spacing:-.3px}
+.tmap2 .pj small{font-size:var(--t1);opacity:.8;white-space:nowrap}
+.tmap2 .pl.mic{padding:4px;align-items:center;justify-content:center}.tmap2 .pl.mic .pt b{font-size:var(--t1)}
+.tmap2 .psp{position:absolute;left:0;right:0;bottom:0;width:100%;height:55%;pointer-events:none}
+.tmap2 .psp path{fill:rgba(255,255,255,.1);stroke:none}.tmap2 .psp path.l{fill:none;stroke:rgba(255,255,255,.45);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.tmap2 .rest{background:repeating-linear-gradient(135deg,var(--c1) 0 8px,var(--c2) 8px 16px);align-items:flex-start}
+.tmap2 .rest b{font-size:var(--t3);font-weight:750}.tmap2 .rest span{font-size:var(--t2);font-weight:700}.tmap2 .rest small{font-size:var(--t1);opacity:.8}
+.tmap2 .rest.mic{align-items:center}.tmap2 .rest.mic b{font-size:var(--t1)}
+.tleg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 4px 4px;color:var(--mut);font-size:var(--t1)}
+.tleg i{width:96px;height:6px;border-radius:999px;background:linear-gradient(90deg,var(--neg),var(--flat),var(--pos))}
+.tleg small{margin-left:auto;font-size:var(--t1)}
+.dots i{position:relative;transition:width .3s cubic-bezier(.3,1.3,.5,1),background .3s}.dots{gap:8px;min-height:44px;align-items:center;margin-top:0;cursor:pointer}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;

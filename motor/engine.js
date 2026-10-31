@@ -53,6 +53,13 @@ export function macd(v) {
 }
 const pct = (a, b) => (b ? (a / b - 1) * 100 : null);
 const ret = (c, n) => (c.length > n ? pct(c[c.length - 1], c[c.length - 1 - n]) : null);
+// Volatilitatea anuală (%): abaterea standard a randamentelor zilnice din ultimul an, × √252.
+export function volAnual(c, n = 252) {
+  const x = c.slice(-(n + 1)); if (x.length < 60) return null;
+  const r = []; for (let i = 1; i < x.length; i++) if (x[i - 1] > 0 && x[i] > 0) r.push(Math.log(x[i] / x[i - 1]));
+  const m = r.reduce((a, b) => a + b, 0) / r.length, v = r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length - 1);
+  return Math.sqrt(v * 252) * 100;
+}
 
 export function indicators(candles) {
   const c = candles.map(x => x.c);
@@ -71,7 +78,8 @@ export function indicators(candles) {
   const protectie = a != null ? maxP - Math.max(PROTECTIE.multATR * a, maxP * PROTECTIE.minPct / 100) : null;
   return {
     pret: last,
-    sma50: sma(c, 50), sma200: sma(c, 200),
+    sma20: sma(c, 20), sma50: sma(c, 50), sma200: sma(c, 200),
+    volAn: volAnual(c),
     rsi: rsi(c.slice(-120)),
     macdCross,
     atr: a, atrPct: a != null ? a / last * 100 : null,
@@ -202,20 +210,66 @@ export function cuAlese(list, alese = []) {
     brokers: [{ broker: 'Trading 212', symbol: k, qty: 0, valueRON: 0, costRON: 0 }], moneda: monedaOf(k), tema: themeOf(k), etf: ETFS.includes(k), virtual: true }));
   return [...list, ...virt];
 }
+// ---------- Scorul unei idei noi (0–100) ----------
+// Aceleași criterii pentru orice companie, din date pe care le verifici oricând:
+// trend (25), cum a mers față de piață pe un an (15), profitabilitate (20), creșterea veniturilor (15), evaluare (10), analiști (15).
+// Scorul e raportat la punctele pentru care există date; sub 70 de puncte posibile, ideea e marcată „date incomplete”.
+// ref = { r1a } al ETF-ului global (VWCE), pentru comparația cu piața.
+export function scorIdee(c, ref = {}) {
+  const i = c?.ind || {}, f = c?.fund || {}, r = c?.rec, pct = [];
+  let p = 0, max = 0;
+  const add = (pts, din, text) => { p += pts; max += din; pct.push({ pts, din, text }); };
+  if (i.sma200 != null && i.pret != null) add((i.pret > i.sma200 ? 15 : 0) + (i.sma50 != null && i.sma50 > i.sma200 ? 10 : 0), 25,
+    i.pret > i.sma200 ? (i.sma50 > i.sma200 ? 'Trend lung în sus (peste media de 200 de zile, iar media de 50 e peste ea)' : 'Peste media de 200 de zile, dar media de 50 e încă sub ea') : 'Sub media de 200 de zile: trendul lung e în jos');
+  // în lei când există (aceeași monedă pentru amândouă), altfel în moneda fiecăreia
+  const lei = i.r1aLei != null && ref.r1aLei != null, r1 = lei ? i.r1aLei : i.r1a, rv = lei ? ref.r1aLei : ref.r1a;
+  if (r1 != null && rv != null) { const d = r1 - rv; add(d >= 10 ? 15 : d >= 0 ? 10 : d >= -10 ? 5 : 0, 15, `Pe un an${lei ? ', în lei' : ''}: ${fmt(r1)}%, față de ${fmt(rv)}% pentru VWCE`); }
+  if (f.marja != null || f.roe != null) {
+    const m = f.marja == null ? null : f.marja >= 15 ? 10 : f.marja >= 8 ? 6 : f.marja > 0 ? 3 : 0, e = f.roe == null ? null : f.roe >= 15 ? 10 : f.roe >= 8 ? 6 : f.roe > 0 ? 3 : 0;
+    add((m ?? 0) + (e ?? 0), (m != null ? 10 : 0) + (e != null ? 10 : 0), [f.marja != null && `marja netă ${fmt(f.marja)}%`, f.roe != null && `rentabilitatea capitalului ${fmt(f.roe)}%`].filter(Boolean).join(', ').replace(/^./, x => x.toUpperCase()));
+  }
+  if (f.crestereVenit != null) add(f.crestereVenit >= 10 ? 15 : f.crestereVenit >= 3 ? 10 : f.crestereVenit >= 0 ? 5 : 0, 15, `Veniturile ${f.crestereVenit >= 0 ? 'cresc' : 'scad'} cu ${fmt(Math.abs(f.crestereVenit))}% pe an`);
+  if (f.pe != null) add(f.pe > 0 && f.pe <= 25 ? 10 : f.pe > 0 && f.pe <= 40 ? 6 : f.pe > 0 && f.pe <= 60 ? 3 : 0, 10, f.pe > 0 ? `P/E ${fmt(f.pe)}: ${f.pe <= 25 ? 'evaluare rezonabilă' : f.pe <= 40 ? 'puțin scumpă' : 'scumpă'}` : 'Fără profit în ultimul an (P/E negativ)');
+  if (r) { const pos = (r.strongBuy || 0) + (r.buy || 0), neg = (r.sell || 0) + (r.strongSell || 0), tot = pos + neg + (r.hold || 0);
+    if (tot) { const net = (pos - neg) / tot; add(net >= 0.6 ? 15 : net >= 0.3 ? 10 : net >= 0 ? 5 : 0, 15, `Analiștii: ${pos} cumpărare, ${r.hold || 0} păstrare, ${neg} vânzare`); } }
+  return { scor: max ? Math.round(p / max * 100) : null, puncte: p, max, incomplet: max < 70, criterii: pct };
+}
+// ---------- Cât pui într-o idee nouă ----------
+// Treapta vine din scor (20%, 35% sau 50% din suma lunară), apoi se ajustează după cât de agitat e prețul:
+// față de piața globală (~18% pe an), o acțiune de două ori mai agitată primește jumătate (niciodată mai puțin de jumătate).
+// Plafoane: cel mult jumătate din suma lunară și cel mult cât lipsește până la ținta ei. Date incomplete: cel mult 35%.
+export const VOL_PIATA = 18;
+export function sumaStart({ scor, vol, incomplet, etf }, suma, minim = 50, plafonLei = Infinity) {
+  if (!(suma > 0)) return null;
+  let treapta = scor >= 70 ? 0.5 : scor >= 50 ? 0.35 : 0.2;
+  if (incomplet) treapta = Math.min(treapta, 0.35);
+  const risc = etf || !(vol > 0) ? 1 : Math.min(1, Math.max(0.5, VOL_PIATA / vol));
+  const brut = suma * treapta * risc, jos = Math.min(minim, suma), sus = Math.max(Math.min(suma * 0.5, plafonLei), jos);
+  // rotunjit la 10 lei, fără să treacă de plafon din cauza rotunjirii (175 → 170, nu 180)
+  let lei = Math.round(Math.min(Math.max(brut, jos), sus) / 10) * 10;
+  if (lei > sus) lei = Math.floor(sus / 10) * 10; if (lei < jos) lei = Math.ceil(jos / 10) * 10;
+  lei = Math.max(10, lei);
+  return { lei, treapta, risc, brut };
+}
 // ---------- Recomandări de ETF-uri ----------
 // tip: similar (aceeași idee ca acțiunile tale, dar împărțită pe multe companii), completeaza (ce îți lipsește), orizont (potrivit cu anii rămași).
-export function recomandaETF(pozitii, teme, profil, decizii = {}) {
+// cand: { simbol: { ind } } din analiză (pentru scor și pentru cât de agitat e prețul).
+export function recomandaETF(pozitii, teme, profil, decizii = {}, cand = {}, ref = {}) {
   const are = new Set(pozitii.filter(p => !p.virtual).map(p => p.symbol)), w = Object.fromEntries(pozitii.map(p => [p.symbol, p.pondere || 0]));
+  const nucleu = [...are].some(k => ETF_CATALOG[k]?.rol === 'nucleu');
   const out = [];
   for (const [k, e] of Object.entries(ETF_CATALOG)) {
-    if (are.has(k) || decizii[k] || k === 'EUNL' || (k === 'VWCE' && are.has('EUNL'))) continue;
+    if (are.has(k) || decizii[k] || k === 'EUNL' || k === 'XDWD' || (k === 'VWCE' && nucleu)) continue;
     const comune = (e.detine || []).filter(s => are.has(s)), pc = comune.reduce((a, s) => a + w[s], 0);
-    const temaP = e.tema ? (teme[e.tema] || 0) : 0, pestePlafon = e.rol === 'tematic' && temaP > profil.maxTema;
+    const temaP = e.tema ? (teme[e.tema] || 0) : 0, pestePlafon = ['tematic', 'sector'].includes(e.rol) && temaP > profil.maxTema;
     let tip = null, scor = 0, motiv = '';
     if (k === 'VWCE') { tip = 'completeaza'; scor = 100; motiv = 'ETF-ul de bază recomandat pentru orice orizont lung: toată lumea, într-un singur ETF.'; }
     else if (e.rol === 'tematic' && comune.length >= 1) {
       tip = 'similar'; scor = 40 + pc;
       motiv = `Ai deja ${listaRo(comune)} (${fmt(pc)}% din portofoliu). ${e.nume} pune aceeași idee în ${e.companii} de companii: dacă una are o problemă, te lovește mult mai puțin.`;
+    } else if (e.rol === 'sector' && !temaP) {
+      tip = 'completeaza'; scor = 45;
+      motiv = `Nu ai nimic din sectorul ${e.tema}. ${DE_CE_SECTOR[e.tema] || ''} Un singur ETF îți dă toate cele ${e.companii} de companii mari din sector, în loc să alegi una.`.replace('  ', ' ');
     } else if (k === 'SXR8' && comune.length >= 3) {
       tip = 'similar'; scor = 20 + pc / 4;
       motiv = `Majoritatea acțiunilor tale (${listaRo(comune.slice(0, 4))}) sunt americane și mari. S&P 500 le are pe toate, plus încă ~490, la un cost de doar ${String(e.ter).replace('.', ',')}% pe an.`;
@@ -227,39 +281,51 @@ export function recomandaETF(pozitii, teme, profil, decizii = {}) {
       motiv = `Ai ${profil.orizontAni} ${profil.orizontAni === 1 ? 'an' : 'ani'} până ai nevoie de bani. Obligațiunile scad mult mai puțin decât acțiunile într-o criză și apără suma de care ai nevoie la final.`;
     }
     if (!tip) continue;
-    out.push({ ticker: k, ...e, tip, scor, motiv, comune, ponderaComuna: pc,
+    const ind = cand[k]?.ind || null, s = ind ? scorIdee({ ind }, ref) : null;
+    out.push({ ticker: k, ...e, tip, scor, scorTehnic: s?.scor ?? null, criterii: s?.criterii || [], ind, vol: ind?.volAn ?? null, comune, ponderaComuna: pc,
       acum: !pestePlafon, nota: pestePlafon ? `Sectorul „${e.tema}” are deja ${fmt(temaP)}%, peste plafonul de ${profil.maxTema}%. Ca alternativă pentru banii viitori pe tema asta, nu ca bani în plus acum.` : null });
   }
-  return out.sort((a, b) => (b.acum - a.acum) || (b.scor - a.scor)); // întâi ce se potrivește acum
+  return out.sort((a, b) => (b.acum - a.acum) || (b.scor - a.scor) || ((b.scorTehnic ?? 0) - (a.scorTehnic ?? 0))); // întâi ce se potrivește acum
 }
 // ---------- Acțiuni pentru diversificare ----------
 const DE_CE_SECTOR = {
   'Financiar': 'Băncile și firmele de plăți câștigă din dobânzi și tranzacții, nu din tehnologie, deci se mișcă altfel decât acțiunile tale.',
   'Sănătate': 'Oamenii au nevoie de medicamente și în crize, așa că sectorul scade de obicei mai puțin când bursa scade.',
   'Consum de bază': 'Produsele de zi cu zi se vând și în crize, așa că sectorul scade de obicei mai puțin când bursa scade.',
+  'Consum ciclic': 'Magazine, restaurante, călătorii și lux: cresc când oamenii cheltuie mai mult, independent de tehnologie.',
   'Energie': 'Energia merge adesea invers față de tehnologie: în 2022, când tehnologia a scăzut mult, petrolul și gazele au crescut.',
   'Utilități': 'Venituri stabile, în mare parte reglementate, și dividende constante. Echilibrează acțiunile care cresc repede.',
-  'Software (Europa)': 'O companie europeană, în euro, cu venituri din abonamente. Scade puțin dependența de dolar.',
-  'Lux (Europa)': 'Expunere la Europa și la cumpărătorii bogați din toată lumea, în euro.',
+  'Industrie': 'Utilaje, transport și construcții: urmează economia reală, nu ciclul tehnologiei.',
+  'Materiale': 'Metale, chimicale și aur: protejează parțial când prețurile cresc (inflație).',
+  'Imobiliare': 'Venituri din chirii, de obicei cu dividende mari. Se mișcă după dobânzi mai mult decât după tehnologie.',
+  'Telecom și media': 'Abonamente lunare (telefonie, streaming): venituri care se repetă.',
+  'Software': 'Venituri din abonamente, cu marje mari. Atenție: se mișcă des împreună cu restul tehnologiei.',
 };
-// candidati: [{ symbol, ind, fund, rec }] din analiza de seară, pentru acțiunile din ACTIUNI_CATALOG.
-// Arată doar sectoarele pe care nu le ai deloc, cea mai bună companie din fiecare sector, cu argumentele pro și contra.
-export function recomandaActiuni(candidati, pozitii, teme, profil, decizii = {}) {
+// candidati: [{ symbol, ind, fund, rec, logo, t212 }] din analiză, pentru universul de idei.
+// Sectoarele pe care nu le ai deloc vin primele, apoi cele sub plafon; cele peste plafon nu apar.
+// În fiecare sector, cea mai bună companie după scor; apoi a doua cea mai bună din fiecare sector, și tot așa:
+// când refuzi una, următoarea din listă îi ia locul imediat, fără nicio cerere nouă.
+export function recomandaActiuni(candidati, pozitii, teme, profil, decizii = {}, ref = {}) {
   const are = new Set(pozitii.filter(p => !p.virtual).map(p => p.symbol)), alese = new Set(profil.alese || []);
   const nSat = pozitii.filter(p => !p.etf && !p.virtual).length + 1;
   const tinta = Math.min(Math.max(100 - profil.tintaETF, 0) / nSat, profil.maxActiune);
   const pe = {};
   for (const c of candidati || []) {
-    const k = c.symbol, e = ACTIUNI_CATALOG[k]; if (!e || are.has(k) || decizii[k] || alese.has(k)) continue;
-    if ((teme[e.sector] || 0) > 0) continue; // ai deja ceva în sectorul ăsta
-    const { tehnic, fundam, motive } = contextScor(c), i = c.ind || {};
+    const k = c.symbol, e = ACTIUNI_CATALOG[k]; if (!e || are.has(k) || decizii[k] || alese.has(k) || c.t212 === false) continue;
+    const tp = teme[e.sector] || 0; if (tp >= profil.maxTema) continue;
+    const s = scorIdee(c, ref), i = c.ind || {};
+    if (s.scor == null) continue;
     const scump = i.rsi != null && i.rsi > RISK.rsiScump, jos = i.sma200 != null && i.pret < i.sma200;
-    const scor = tehnic + fundam;
-    if (!pe[e.sector] || scor > pe[e.sector].scor) pe[e.sector] = { ticker: k, ...e, scor, motive, ind: c.ind || null, fund: c.fund || null, rec: c.rec || null, logo: c.logo || null,
+    (pe[e.sector] ||= []).push({ ticker: k, ...e, ...s, grup: tp > 0 ? 1 : 0, vol: i.volAn ?? null, ind: c.ind || null, fund: c.fund || null, rec: c.rec || null, logo: c.logo || null,
+      motive: s.criterii.map(x => `${x.pts >= x.din * 0.6 ? '+' : x.pts <= x.din * 0.2 ? '−' : '·'} ${x.text}`),
       acum: !scump && !jos, nota: scump ? `RSI ${Math.round(i.rsi)}: a urcat foarte repede. Dacă o alegi, așteaptă o scădere pentru prima cumpărare.` : jos ? 'Prețul e sub media de 200 de zile: trendul lung e în jos. Merită așteptat până se întoarce.' : null,
-      tinta, motiv: `Nu ai nicio companie din sectorul ${e.sector}. ${DE_CE_SECTOR[e.sector] || ''}`.trim() };
+      tinta, motiv: tp > 0 ? `Ai ${fmt(tp)}% în ${e.sector}, sub plafonul de ${profil.maxTema}%.` : `Nu ai nicio companie din sectorul ${e.sector}. ${DE_CE_SECTOR[e.sector] || ''}`.trim() });
   }
-  return Object.values(pe).sort((a, b) => (b.acum - a.acum) || (b.scor - a.scor));
+  const out = [];
+  // ordinea folosește scorul „sigur”: un 100 din doar 25 de puncte posibile cântărește mai puțin decât un 80 din 100 de puncte
+  const sig = x => x.scor * Math.min(1, x.max / 70), ord = (a, b) => (b.acum - a.acum) || (sig(b) - sig(a));
+  for (const l of Object.values(pe)) l.sort(ord).forEach((x, r) => { x.rang = r; out.push(x); });
+  return out.sort((a, b) => (a.rang - b.rang) || (a.grup - b.grup) || ord(a, b));
 }
 const listaRo = a => a.length <= 1 ? (a[0] || '') : `${a.slice(0, -1).join(', ')} și ${a.at(-1)}`;
 
@@ -413,13 +479,30 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
     else semnal = 'adauga';
   } else semnal = 'pastreaza';
 
+  // Reducere (v0.22): o acțiune care a scăzut mult, dar din cauza pieței, nu a companiei.
+  // „Mult” = cel puțin 15% sub maximul pe un an SAU 1,5 × mișcarea ei obișnuită pe o lună, oricare e mai mare
+  // (pentru o acțiune agitată, 15% e o lună normală). „Din cauza pieței” = pe 3 luni a scăzut cel mult cu 10 puncte
+  // mai mult decât sectorul ei (sau decât VWCE, dacă nu are cu cine se compara). Fundamentalele trebuie să fie cel puțin neutre.
+  // Se cumpără în trei tranșe: acum, când prețul nu mai scade (peste media de 20 de zile), când revine peste media de 200.
+  let reducere = null;
+  if (!g.etf && semnal !== 'reechilibreaza' && ind?.deLaMaxim != null) {
+    const scad = -ind.deLaMaxim, volLuna = ind.volAn != null ? ind.volAn / Math.sqrt(12) : null, prag = Math.max(15, volLuna != null ? 1.5 * volLuna : 0);
+    if (scad >= prag) {
+      const ref = m?.ref3l, rel = ind.r3l != null && ref != null ? ind.r3l - ref : null, refNume = m?.refNume || 'piața';
+      const areDate = !!(m?.fund || m?.rec), fundOk = areDate && fundam >= 0;
+      if (rel != null && rel < -10) atentie.push(`A scăzut ${fmt(scad)}% față de maximul pe un an. Pe 3 luni: ${fmt(ind.r3l)}%, față de ${fmt(ref)}% pentru ${refNume}: scăderea vine mai ales de la companie, nu de la piață. Nu e o reducere.`);
+      else if (areDate && !fundOk) atentie.push(`A scăzut ${fmt(scad)}% față de maximul pe un an, iar cifrele companiei s-au înrăutățit. Nu e o reducere.`);
+      else if (fundOk && rel != null && abatere < 0) reducere = { scadere: scad, prag, r3l: ind.r3l, ref3l: ref, refNume, sma20: ind.sma20, sma200: ind.sma200,
+        etapa: ind.sma20 != null && ind.pret > ind.sma20 ? 'stabilizat' : 'scade', sectorPeste: tp > profil.maxTema && g.tema !== 'Altele', tema: g.tema, tp };
+    }
+  }
   // Oportunitate: o acțiune sub țintă, în trend lung bun, care a scăzut temporar.
   if (!g.etf && semnal === 'adauga' && ind && ind.sma200 != null && ind.pret > ind.sma200 && fundam >= 0 &&
       ((ind.rsi != null && ind.rsi < RISK.rsiIeftin) || (ind.deLaMaxim3l != null && ind.deLaMaxim3l <= -10))) {
     oportunitate = `A scăzut ${fmt(-ind.deLaMaxim3l)}% față de maximul pe 3 luni. Trendul lung și fundamentalele sunt în regulă.`;
   }
   if (abatere !== 0 && !g.etf) motive.push(`· Pondere ${fmt(g.pondere)}%, ținta ta e ${fmt(tinta)}%`);
-  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate };
+  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate, reducere };
 }
 
 // ---------- Oportunitate în timpul zilei ----------
@@ -507,9 +590,16 @@ export function avertizariPortofoliu(comb, profil = PROFIL) {
   return out;
 }
 
+// Expunerea valutară reală: la ETF-uri contează moneda companiilor din interior, nu moneda în care e cotat ETF-ul.
+// VWCE e cotat în euro, dar ~62% din el sunt companii americane: acea parte se mișcă după dolar.
 export function expunereValutara(list) {
   const out = {};
-  for (const g of list) out[g.moneda] = (out[g.moneda] || 0) + g.pondere;
+  for (const g of list) {
+    const v = ETF_CATALOG[g.symbol]?.valute;
+    if (!v) { out[g.moneda] = (out[g.moneda] || 0) + g.pondere; continue; }
+    let rest = 100; for (const [m, x] of Object.entries(v)) { out[m] = (out[m] || 0) + g.pondere * x / 100; rest -= x; }
+    if (rest > 0) out['Alte'] = (out['Alte'] || 0) + g.pondere * rest / 100;
+  }
   return out;
 }
 export function dubluri(list, profil = PROFIL) {

@@ -1,5 +1,5 @@
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.19.0';
+export const VERSION = '0.22.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -42,26 +42,83 @@ export const THEMES = {
   'Aviație și apărare': ['GE', 'AIR.PA'],
   'Tehnologie de consum': ['AAPL'],
   'Jocuri video': ['TTWO'],
-  // sectoarele acțiunilor din catalogul de diversificare (mai jos)
-  'Financiar': ['V', 'JPM'], 'Sănătate': ['LLY', 'JNJ'], 'Consum de bază': ['PG', 'KO', 'COST'], 'Energie': ['XOM'],
-  'Utilități': ['NEE'], 'Software (Europa)': ['SAP.DE'], 'Lux (Europa)': ['MC.PA'],
 };
 
-// Acțiuni pentru diversificare: companii mari, din sectoare pe care portofoliul tău nu le are.
-// Nu sunt sfaturi de cumpărare: aplicația le arată doar pe cele din sectoarele care îți lipsesc, cu datele lor de azi.
+// Universul de idei (v0.22): companii mari, din toate sectoarele, pe care le cauți săptămânal la Trading 212 și eToro.
+// Nu sunt sfaturi de cumpărare: analiza le notează cu aceleași reguli (trend, evaluare, venituri, profitabilitate, analiști,
+// cât de agitat e prețul) și îți arată doar ce completează portofoliul tău. Semiconductorii și apărarea lipsesc intenționat:
+// ai deja destul din ele. Lista se poate lărgi oricând; o companie negăsită la eToro e pur și simplu ignorată.
+const U = (sector, lista) => Object.fromEntries(lista.map(([k, nume, despre]) => [k, { nume, sector, despre }]));
 export const ACTIUNI_CATALOG = {
-  V:        { nume: 'Visa', sector: 'Financiar', despre: 'Rețeaua de plăți cu cardul. Câștigă un comision mic din fiecare plată, oriunde în lume.' },
-  JPM:      { nume: 'JPMorgan Chase', sector: 'Financiar', despre: 'Cea mai mare bancă din SUA: credite, conturi, investiții.' },
-  LLY:      { nume: 'Eli Lilly', sector: 'Sănătate', despre: 'Medicamente, între care tratamente pentru diabet și obezitate.' },
-  JNJ:      { nume: 'Johnson & Johnson', sector: 'Sănătate', despre: 'Medicamente și dispozitive medicale. Plătește dividende în creștere de peste 60 de ani.' },
-  PG:       { nume: 'Procter & Gamble', sector: 'Consum de bază', despre: 'Produse de folosință zilnică (Gillette, Pampers, Ariel). Vânzări stabile și în crize.' },
-  KO:       { nume: 'Coca-Cola', sector: 'Consum de bază', despre: 'Băuturi vândute în peste 200 de țări. Dividend constant.' },
-  COST:     { nume: 'Costco', sector: 'Consum de bază', despre: 'Magazine en-gros pe bază de abonament. Clienți fideli, creștere constantă.' },
-  XOM:      { nume: 'Exxon Mobil', sector: 'Energie', despre: 'Petrol și gaze. Merge de obicei invers față de tehnologie când energia se scumpește.' },
-  NEE:      { nume: 'NextEra Energy', sector: 'Utilități', despre: 'Cel mai mare producător de energie eoliană și solară din SUA, plus o rețea de electricitate.' },
-  'SAP.DE': { nume: 'SAP', sector: 'Software (Europa)', despre: 'Cel mai mare producător de software din Europa, pentru firme.' },
-  'MC.PA':  { nume: 'LVMH', sector: 'Lux (Europa)', despre: 'Louis Vuitton, Dior, Moët Hennessy. Cea mai mare companie de lux din lume.' },
+  ...U('Financiar', [
+    ['V', 'Visa', 'Rețeaua de plăți cu cardul: un comision mic din fiecare plată.'], ['MA', 'Mastercard', 'A doua rețea de plăți cu cardul din lume.'],
+    ['JPM', 'JPMorgan Chase', 'Cea mai mare bancă din SUA.'], ['BAC', 'Bank of America', 'Bancă mare din SUA, cu milioane de clienți.'],
+    ['GS', 'Goldman Sachs', 'Bancă de investiții și administrare de averi.'], ['MS', 'Morgan Stanley', 'Administrare de averi și bancă de investiții.'],
+    ['AXP', 'American Express', 'Carduri premium și plăți.'], ['BLK', 'BlackRock', 'Cel mai mare administrator de fonduri din lume (iShares).'],
+    ['SPGI', 'S&P Global', 'Ratinguri de credit și indici bursieri.'], ['ALV.DE', 'Allianz', 'Cel mai mare asigurător din Europa.'],
+    ['CS.PA', 'AXA', 'Asigurări, din Franța.'], ['MUV2.DE', 'Munich Re', 'Reasigurări: asigură asigurătorii.'],
+  ]),
+  ...U('Sănătate', [
+    ['LLY', 'Eli Lilly', 'Medicamente, între care tratamente pentru diabet și obezitate.'], ['JNJ', 'Johnson & Johnson', 'Medicamente și dispozitive medicale.'],
+    ['UNH', 'UnitedHealth', 'Cea mai mare companie de asigurări de sănătate din SUA.'], ['ABBV', 'AbbVie', 'Medicamente pentru boli autoimune și cancer.'],
+    ['MRK', 'Merck & Co', 'Medicamente și vaccinuri.'], ['TMO', 'Thermo Fisher', 'Echipamente pentru laboratoare.'],
+    ['ABT', 'Abbott', 'Dispozitive medicale, teste și nutriție.'], ['ISRG', 'Intuitive Surgical', 'Roboți pentru chirurgie.'],
+    ['AMGN', 'Amgen', 'Biotehnologie.'], ['NVO', 'Novo Nordisk', 'Insulină și tratamente pentru obezitate, din Danemarca.'],
+    ['AZN', 'AstraZeneca', 'Medicamente pentru cancer și boli cardiace, din Marea Britanie.'],
+  ]),
+  ...U('Consum de bază', [
+    ['PG', 'Procter & Gamble', 'Gillette, Pampers, Ariel: vânzări stabile și în crize.'], ['KO', 'Coca-Cola', 'Băuturi vândute în peste 200 de țări.'],
+    ['PEP', 'PepsiCo', 'Băuturi și gustări (Lay’s, Doritos).'], ['COST', 'Costco', 'Magazine en-gros pe bază de abonament.'],
+    ['WMT', 'Walmart', 'Cel mai mare lanț de magazine din lume.'], ['MDLZ', 'Mondelez', 'Milka, Oreo, Toblerone.'],
+    ['CL', 'Colgate-Palmolive', 'Pastă de dinți și produse de igienă.'], ['PM', 'Philip Morris', 'Tutun și produse fără fum.'],
+  ]),
+  ...U('Consum ciclic', [
+    ['AMZN', 'Amazon', 'Comerț online și servicii cloud (AWS).'], ['HD', 'Home Depot', 'Magazine de bricolaj din SUA.'],
+    ['MCD', 'McDonald’s', 'Restaurante, mai ales în franciză.'], ['NKE', 'Nike', 'Încălțăminte și îmbrăcăminte sport.'],
+    ['BKNG', 'Booking Holdings', 'Rezervări de hoteluri și călătorii.'], ['TJX', 'TJX', 'Magazine de haine la reducere (TK Maxx).'],
+    ['LOW', 'Lowe’s', 'Magazine de bricolaj din SUA.'], ['MC.PA', 'LVMH', 'Louis Vuitton, Dior, Moët Hennessy.'],
+    ['RMS.PA', 'Hermès', 'Lux, cu marje foarte mari.'], ['ADS.DE', 'adidas', 'Încălțăminte și îmbrăcăminte sport, din Germania.'],
+  ]),
+  ...U('Energie', [
+    ['XOM', 'Exxon Mobil', 'Petrol și gaze.'], ['CVX', 'Chevron', 'Petrol și gaze.'], ['SHEL', 'Shell', 'Petrol, gaze și energie, din Marea Britanie.'],
+    ['TTE', 'TotalEnergies', 'Petrol, gaze și energie regenerabilă, din Franța.'], ['COP', 'ConocoPhillips', 'Extracție de petrol și gaze.'],
+    ['SLB', 'SLB', 'Servicii pentru extracția de petrol.'],
+  ]),
+  ...U('Utilități', [
+    ['NEE', 'NextEra Energy', 'Cel mai mare producător de energie eoliană și solară din SUA.'], ['DUK', 'Duke Energy', 'Electricitate și gaze în sud-estul SUA.'],
+    ['SO', 'Southern Company', 'Electricitate în sud-estul SUA.'], ['IBE.MC', 'Iberdrola', 'Electricitate și regenerabile, din Spania.'],
+    ['ENEL.MI', 'Enel', 'Electricitate, din Italia (inclusiv rețele în alte țări).'], ['EOAN.DE', 'E.ON', 'Rețele de electricitate și gaze, din Germania.'],
+  ]),
+  ...U('Industrie', [
+    ['CAT', 'Caterpillar', 'Utilaje de construcții și minerit.'], ['HON', 'Honeywell', 'Automatizări și echipamente industriale.'],
+    ['UNP', 'Union Pacific', 'Căi ferate de marfă în SUA.'], ['DE', 'Deere & Co', 'Utilaje agricole (John Deere).'],
+    ['UPS', 'UPS', 'Curierat și logistică.'], ['ETN', 'Eaton', 'Echipamente electrice.'],
+    ['SIE.DE', 'Siemens', 'Automatizări industriale, din Germania.'], ['SU.PA', 'Schneider Electric', 'Echipamente electrice și automatizări, din Franța.'],
+  ]),
+  ...U('Materiale', [
+    ['LIN', 'Linde', 'Gaze industriale (oxigen, azot, hidrogen).'], ['SHW', 'Sherwin-Williams', 'Vopsele.'],
+    ['APD', 'Air Products', 'Gaze industriale.'], ['NEM', 'Newmont', 'Cel mai mare producător de aur din lume.'],
+    ['FCX', 'Freeport-McMoRan', 'Cupru și aur.'], ['BAS.DE', 'BASF', 'Cea mai mare companie chimică din lume.'],
+  ]),
+  ...U('Imobiliare', [
+    ['PLD', 'Prologis', 'Depozite pentru logistică.'], ['AMT', 'American Tower', 'Turnuri pentru telefonie mobilă.'],
+    ['O', 'Realty Income', 'Clădiri comerciale închiriate pe termen lung. Dividend lunar.'], ['SPG', 'Simon Property', 'Centre comerciale.'],
+  ]),
+  ...U('Telecom și media', [
+    ['TMUS', 'T-Mobile US', 'Telefonie mobilă în SUA.'], ['VZ', 'Verizon', 'Telefonie și internet în SUA.'],
+    ['DTE.DE', 'Deutsche Telekom', 'Telecomunicații, din Germania (și acționarul principal al T-Mobile US).'],
+    ['NFLX', 'Netflix', 'Filme și seriale prin abonament.'], ['DIS', 'Disney', 'Filme, parcuri de distracții, Disney+.'],
+    ['META', 'Meta Platforms', 'Facebook, Instagram, WhatsApp.'],
+  ]),
+  ...U('Software', [
+    ['MSFT', 'Microsoft', 'Windows, Office, cloud (Azure).'], ['ORCL', 'Oracle', 'Baze de date și cloud pentru firme.'],
+    ['CRM', 'Salesforce', 'Software de vânzări pentru firme, prin abonament.'], ['ADBE', 'Adobe', 'Photoshop, Acrobat, prin abonament.'],
+    ['NOW', 'ServiceNow', 'Software de automatizare pentru firme.'], ['INTU', 'Intuit', 'Software de contabilitate și taxe.'],
+    ['SAP.DE', 'SAP', 'Cel mai mare producător de software din Europa, pentru firme.'],
+  ]),
 };
+// Fiecare sector din universul de idei devine o temă (ponderile se adună pe sector, ca la acțiunile tale).
+for (const [k, e] of Object.entries(ACTIUNI_CATALOG)) (THEMES[e.sector] ||= []).includes(k) || THEMES[e.sector].push(k);
 
 // Aceeași companie, simboluri diferite (clase de acțiuni).
 export const ALIASES = { GOOG: 'GOOGL' };
@@ -69,14 +126,25 @@ export const ALIASES = { GOOG: 'GOOGL' };
 // Catalogul de ETF-uri pe care analistul le cunoaște și le poate recomanda (toate UCITS, acumulare, listate pe Xetra în EUR).
 // Date verificate în octombrie 2026 (justETF, emitenți). rol: nucleu (global), obligatiuni, regional, tematic.
 // tema = tema din THEMES în care intră (o expunere tematică prin ETF se adună la același sector ca acțiunile).
+// valute = cât din ce conține ETF-ul e în dolari (aproximativ, după ponderea SUA în indice: FTSE All-World ~62%, MSCI World ~70%,
+//   sectoarele MSCI World ~65%; octombrie 2026). Restul e în alte monede (euro, yeni, lire etc.). ETF-ul e cotat în euro, dar riscul valutar e al conținutului.
 // detine = acțiuni din portofoliul tău pe care ETF-ul le conține printre cele mai mari poziții (pentru „similar cu ce ai”).
 export const ETF_CATALOG = {
-  VWCE: { nume: 'Vanguard FTSE All-World', isin: 'IE00BK5BQT80', ter: 0.14, rol: 'nucleu', indice: 'FTSE All-World', companii: '~3.700', despre: 'Companii mari și mijlocii din toată lumea, inclusiv piețe emergente.' },
-  EUNL: { nume: 'iShares Core MSCI World', isin: 'IE00B4L5Y983', ter: 0.20, rol: 'nucleu', indice: 'MSCI World', companii: '~1.300', despre: 'Companii mari și mijlocii din 23 de țări dezvoltate, fără piețe emergente.' },
-  SXR8: { nume: 'iShares Core S&P 500', isin: 'IE00B5BMR087', ter: 0.07, rol: 'regional', tema: 'Indicele S&P 500', indice: 'S&P 500', companii: '~500', despre: 'Cele mai mari 500 de companii din SUA. Foarte ieftin, dar concentrat pe o singură țară și pe tehnologie.', detine: ['NVDA', 'AAPL', 'GOOGL', 'AMD', 'GE', 'GEV', 'PWR'] },
+  VWCE: { valute: { USD: 62 }, nume: 'Vanguard FTSE All-World', isin: 'IE00BK5BQT80', ter: 0.14, rol: 'nucleu', indice: 'FTSE All-World', companii: '~3.700', despre: 'Companii mari și mijlocii din toată lumea, inclusiv piețe emergente.' },
+  EUNL: { valute: { USD: 70 }, nume: 'iShares Core MSCI World', isin: 'IE00B4L5Y983', ter: 0.20, rol: 'nucleu', indice: 'MSCI World', companii: '~1.300', despre: 'Companii mari și mijlocii din 23 de țări dezvoltate, fără piețe emergente.' },
+  SXR8: { valute: { USD: 100 }, nume: 'iShares Core S&P 500', isin: 'IE00B5BMR087', ter: 0.07, rol: 'regional', tema: 'Indicele S&P 500', indice: 'S&P 500', companii: '~500', despre: 'Cele mai mari 500 de companii din SUA. Foarte ieftin, dar concentrat pe o singură țară și pe tehnologie.', detine: ['NVDA', 'AAPL', 'GOOGL', 'AMD', 'GE', 'GEV', 'PWR'] },
   IS3N: { nume: 'iShares Core MSCI EM IMI', isin: 'IE00BKM4GZ66', ter: 0.18, rol: 'regional', tema: 'Piețe emergente', indice: 'MSCI EM IMI', companii: '~3.100', despre: 'Companii din piețele emergente (Taiwan, India, China, Coreea și altele), inclusiv cele mici.', detine: ['TSM'] },
-  VVSM: { nume: 'VanEck Semiconductor', isin: 'IE00BMC38736', ter: 0.35, rol: 'tematic', tema: 'AI și infrastructură', indice: 'MVIS US Listed Semiconductor 10% Capped', companii: '~25', despre: 'Producătorii de cipuri: TSMC, Nvidia, ASML, AMD, Broadcom și alții. Aceeași idee ca acțiunile tale de AI, împărțită pe mai multe companii.', detine: ['TSM', 'NVDA', 'AMD'] },
+  VVSM: { valute: { USD: 100 }, nume: 'VanEck Semiconductor', isin: 'IE00BMC38736', ter: 0.35, rol: 'tematic', tema: 'AI și infrastructură', indice: 'MVIS US Listed Semiconductor 10% Capped', companii: '~25', despre: 'Producătorii de cipuri: TSMC, Nvidia, ASML, AMD, Broadcom și alții. Aceeași idee ca acțiunile tale de AI, împărțită pe mai multe companii.', detine: ['TSM', 'NVDA', 'AMD'] },
   DFEN: { nume: 'VanEck Defense', isin: 'IE000YYE6WK5', ter: 0.55, rol: 'tematic', tema: 'Aviație și apărare', indice: 'MarketVector Global Defense Industry', companii: '~30', despre: 'Industria de apărare din SUA și Europa (Rheinmetall, Thales, Leonardo, Saab și alții).', detine: ['GE', 'AIR.PA'] },
+  XDWD: { valute: { USD: 70 }, nume: 'Xtrackers MSCI World 1C', isin: 'IE00BJ0KDQ92', ter: 0.12, rol: 'nucleu', indice: 'MSCI World', companii: '~1.300', despre: 'Aceleași companii ca iShares Core MSCI World, la un cost mai mic. Fără piețe emergente.' },
+  // ETF-uri pe sector (Xtrackers MSCI World, acumulare, TER 0,25%, verificate în octombrie 2026): tot sectorul dintr-o cumpărare,
+  // alternativa la o singură companie când îți lipsește un sector.
+  XDWH: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Health Care 1C', isin: 'IE00BM67HK77', ter: 0.25, rol: 'sector', tema: 'Sănătate', indice: 'MSCI World Health Care', companii: '~150', despre: 'Toate companiile mari de sănătate din țările dezvoltate: medicamente, dispozitive, asigurări.' },
+  XDWF: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Financials 1C', isin: 'IE00BM67HL84', ter: 0.25, rol: 'sector', tema: 'Financiar', indice: 'MSCI World Financials', companii: '~230', despre: 'Bănci, asigurători și firme de plăți din țările dezvoltate.' },
+  XDWS: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Consumer Staples 1C', isin: 'IE00BM67HN09', ter: 0.25, rol: 'sector', tema: 'Consum de bază', indice: 'MSCI World Consumer Staples', companii: '~120', despre: 'Produse de zi cu zi: alimente, băuturi, igienă. Scade de obicei mai puțin în crize.' },
+  XDW0: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Energy 1C', isin: 'IE00BM67HM91', ter: 0.25, rol: 'sector', tema: 'Energie', indice: 'MSCI World Energy', companii: '~60', despre: 'Petrol, gaze și servicii pentru ele. Merge adesea invers față de tehnologie.' },
+  XDWU: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Utilities 1C', isin: 'IE00BM67HQ30', ter: 0.25, rol: 'sector', tema: 'Utilități', indice: 'MSCI World Utilities', companii: '~90', despre: 'Electricitate, gaze și apă: venituri stabile, în mare parte reglementate.' },
+  XDWI: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Industrials 1C', isin: 'IE00BM67HV82', ter: 0.25, rol: 'sector', tema: 'Industrie', indice: 'MSCI World Industrials', companii: '~250', despre: 'Utilaje, transport, construcții și echipamente electrice.' },
   EUNA: { nume: 'iShares Core Global Aggregate Bond EUR Hedged', isin: 'IE00BDBRDM35', ter: 0.10, rol: 'obligatiuni', tema: 'Obligațiuni', indice: 'Bloomberg Global Aggregate', companii: '~23.000 de obligațiuni', despre: 'Obligațiuni de stat și de companii din toată lumea, cu riscul valutar acoperit în euro. Se mișcă mult mai puțin decât acțiunile.' },
 };
 // ETF-uri tratate ca nucleu: fără semnale de vânzare sau de protecție; împart ținta ETF.
@@ -105,8 +173,8 @@ export const IMPOZIT = { cota: 16, termen: '25 mai' };
 
 // Sufixe Trading 212 -> sufixe de bursă. "VWCEd_EQ" = VWCE pe Xetra.
 export const T212_SUFFIX = { d: '.DE', p: '.PA', l: '.L', a: '.AS', e: '.MC', m: '.MI', s: '.SW' };
-export const SYMBOL_OVERRIDES = { 'VWCEd_EQ': 'VWCE', 'EUNLd_EQ': 'EUNL', 'SXR8d_EQ': 'SXR8', 'IS3Nd_EQ': 'IS3N', 'VVSMd_EQ': 'VVSM', 'DFENd_EQ': 'DFEN', 'EUNAd_EQ': 'EUNA' };
-export const ETORO_SYMBOL = { 'SAP.DE': 'SAP.DE', 'MC.PA': 'MC.PA', VWCE: 'VWCE.DE', EUNL: 'EUNL.DE', SXR8: 'SXR8.DE', IS3N: 'IS3N.DE', VVSM: 'VVSM.DE', DFEN: 'DFEN.DE', EUNA: 'EUNA.DE' };
+export const SYMBOL_OVERRIDES = Object.fromEntries(['VWCE', 'EUNL', 'SXR8', 'IS3N', 'VVSM', 'DFEN', 'EUNA', 'XDWD', 'XDWH', 'XDWF', 'XDWS', 'XDW0', 'XDWU', 'XDWI'].map(k => [k + 'd_EQ', k]));
+export const ETORO_SYMBOL = Object.fromEntries(['VWCE', 'EUNL', 'SXR8', 'IS3N', 'VVSM', 'DFEN', 'EUNA', 'XDWD', 'XDWH', 'XDWF', 'XDWS', 'XDW0', 'XDWU', 'XDWI'].map(k => [k, k + '.DE']));
 
 // Moneda de listare după sufix (pentru expunerea valutară).
 export const MONEDA_SUFIX = { '.PA': 'EUR', '.DE': 'EUR', '.AS': 'EUR', '.MC': 'EUR', '.MI': 'EUR', '.L': 'GBP', '.SW': 'CHF' };

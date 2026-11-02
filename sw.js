@@ -2,8 +2,8 @@
 // Analist service worker: aplicația pornește instant și fără rețea.
 // Cache versionat: o versiune nouă se instalează în fundal și așteaptă până apeși „Reîncarcă”.
 // Datele din GitHub NU trec pe aici (alt domeniu); aplicația le ține singură, cu ETag.
-const CACHE = 'analist-0.31.0';
-const SHELL = ['./', 'index.html', 'app.js', 'garda.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'motor/engine.js', 'motor/config.js', 'font/space-grotesk-latin-500-normal.woff2', 'font/space-grotesk-latin-700-normal.woff2', 'font/space-grotesk-latin-ext-500-normal.woff2', 'font/space-grotesk-latin-ext-700-normal.woff2'];
+const CACHE = 'analist-0.32.0';
+const SHELL = ['./', 'index.html', 'app.js', 'garda.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'badge-96.png', 'motor/engine.js', 'motor/config.js', 'font/space-grotesk-latin-500-normal.woff2', 'font/space-grotesk-latin-700-normal.woff2', 'font/space-grotesk-latin-ext-500-normal.woff2', 'font/space-grotesk-latin-ext-700-normal.woff2'];
 self.addEventListener('install', e => {
   // fișier cu fișier: unul lipsă nu blochează instalarea
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))));
@@ -19,4 +19,25 @@ self.addEventListener('fetch', e => {
   e.respondWith(caches.open(CACHE).then(c => c.match(e.request, { ignoreSearch: true }).then(hit => hit ||
     fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; })
       .catch(() => c.match('index.html')))));
+});
+
+// Notificările analistului (Web Push). Mesajul vine criptat cap-coadă; browserul îl decriptează și îl dă aici.
+// Linkul se deschide doar în aplicație (aceeași adresă); orice altceva duce la pagina principală.
+self.addEventListener('push', e => {
+  let m = {}; try { m = e.data ? e.data.json() : {}; } catch { m = {}; }
+  const scope = self.registration.scope, sir = (x, n) => typeof x === 'string' ? x.slice(0, n) : '';
+  const url = typeof m.url === 'string' && m.url.startsWith(scope) ? m.url : scope;
+  const tag = sir(m.tag, 60) || undefined;
+  e.waitUntil(self.registration.showNotification(sir(m.titlu, 120) || 'Analist', {
+    body: sir(m.text, 500), icon: 'icon-192.png', badge: 'badge-96.png', tag, renotify: !!tag,
+    silent: m.silentios === true, requireInteraction: m.urgent === true, data: { url }, lang: 'ro', timestamp: Date.now() }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const scope = self.registration.scope, url = e.notification.data?.url || scope, h = url.includes('#') ? url.slice(url.indexOf('#')) : '';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(lista => {
+    const w = lista.find(c => c.url.startsWith(scope));
+    if (w) { w.postMessage({ tip: 'ancora', h }); return w.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });

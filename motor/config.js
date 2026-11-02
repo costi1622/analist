@@ -1,6 +1,6 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență: vezi LICENSE.
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.30.0';
+export const VERSION = '0.32.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -167,7 +167,12 @@ export const RISK = {
 export const PROTECTIE = { zile: 126, multATR: 5, minPct: 15 };
 
 // Alertă în timpul zilei: mișcare de cel puțin max(prag, K × ATR%) față de închiderea anterioară.
-export const MISCARE_ZI = { prag: 5, multATR: 2.5 };
+export const MISCARE_ZI = { prag: 4, multATR: 2 };
+// Analistul în timpul zilei (v0.32):
+//  planMin / planATR: o cumpărare din planul lunii, încă nefăcută, e „la reducere” când scade azi cu cel puțin
+//    max(1,5%, 0,8 × volatilitatea zilnică obișnuită). Pentru VWCE (~1% pe zi) asta înseamnă cam −1,5%.
+//  portofoliuZi: portofoliul întreg se mișcă azi cu cel puțin 2% (în sus sau în jos).
+export const OCAZII = { planMin: 1.5, planATR: 0.8, portofoliuZi: 2 };
 
 // Impozit pe câștigul realizat prin brokeri străini, 2026 (Declarația Unică, până la 25 mai).
 export const IMPOZIT = { cota: 16, termen: '25 mai' };

@@ -793,3 +793,56 @@ export function raportPerioada(ev, de, pana, conturi = null) {
   return { de: ev.d[idx[0]], pana: ev.d[i1], start: +start.toFixed(2), fin: +fin.toFixed(2), depus: +depus.toFixed(2), castig: +castig.toFixed(2),
     rand: rand == null ? null : +rand.toFixed(2), vwce: b?.at(-1) != null ? +b.at(-1).toFixed(2) : null, peZi: { d: ev.d.slice(i0, i1 + 1), v: v.slice(i0, i1 + 1).map(x => +x.toFixed(2)) } };
 }
+
+// ---- v0.32: analistul care te anunță ----
+// Cumpărările din planul lunii încă nefăcute care sunt azi la reducere față de închiderea de ieri.
+// plan: [{ symbol, suma, broker }]; ref: { SYM: poziția din analiza de ieri (ind.pret = închiderea, ind.atrPct) };
+// pret: { SYM: prețul de acum }; operatiuni: cumpărările văzute (din analiza de seară); azi: 'YYYY-MM-DD'.
+export function ocaziiPlan(plan, ref, pret, operatiuni, azi, o = { planMin: 1.5, planATR: 0.8 }) {
+  const luna = azi.slice(0, 7), cumparat = new Set((operatiuni || []).filter(x => x.tip === 'cumparare' && String(x.data).startsWith(luna)).map(x => x.symbol));
+  const out = [];
+  for (const l of plan || []) {
+    const r = ref?.[l.symbol], p = pret?.[l.symbol];
+    if (!r?.ind?.pret || !(p > 0) || cumparat.has(l.symbol)) continue;
+    const vari = (p / r.ind.pret - 1) * 100, prag = Math.max(o.planMin, o.planATR * (r.ind.atrPct || 0));
+    if (vari <= -prag) out.push({ symbol: l.symbol, vari, prag, suma: l.suma, broker: l.broker, etf: !!r.etf });
+  }
+  return out.sort((a, b) => a.vari - b.vari);
+}
+
+// Mișcarea de azi a portofoliului: media ponderată a mișcărilor, în procente și în lei, cu cele mai mari mișcări.
+// pozitii: [{ symbol, valueRON }]; vari: { SYM: % azi }. Pozițiile fără preț de azi contează cu 0%.
+export function miscarePortofoliu(pozitii, vari) {
+  const tot = (pozitii || []).reduce((a, p) => a + (p.valueRON || 0), 0);
+  if (!(tot > 0)) return null;
+  let lei = 0; const l = [];
+  for (const p of pozitii) { const v = vari?.[p.symbol]; if (v == null || !Number.isFinite(v)) continue;
+    const d = p.valueRON * v / 100; lei += d; l.push({ symbol: p.symbol, vari: v }); }
+  l.sort((a, b) => b.vari - a.vari);
+  return { pct: lei / tot * 100, lei, sus: l.filter(x => x.vari > 0).slice(0, 2), jos: l.filter(x => x.vari < 0).slice(-2).reverse() };
+}
+
+// Rezumatul zilei, după închidere: cât s-a mișcat portofoliul, cine a urcat, cine a scăzut, ce semnale noi au apărut.
+// pozitii: din analiza de azi (valueRON = valoarea la închidere, ind.r1z = mișcarea zilei în %); sch: schimbările de semnal.
+export function rezumatZi(pozitii, sch = []) {
+  const vari = {}, ieri = [];
+  for (const p of pozitii || []) { const r = p.ind?.r1z; if (r == null || !Number.isFinite(r)) continue;
+    vari[p.symbol] = r; ieri.push({ symbol: p.symbol, valueRON: p.valueRON / (1 + r / 100) }); }
+  const m = miscarePortofoliu(ieri, vari); if (!m) return null;
+  const f = x => `${x.symbol} ${x.vari > 0 ? '+' : '−'}${fmt(Math.abs(x.vari))}%`;
+  const linii = [];
+  if (m.sus.length) linii.push('Sus: ' + m.sus.map(f).join(', ') + '.');
+  if (m.jos.length) linii.push('Jos: ' + m.jos.map(f).join(', ') + '.');
+  const noi = (sch || []).filter(x => x.important);
+  if (noi.length) linii.push(`${noi.length === 1 ? 'Semnal nou' : noi.length + ' semnale noi'}: ${noi.map(x => `${x.symbol} (${x.eticheta})`).join(', ')}.`);
+  return { pct: m.pct, lei: m.lei, titlu: `Ziua pe bursă: ${m.pct >= 0 ? '+' : '−'}${fmt(Math.abs(m.pct))}% (${m.lei >= 0 ? '+' : '−'}${String(Math.round(Math.abs(m.lei))).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} lei)`, text: linii.join(' ') || 'O zi liniștită.' };
+}
+
+// Ziua de bursă pentru rezumat: cea mai nouă lumânare din date (cel mult 3 zile în urmă) și pozițiile care o au.
+// Într-o zi fără bursă nu apare o lumânare nouă, deci rezumatul (cheia „rezumat:ZIUA”) nu se repetă.
+export function ziRezumat(pozitii, azi) {
+  const poz = (pozitii || []).filter(p => !p.virtual), ok = d => /^\d{4}-\d\d-\d\d$/.test(d || '');
+  const zi = poz.map(p => p.serie?.d?.at(-1)).filter(ok).sort().at(-1);
+  if (!zi || zi > azi || (Date.parse(azi) - Date.parse(zi)) / 864e5 > 3) return null;
+  return { zi, pozitii: poz.filter(p => p.serie?.d?.at(-1) === zi) };
+}

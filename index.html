@@ -53,7 +53,8 @@ html,body{margin:0;background:var(--bg) radial-gradient(120% 60% at 50% -10%,var
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:var(--r1)}
 /* ===== Antet ===== */
-header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
+header::before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
+header{position:sticky;top:0;z-index:10;isolation:isolate;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
 .hrow{display:flex;align-items:center;gap:12px;max-width:760px;margin:0 auto}
 .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:var(--t3);letter-spacing:.2px}.brand svg{width:28px;height:28px;flex:none}.brand small{display:block;font-size:var(--t1);font-weight:600;color:var(--mut);letter-spacing:.4px;margin-top:-2px}
 .pill{font-size:var(--t1);font-weight:700;padding:2px 8px;border-radius:var(--r1);border:1px solid currentColor}
@@ -79,8 +80,6 @@ nav .ind{position:absolute;left:0;top:6px;bottom:6px;border-radius:var(--r3);bac
 nav button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 8px;color:var(--mut);font-size:var(--t1);font-weight:700;cursor:pointer;position:relative;z-index:1;transition:color .2s}
 nav .ico{width:23px;height:23px;stroke:currentColor;color:currentColor;transition:transform .2s}
 nav button.on{color:var(--acc)}nav button.on .ico .f{opacity:.3}
-nav button.pop .ico{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
-nav button.pop .ico path:not(.f),nav button.pop .ico rect:not(.f),nav button.pop .ico circle:not(.f){stroke-dasharray:80;animation:draw .6s ease both}
 @keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.18) translateY(-2px)}100%{transform:none}}
 @keyframes draw{from{stroke-dashoffset:80}to{stroke-dashoffset:0}}
 nav .dot{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--verifica);box-shadow:0 0 0 2px var(--panel);animation:puls 2s 4}
@@ -168,7 +167,7 @@ input,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
 .banner{display:flex;gap:12px;align-items:flex-start;font-size:var(--t2);padding:12px 12px;border-radius:var(--r2);margin-bottom:12px;background:color-mix(in srgb,var(--asteapta) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--asteapta) 35%,var(--line));color:var(--ink2)}
 .sk{background:linear-gradient(90deg,var(--panel2) 25%,var(--line) 50%,var(--panel2) 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:var(--r2)}
 @keyframes sk{to{background-position:-200% 0}}
-#ptr{position:fixed;left:50%;top:calc(60px + env(safe-area-inset-top));z-index:9;transform:translate(-50%,-60px);transition:transform .2s;width:34px;height:34px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--shadow)}
+#ptr{position:fixed;left:50%;top:calc(60px + env(safe-area-inset-top));z-index:9;transform:translate(-50%,-60px);opacity:0;transition:transform .2s,opacity .2s;width:34px;height:34px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--shadow)}
 #ptr svg{width:16px;height:16px;stroke:var(--acc);fill:none;stroke-width:2.2;stroke-linecap:round}
 #toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:var(--r2);opacity:0;pointer-events:none;transition:all .2s;z-index:30;font-size:var(--t2);font-weight:600;max-width:90vw;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
@@ -192,7 +191,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 .ico .s{fill:var(--acc2);stroke:none}
 nav button.on .ico{stroke:url(#gIco)}
 nav button.on .ico .s{fill:#f5c84b}
-nav button.pop .ico .s,.ib:active .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:orbita .8s cubic-bezier(.4,1.4,.5,1)}
+nav button.pop .ico:not(.nvi) .s,.ib:active .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:orbita .8s cubic-bezier(.4,1.4,.5,1)}
 @keyframes orbita{from{transform:rotate(-300deg) scale(.6)}to{transform:none}}
 .sic .s{fill:#f5c84b}
 .sat{filter:drop-shadow(0 0 3px #f5c84b88)}
@@ -397,7 +396,7 @@ html[data-vt] .sheet,html[data-vt] .veil{transition:none!important}
 #splash.iese{opacity:0;transform:scale(1.08);pointer-events:none}
 @media (prefers-reduced-motion:reduce){#splash *,#splash::before,#splash::after{animation:none!important}}
 /* iconițe vii: satelitul tabului activ se rotește încet, titlurile secțiunilor își desenează iconița */
-nav button.on .ico .s{transform-box:view-box;transform-origin:12px 12px;animation:orbitaLenta 2.4s cubic-bezier(.4,0,.2,1) 1}
+nav button.on .ico:not(.nvi) .s{transform-box:view-box;transform-origin:12px 12px;animation:orbitaLenta 2.4s cubic-bezier(.4,0,.2,1) 1}
 @keyframes orbitaLenta{to{transform:rotate(360deg)}}
 .sec h2 .sic path,.sec h2 .sic rect,.sec h2 .sic ellipse,.sec h2 .sic circle:not(.s){stroke-dasharray:80;animation:draw 1s cubic-bezier(.3,.7,.3,1) both}
 .sec h2 .sic .s{animation:sicIn .6s .5s cubic-bezier(.3,1.6,.5,1) both}
@@ -723,6 +722,93 @@ header.compact .ib.ha{min-width:44px;padding:4px 4px!important}header.compact .i
   html.tiparesc .rps,html.tiparesc .rpk{break-inside:avoid}
   @page{margin:16mm}
 }
+/* v0.31: sigla vie din antet (doar transform și opacitate, pe placa video) */
+.brand .lv{--lvs:30px;--u:calc(var(--lvs) / 64);position:relative;display:block;width:var(--lvs);height:var(--lvs);flex:none;contain:layout paint;border-radius:var(--r1)}
+.lv>svg{position:absolute;inset:0;width:100%;height:100%}
+.lv .lvf{filter:drop-shadow(0 4px 12px rgba(90,162,255,.35))}
+.lv i,.lv span,.lv b{position:absolute;display:block}
+.lvh{left:50%;top:50%;width:calc(var(--u) * 36);height:calc(var(--u) * 36);margin:calc(var(--u) * -18) 0 0 calc(var(--u) * -18);border-radius:50%;background:radial-gradient(circle,rgba(90,162,255,.6),rgba(90,162,255,0) 68%);animation:lvPuls 4s ease-in-out infinite}
+.lva{left:50%;top:50%;width:calc(var(--u) * 54);height:calc(var(--u) * 54);margin:calc(var(--u) * -27) 0 0 calc(var(--u) * -27);border-radius:50%;opacity:0;transition:opacity .4s;background:conic-gradient(from 0deg,transparent 0 62%,rgba(124,196,255,.95) 100%);-webkit-mask:radial-gradient(circle,transparent 62%,#000 64%,#000 70%,transparent 72%);mask:radial-gradient(circle,transparent 62%,#000 64%,#000 70%,transparent 72%)}
+.lv.rul .lva{opacity:1;animation:lvRot 1.1s linear infinite}
+.lv.rul .lvh{animation-duration:1.2s}
+.lvo{inset:0;transform:rotate(-24deg)}
+.lve{inset:0;transform:scaleY(.38)}
+.lvr{left:50%;top:50%;width:0;height:0;animation:lvRot 9s linear infinite}
+.lvr.r2{animation:lvRotInv 5.5s linear infinite}
+.lvr.r1 .lvp{transform:translateX(calc(var(--u) * 25))}.lvr.r2 .lvp{transform:translateX(calc(var(--u) * 16))}
+.lvr.r1 .lvc{animation:lvRotInv 9s linear infinite}.lvr.r2 .lvc{animation:lvRot 5.5s linear infinite}
+.lvr.r1,.lvr.r1 .lvc{animation-delay:-2.2s}.lvr.r2,.lvr.r2 .lvc{animation-delay:-1.1s}
+.lvk{transform:scaleY(2.632)}
+.lv b{border-radius:50%;left:0;top:0}
+.lvr.r1 b{width:calc(var(--u) * 6.8);height:calc(var(--u) * 6.8);margin:calc(var(--u) * -3.4) 0 0 calc(var(--u) * -3.4);background:radial-gradient(circle at 35% 35%,#fff6d6,#f5c84b 45%,#b8790f);box-shadow:0 0 calc(var(--u) * 4) rgba(245,200,75,.55);animation:lvAdanc 9s linear infinite;animation-delay:-2.2s}
+.lvr.r2 b{width:calc(var(--u) * 4);height:calc(var(--u) * 4);margin:calc(var(--u) * -2) 0 0 calc(var(--u) * -2);background:radial-gradient(circle at 35% 35%,#ffd6e6,#e1638f 50%,#8a2450);animation:lvAdancInv 5.5s linear infinite;animation-delay:-1.1s}
+.lvt{width:calc(var(--u) * 3);height:calc(var(--u) * 3);margin:calc(var(--u) * -1.5) 0 0 calc(var(--u) * -1.5);border-radius:50%;background:radial-gradient(circle,#fff,rgba(207,227,255,0) 70%);opacity:0;animation:lvSclipire 3.6s ease-in-out infinite}
+.lvt.t1{left:82%;top:16%}.lvt.t2{left:18%;top:78%;animation-delay:-1.8s}
+@keyframes lvRot{to{transform:rotate(360deg)}}
+@keyframes lvRotInv{to{transform:rotate(-360deg)}}
+@keyframes lvPuls{0%,100%{transform:scale(.86);opacity:.75}50%{transform:scale(1.08);opacity:1}}
+/* adâncimea: planeta crește în fața soarelui (jos) și se micșorează în spate (sus) */
+@keyframes lvAdanc{0%,100%{transform:scale(1);opacity:1}25%{transform:scale(1.16);opacity:1}50%{transform:scale(1);opacity:.95}75%{transform:scale(.74);opacity:.7}}
+@keyframes lvAdancInv{0%,100%{transform:scale(1);opacity:1}25%{transform:scale(.74);opacity:.7}50%{transform:scale(1);opacity:.95}75%{transform:scale(1.16);opacity:1}}
+@keyframes lvSclipire{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1.2)}}
+
+/* v0.31: iconițele din bara de jos */
+nav .ni{position:relative;display:grid;place-items:center;width:28px;height:28px}
+nav .ni::before{content:"";position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--acc) 42%,transparent),transparent 66%);opacity:0;transform:scale(.5);transition:opacity .35s,transform .35s;pointer-events:none}
+nav button.on .ni::before{opacity:.75;transform:scale(1);animation:nvLumina 3.4s ease-in-out infinite}
+nav button.pop .ni::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--acc);pointer-events:none;animation:nvUnda .7s cubic-bezier(.2,.7,.3,1) both}
+nav .nvi{width:26px;height:26px;overflow:visible;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;position:relative}
+nav .nvi *{transform-box:view-box}
+nav .nvi .f{stroke:none;fill:currentColor;opacity:.12;transition:opacity .3s}
+nav button.on .nvi .f{fill:url(#gIco);opacity:.3}
+nav .nvi .ul{stroke:none;fill:#f5c84b;opacity:0;transition:opacity .3s}nav button.on .nvi .ul{opacity:.45}
+nav .nvi .g{opacity:.45}
+nav .nvi .k{opacity:0;stroke:#f5c84b;stroke-width:1.5}
+nav button.pop .nvi{animation:nvPop .6s cubic-bezier(.25,.8,.35,1)}
+/* Acasă: acoperișul cade la loc, pereții se desenează, ușa se deschide și se aprinde, soarele răsare */
+nav button.pop .azi .r{animation:nvCade .55s cubic-bezier(.3,1.5,.5,1) both}
+nav button.pop .azi .w{stroke-dasharray:1;animation:nvDesen .55s .08s cubic-bezier(.3,.7,.3,1) both}
+nav button.pop .azi .u{transform-origin:12px 19.5px;animation:nvUsa .45s .3s cubic-bezier(.3,1.5,.5,1) both}
+nav button.pop .azi .ul{animation:nvLumUsa .9s .35s ease-out both}
+nav button.pop .azi .s{transform-origin:19px 4.4px;animation:nvRasare .7s .35s cubic-bezier(.3,1.5,.5,1) both}
+/* Plan: barele cresc, linia urcă, o cometă o parcurge până la săgeată */
+nav .plan .f{transform-origin:12px 19.5px}
+nav button.pop .plan .b1{animation:nvBara .45s .02s cubic-bezier(.3,1.5,.5,1) both}
+nav button.pop .plan .b2{animation:nvBara .45s .1s cubic-bezier(.3,1.5,.5,1) both}
+nav button.pop .plan .b3{animation:nvBara .45s .18s cubic-bezier(.3,1.5,.5,1) both}
+nav button.pop .plan .l{stroke-dasharray:1;animation:nvDesen .6s .12s cubic-bezier(.4,0,.2,1) both}
+nav button.pop .plan .a{transform-origin:20.5px 6px;animation:nvSageata .4s .6s cubic-bezier(.3,1.6,.5,1) both}
+nav button.pop .plan .s{animation:nvCometa 1.3s .1s cubic-bezier(.4,0,.2,1) both}
+/* Analiză: orbita se întoarce, miezul pulsează, luna face un tur */
+nav .analiza .o,nav .analiza .m,nav .analiza .c{transform-origin:12px 12px}
+nav button.pop .analiza .o{animation:nvInel .9s cubic-bezier(.3,1.3,.5,1) both}
+nav button.pop .analiza .c{animation:nvMiez .55s .1s cubic-bezier(.3,1.6,.5,1) both}
+nav button.pop .analiza .m{animation:nvLuna 1.1s cubic-bezier(.4,0,.2,1) both}
+/* Învață: toca e aruncată în aer, ciucurele se leagănă, apar două sclipiri */
+nav .invata .h{transform-origin:12px 18px}nav .invata .t{transform-origin:21.5px 9.5px}
+nav button.pop .invata .h{animation:nvArunca .8s cubic-bezier(.3,.7,.4,1) both}
+nav button.pop .invata .t{animation:nvCiucure 1.2s .15s ease-out both}
+nav button.pop .invata .k1{transform-origin:4.5px 3.8px;animation:nvScanteie .7s .3s ease-out both}
+nav button.pop .invata .k2{transform-origin:17.8px 2.5px;animation:nvScanteie .7s .45s ease-out both}
+@keyframes nvLumina{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:.4;transform:scale(1.2)}}
+@keyframes nvUnda{from{transform:scale(.4);opacity:.9}to{transform:scale(1.9);opacity:0}}
+@keyframes nvPop{0%{transform:scale(.7) rotate(-8deg)}50%{transform:scale(1.18) translateY(-2px) rotate(2deg)}75%{transform:scale(.97)}100%{transform:none}}
+@keyframes nvCade{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+@keyframes nvDesen{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes nvUsa{from{transform:scaleY(0)}to{transform:none}}
+@keyframes nvLumUsa{0%{opacity:0}40%{opacity:1}100%{opacity:.45}}
+@keyframes nvRasare{from{transform:translateY(6px) scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes nvBara{from{transform:scaleY(0)}to{transform:none}}
+@keyframes nvSageata{from{transform:scale(0);opacity:0}to{transform:none;opacity:1}}
+@keyframes nvCometa{0%{transform:none;opacity:1}17%{transform:translate(5.5px,-4.5px)}27%{transform:translate(9px,-2px)}54%{transform:translate(17px,-9.5px);opacity:1}64%{transform:translate(17px,-9.5px);opacity:0}65%{transform:none;opacity:0}100%{transform:none;opacity:1}}
+@keyframes nvInel{from{transform:rotate(-180deg) scale(.5);opacity:0}to{transform:none;opacity:1}}
+@keyframes nvMiez{0%{transform:scale(.3)}60%{transform:scale(1.3)}100%{transform:none}}
+@keyframes nvLuna{from{transform:rotate(-360deg)}to{transform:none}}
+@keyframes nvArunca{0%{transform:none}35%{transform:translateY(-6px) rotate(-14deg)}62%{transform:translateY(1px) rotate(5deg)}80%{transform:rotate(-2deg)}100%{transform:none}}
+@keyframes nvCiucure{0%{transform:none}22%{transform:rotate(32deg)}45%{transform:rotate(-20deg)}66%{transform:rotate(10deg)}84%{transform:rotate(-4deg)}100%{transform:none}}
+@keyframes nvScanteie{0%{opacity:0;transform:scale(.3)}45%{opacity:1;transform:scale(1.25)}100%{opacity:0;transform:scale(.8)}}
+html.fx-redus .lv *,html.fx-redus nav .ni::before{animation:none!important}
+@media (prefers-reduced-motion:reduce){.lv *,nav .nvi,nav .nvi *,nav .ni::before,nav .ni::after{animation:none!important}}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;

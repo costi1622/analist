@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.30.0';
+const APP_VER = '0.31.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -225,6 +225,41 @@ const LOGO = (c='', anim=true, fundal=true) => { const k='L'+(LOGO_N++), rep = a
     <circle r="3.3" fill="url(#${k}p)" ${anim?'':'cx="54" cy="27.6"'}>${anim?'<animateMotion dur="9s" repeatCount="${rep}" fill="freeze" path="M57 32a25 9.5 0 1 1-50 0a25 9.5 0 1 1 50 0"/>':''}</circle>
     <circle r="1.9" fill="url(#${k}q)" ${anim?'':'cx="18" cy="35"'}>${anim?'<animateMotion dur="5.5s" repeatCount="${rep}" fill="freeze" path="M16 32a16 6 0 1 0 32 0a16 6 0 1 0-32 0"/>':''}</circle>
   </g></svg>`; };
+// ===== v0.31: sigla vie din antet și iconițele din bara de jos =====
+// Sigla din antet: fundalul, soarele și inelele stau desenate o singură dată (SVG); planetele, halo-ul și sclipirile sunt straturi
+// HTML animate doar prin transform și opacitate, pe care le mișcă placa video. Antetul nu se redesenează deloc.
+const LOGO_VIU = () => { const k = 'LV' + (LOGO_N++);
+  const def = `<defs><radialGradient id="${k}b" cx=".5" cy=".38" r=".75"><stop offset="0" stop-color="#16263f"/><stop offset=".6" stop-color="#0b1424"/><stop offset="1" stop-color="#060a12"/></radialGradient>
+    <radialGradient id="${k}s" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#9fd0ff"/><stop offset=".7" stop-color="#5aa2ff"/><stop offset="1" stop-color="#2dd4bf"/></radialGradient>
+    <linearGradient id="${k}o" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5aa2ff" stop-opacity=".25"/><stop offset=".5" stop-color="#7cc4ff"/><stop offset="1" stop-color="#2dd4bf" stop-opacity=".35"/></linearGradient>
+    <clipPath id="${k}f"><rect x="0" y="32" width="64" height="32"/></clipPath><clipPath id="${k}r"><rect x="0" y="0" width="64" height="32"/></clipPath></defs>`;
+  const inel = (c, op) => `<g clip-path="url(#${k}${c})"><ellipse cx="32" cy="32" rx="25" ry="9.5" fill="none" stroke="url(#${k}o)" stroke-width="${c==='f'?1.5:1.3}" opacity="${op}"/><ellipse cx="32" cy="32" rx="16" ry="6" fill="none" stroke="#7cc4ff" stroke-width=".9" stroke-dasharray="1.6 2" opacity="${op*.8}"/></g>`;
+  return `<span class="lv" aria-hidden="true">
+    <svg class="lvf" viewBox="0 0 64 64">${def}<rect width="64" height="64" rx="15" fill="url(#${k}b)"/>
+      <g fill="#cfe3ff" opacity=".7"><circle cx="11" cy="13" r=".55"/><circle cx="56" cy="47" r=".6"/><circle cx="9" cy="50" r=".4"/><circle cx="44" cy="56" r=".35"/><circle cx="21" cy="57" r=".45"/></g>
+      <g transform="rotate(-24 32 32)">${inel('r', .55)}</g></svg>
+    <i class="lvh"></i><i class="lva"></i>
+    <svg class="lvs" viewBox="0 0 64 64"><g transform="rotate(-24 32 32)"><circle cx="32" cy="32" r="8.6" fill="url(#${k}s)"/>${inel('f', 1)}</g></svg>
+    <span class="lvo"><span class="lve"><span class="lvr r1"><span class="lvp"><span class="lvc"><span class="lvk"><b></b></span></span></span></span>
+      <span class="lvr r2"><span class="lvp"><span class="lvc"><span class="lvk"><b></b></span></span></span></span></span></span>
+    <i class="lvt t1"></i><i class="lvt t2"></i></span>`; };
+const logoRuleaza = on => document.querySelector('#blogo .lv')?.classList.toggle('rul', !!on);
+
+// Iconițele din bara de jos: fiecare are o animație proprie când devine activă (casa se construiește, graficul urcă,
+// orbita se rotește, toca e aruncată în aer), plus o lumină care respiră în spatele tabului activ.
+const NAVI = {
+  azi: `<path class="f" d="M5.5 10.4 12 5.2l6.5 5.2v9.1h-13z"/><path class="ul" d="M10 19.5v-4a2 2 0 0 1 4 0v4z"/>
+    <path class="w" pathLength="1" d="M5.5 10v9.5h13V10"/><path class="r" d="M3 11.4 12 4.2l9 7.2"/><path class="u" d="M10 19.5v-4a2 2 0 0 1 4 0v4"/>
+    <circle class="s" cx="19" cy="4.4" r="1.7"/>`,
+  plan: `<rect class="f b1" x="4.6" y="15" width="3.2" height="4.5" rx="1"/><rect class="f b2" x="10.4" y="12.6" width="3.2" height="6.9" rx="1"/><rect class="f b3" x="16.2" y="10" width="3.2" height="9.5" rx="1"/>
+    <path class="g" d="M3 20.5h18"/><path class="l" pathLength="1" d="M3.5 15.5 9 11l3.5 2.5 8-7.5"/><path class="a" d="M16 6h4.5v4.5"/>
+    <circle class="s" cx="3.5" cy="15.5" r="1.7"/>`,
+  analiza: `<circle class="f" cx="12" cy="12" r="5.6"/><g class="o"><ellipse cx="12" cy="12" rx="9.6" ry="4" transform="rotate(-25 12 12)"/></g>
+    <circle class="c" cx="12" cy="12" r="3.2"/><g class="m"><circle class="s" cx="20.4" cy="7.8" r="1.8"/></g>`,
+  invata: `<g class="h"><path class="f" d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.6V16c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.4"/>
+    <g class="t"><path d="M21.5 9.5v5"/><circle class="s" cx="21.5" cy="16.2" r="1.6"/></g></g>
+    <path class="k k1" d="M4.5 2.6v2.4M3.3 3.8h2.4"/><path class="k k2" d="M17.8 1.6v1.8M16.9 2.5h1.8"/>` };
+const navIc = n => NAVI[n] ? `<svg class="ico nvi ${n}" viewBox="0 0 24 24" aria-hidden="true">${NAVI[n]}</svg>` : ic(n);
 const AMPRENTA = `<svg viewBox="0 0 24 24"><path d="M12 11v3a8 8 0 0 1-1.5 4.7"/><path d="M8.5 9.5A3.5 3.5 0 0 1 15.5 11v2a12 12 0 0 1-.6 3.8"/><path d="M5.6 7.6A7 7 0 0 1 19 11v1.5"/><path d="M5 12v1a11 11 0 0 0 1.3 5.2"/><path d="M8.5 13a14 14 0 0 1-.4 3.6"/><path d="M18.6 16.5a17 17 0 0 1-.9 3"/><path d="M8 4.2A9 9 0 0 1 20.5 7"/></svg>`;
 function vBlocat(){
   const e = S.esec || {n:0}, astept = Date.now() < (e.pana||0), bio = !!citesteSeif()?.bio;
@@ -713,7 +748,7 @@ const numCsv = x => x==null||isNaN(x) ? '' : String(Math.round(x*100)/100).repla
 function bandaAnaliza(){
   if (!analizaVeche()) return '';
   return `<div class="card pz galben"><div class="pzt">${ic('refresh')}<b>Actualizează analiza din GitHub</b></div>
-    <div class="sub">Aplicația e la ${APP_VER}, analiza din repo e la ${esc(SNAP.versiune)}. Urcă în repo-ul <b class="ink2">analist-date</b> fișierele:</div>
+    <div class="sub">Aplicația are nevoie de analiza ${MIN_ANALIZA}, în repo e ${esc(SNAP.versiune)}. Urcă în repo-ul <b class="ink2">analist-date</b> fișierele:</div>
     <ul class="lst">${fisiereDeUrcat().map(f=>`<li><code>${esc(f)}</code></li>`).join('')}</ul>
     <div class="sub" style="margin-top:8px">Până atunci, totul merge ca înainte. Calendarul dividendelor apare după prima analiză nouă.</div></div>`;
 }
@@ -2639,7 +2674,7 @@ function progres(t){ PROGRES_TEXT = t||''; document.querySelectorAll('#rulc .pt'
 let RULEAZA = false;
 async function ruleaza(test){
   if (RULEAZA) return;
-  if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; if (!test && ['azi'].includes(VIEW) || !SNAP) render();
+  if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; logoRuleaza(true); if (!test && ['azi'].includes(VIEW) || !SNAP) render();
   const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
@@ -2657,7 +2692,7 @@ async function ruleaza(test){
     }
     progres(null); toast('Încă rulează. Reîncarcă peste un minut.');
   } catch(e){ progres(null); toast(e.message); }
-  finally { RULEAZA = false; if ($('rulc')) render(); }
+  finally { RULEAZA = false; logoRuleaza(false); if ($('rulc')) render(); }
 }
 
 // ===== Mișcare cu inerție (D5): foile și glisarea între tab-uri urmează viteza degetului =====
@@ -2713,7 +2748,7 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('touchmove',e=>{
     if(x0==null) return; const t=e.touches[0], ddx=t.clientX-x0, ddy=t.clientY-y0;
     if (!axa && Math.hypot(ddx,ddy)>10) axa = Math.abs(ddx)>Math.abs(ddy)*1.15 ? 'x' : 'y';
-    if (axa==='y' && pull && ddy>0) $('ptr').style.transform=`translate(-50%,${Math.min(ddy*0.5,60)-60}px) rotate(${ddy*2}deg)`;
+    if (axa==='y' && pull && ddy>0) { $('ptr').style.transform=`translate(-50%,${Math.min(ddy*0.5,60)-60}px) rotate(${ddy*2}deg)`; $('ptr').style.opacity=Math.min(ddy/40,1); }
     if (axa==='x') vz.add(ddx);
     if (axa==='x' && zona==='da' && TABS.includes(VIEW)) {
       const i=TABS.indexOf(VIEW), capat=(ddx>0&&i===0)||(ddx<0&&i===TABS.length-1);
@@ -2723,7 +2758,7 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   },{passive:true});
   addEventListener('touchend',e=>{
     if(x0==null) return; const t=e.changedTouches[0], ddx=t.clientX-x0, ddy=t.clientY-y0, v=vz.get(), rapid=performance.now()-t0<320;
-    $('ptr').style.transform='translate(-50%,-60px)';
+    $('ptr').style.transform='translate(-50%,-60px)'; $('ptr').style.opacity=0;
     if (axa==='y' && pull && ddy>110 && Math.abs(ddx)<60) reincarca(true);
     else if (axa==='x' && zona!=='nu' && TABS.includes(VIEW)) {
       const prag = zona==='rapid' ? (Math.abs(ddx)>60 && (Math.abs(v)>0.5 || rapid)) : (Math.abs(ddx)>70 || (Math.abs(v)>0.35 && Math.abs(ddx)>24));
@@ -2733,7 +2768,7 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
     x0=null; axa='';
   });
   // gestul întrerupt de sistem (notificare, apel, gestul „înapoi”): pagina revine la loc, nimic rămas pe jumătate
-  addEventListener('touchcancel',()=>{ if (x0==null) return; x0=null; axa=''; $('ptr').style.transform='translate(-50%,-60px)'; if (main().style.transform) reset(); });
+  addEventListener('touchcancel',()=>{ if (x0==null) return; x0=null; axa=''; $('ptr').style.transform='translate(-50%,-60px)'; $('ptr').style.opacity=0; if (main().style.transform) reset(); });
   // doar la schimbarea lățimii (rotire), nu la apariția tastaturii, care ar șterge ce scrii
   let w0=innerWidth; addEventListener('resize',()=>{ if(innerWidth===w0) return; w0=innerWidth; clearTimeout(window._rz); window._rz=setTimeout(render,200); });
 })();
@@ -2749,7 +2784,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then
 // nu schimbă nimic din pagină: o reîncărcare ar șterge parola pe care tocmai o scrii.
 const AVEA_SW = !!navigator.serviceWorker?.controller;
 let RELOADING=false; navigator.serviceWorker?.addEventListener('controllerchange',()=>{ if(!RELOADING && AVEA_SW){ RELOADING=true; location.reload(); } });
-document.querySelectorAll('.ni[data-i]').forEach(e=>e.innerHTML=ic(e.dataset.i)); $('blogo').innerHTML=LOGO('',2); setTimeout(muta,50); addEventListener('resize',()=>setTimeout(muta,60));
+document.querySelectorAll('.ni[data-i]').forEach(e=>e.innerHTML=navIc(e.dataset.i)); $('blogo').innerHTML=LOGO_VIU(); setTimeout(()=>document.querySelector('nav button.on')?.classList.add('pop'), 700); setTimeout(muta,50); addEventListener('resize',()=>setTimeout(muta,60));
 LOADED = !are_seif() ? true : LOADED;
 // Ecranul de pornire: rămâne cel puțin 1,7 secunde (cât să se vadă animația), apoi se deschide în aplicație.
 const T_START = performance.now();

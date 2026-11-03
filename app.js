@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.33.0';
+const APP_VER = '0.34.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -62,7 +62,7 @@ const cls = x => x>0?'pos':x<0?'neg':'';
 const chip = s => `<button class="chip" style="color:var(${SEMC[s]})" data-c="${A('termen',s)}">${SEM[s]}</button>`;
 const toast = m => { const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('on'),3000); };
 // ===== Seiful de pe telefon =====
-// Tokenul, cheia de date, cheia privată a raportului, numele ntfy și jurnalul stau criptate cu parola ta
+// Tokenul, cheia de date, cheia privată a raportului și jurnalul stau criptate cu parola ta
 // (PBKDF2-SHA256, 600.000 de iterații → AES-256-GCM). Fără parolă, nimic nu se poate citi:
 // nici de cineva cu telefonul în mână, nici de alte pagini de pe același domeniu (Nivelo etc.).
 let V = null, VK = null, DK = null, PRIV = null, STARE = null; // seiful deschis, cheia lui, cheia de date, cheia privată
@@ -243,7 +243,7 @@ const LOGO_VIU = () => { const k = 'LV' + (LOGO_N++);
     <span class="lvo"><span class="lve"><span class="lvr r1"><span class="lvp"><span class="lvc"><span class="lvk"><b></b></span></span></span></span>
       <span class="lvr r2"><span class="lvp"><span class="lvc"><span class="lvk"><b></b></span></span></span></span></span></span>
     <i class="lvt t1"></i><i class="lvt t2"></i></span>`; };
-const logoRuleaza = on => document.querySelector('#blogo .lv')?.classList.toggle('rul', !!on);
+const logoRuleaza = on => document.querySelectorAll('#blogo .lv, #v .lv').forEach(e => e.classList.toggle('rul', !!on));
 
 // Iconițele din bara de jos: fiecare are o animație proprie când devine activă (casa se construiește, graficul urcă,
 // orbita se rotește, toca e aruncată în aer), plus o lumină care respiră în spatele tabului activ.
@@ -431,6 +431,24 @@ async function sincronizeazaProfil(mod='zi'){
 
 
 let ULTIM = 0, TRANZ = '', ANIM = true; // ANIM: totalul se animă doar când sosesc date noi
+// Bursa e deschisă (zi lucrătoare, 10:00–23:00 ora României: Europa de la 10, SUA până la 23). Sărbătorile nu contează:
+// o cerere de prețuri într-o zi fără bursă doar confirmă prețurile de ieri.
+function bursaDeschisa(d = new Date()){
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Bucharest', weekday:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(d).map(x=>[x.type,x.value]));
+  const m = +p.hour*60 + +p.minute; return !['Sat','Sun'].includes(p.weekday) && m >= 600 && m < 1380;
+}
+function varstaDate(){ const g = intraValid() ? INTRA.generat : SNAP?.generat; return g ? Date.now() - Date.parse(g) : Infinity; }
+// „Actualizează”: aduce ce a scris analiza din GitHub; dacă nu e nimic nou, iar bursa e deschisă și prețurile au peste 20 de minute,
+// cere chiar acum o analiză scurtă (prețurile de acum, ~40 de secunde). Seara și în weekend, spune de când sunt datele.
+async function actualizeaza(){
+  if (RULEAZA || !live()) { reincarca(true); return; }
+  const nou = await reincarca(false);
+  if (nou) { toast('Actualizat.'); return; }
+  if (OFFLINE) return;
+  const v = varstaDate();
+  if (bursaDeschisa() && v > 20*60e3 && !S.kill) { ruleaza(false, true); return; }
+  toast(v < 20*60e3 ? `Datele sunt de acum ${Math.max(1, Math.round(v/60e3))} min. Nimic nou.` : bursaDeschisa() ? 'Nimic nou.' : 'Bursa e închisă. Datele sunt de la ultima analiză.');
+}
 async function reincarca(manual) {
   if (are_seif() && !V) { LOADED=true; stare(); render(); return; } // blocat: nimic de încărcat
   $('bref').classList.add('spin'); OFFLINE=false;
@@ -439,8 +457,8 @@ async function reincarca(manual) {
       const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
       saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{});
-      if (manual) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
-      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return;
+      if (manual === true) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
+      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return schimbat;
     }
     // neconectat: nu există date de arătat, doar ecranul Pornire
     SNAP = null; IST = null; RAP = null; INTRA = null;
@@ -667,7 +685,6 @@ async function pornesteDinNou(){
   try { await gh('/actions/workflows/analiza.yml/enable', {method:'PUT'}); S.kill=null; save(); closeSheet(); render(); toast('Analiza automată a pornit din nou.'); }
   catch(e){ toast('Nu am putut-o porni: '+(e.message||e)); }
 }
-function alarmaVazuta(id){ S.alVazute=[...(S.alVazute||[]), id].slice(-100); save(); render(); }
 function activitateConfirmata(){ S.actConf=[...(S.actConf||[]), ...activitateNeconf().map(x=>x.id)].slice(-300); save(); vib(); render(); toast('Confirmat. Mulțumesc!'); }
 function codConfirmat(){ const c=S.cod||{}; for (const [k,v] of codNou()) c[k]={sha:v.head, cand:new Date().toISOString()}; S.cod=c; S.codNou={}; save(); vib(); render(); }
 // Codul din GitHub: telefonul ține minte ultima versiune pe care ai confirmat-o. O versiune nouă pe care n-ai urcat-o tu
@@ -729,16 +746,18 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.33.0';
+const MIN_ANALIZA = '0.34.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
-  '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'] };
+  '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
+  '0.34.0': ['runner/notificari.js', 'runner/analiza.js', 'runner/sources.js', 'runner/paza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
 const aziISO = () => new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10); // data de azi, în ora telefonului
 const plusZile = (iso, n) => new Date(Date.parse(iso)+n*864e5).toISOString().slice(0,10);
-const maiMica = (a,b) => { const x=String(a||'0').split('.').map(Number), y=String(b||'0').split('.').map(Number); for (let i=0;i<3;i++) if ((x[i]||0)!==(y[i]||0)) return (x[i]||0)<(y[i]||0); return false; };
+// compararea versiunilor vine din motor (aceeași funcție testată în test-v30); motorul se încarcă înaintea primei afișări cu date
+const maiMica = (a,b) => !!M?.versiuneMaiMica?.(a,b);
 const analizaVeche = () => !!(SNAP?.versiune && maiMica(SNAP.versiune, MIN_ANALIZA));
 const fisiereDeUrcat = () => [...new Set(Object.entries(FISIERE_ANALIZA).filter(([k])=>maiMica(SNAP?.versiune, k)).flatMap(([,f])=>f))];
 function descarca(nume, text, tip){
@@ -772,7 +791,9 @@ function tokenFoaie(){
     <ol class="lst">
       <li>Deschide <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">GitHub → Settings → Developer settings → Fine-grained tokens</a>, alege tokenul și apasă <b>Regenerate token</b>. Permisiunile rămân aceleași; alege din nou 1 an.</li>
       <li>Copiază tokenul nou (începe cu <code>github_pat_</code>).</li>
-      <li>În aplicație: Setări → Schimbă tokenul GitHub → lipește-l și apasă „Salvează și testează”.</li></ol>
+      <li>Lipește-l mai jos, la „Tokenul nou”, și apasă „Salvează și testează”.</li></ol>
+    <div class="lbl" style="margin-top:16px">Tokenul nou</div>
+    <input id="ft" type="password" autocomplete="off" placeholder="Lipește tokenul nou (github_pat_…)"><button class="btn ghost" data-c="${A('salveaza',true)}">Salvează și testează</button>
     <div class="lbl" style="margin-top:16px">Data expirării</div>
     <div class="sub" style="margin:4px 0 8px">O vezi în lista de tokenuri din GitHub, sub numele tokenului.</div>
     <div style="display:flex;gap:8px;align-items:center"><input id="texp" type="date" value="${esc(S.tokenExp||'')}" style="flex:1;margin:0"><button class="btn sm" style="flex:none;margin:0;padding:0 20px" data-c="${A('setTokenExp')}">Salvează</button></div>
@@ -889,7 +910,8 @@ function rapoarteHTML(){
 // ---- 7) Modul începător și turul ghidat ----
 const incepator = () => !!S.incepator;
 const indiciu = t => incepator() ? `<div class="inc">${ic('bec')}<span>${t}</span></div>` : '';
-function setIncepator(v){ S.incepator = !!v; save(); vib(); tranzitie(render, 'lin'); if (S.incepator && !S.turVazut) { render.tur = true; tur.t = setTimeout(()=>tur(0), 600); } }
+function setIncepator(v){ S.incepator = !!v; save(); vib(); tranzitie(render, 'lin'); refaFoaie();
+  if (S.incepator && !S.turVazut) { render.tur = true; closeSheet(); tur.t = setTimeout(()=>tur(0), 700); } }
 const TUR = [
   ['.hcard .hero', 'Valoarea ta', 'Cât valorează acum tot ce ai, cât ai câștigat și cum te descurci față de VWCE, ETF-ul global de referință.'],
   ['.list2 > :first-child', 'Pozițiile tale', 'Fiecare acțiune are o etichetă colorată: ce faci cu ea luna aceasta. Atinge o poziție ca să vezi de ce.'],
@@ -1195,6 +1217,84 @@ function ghidFundal(){
 }
 // Când sosește o notificare cu aplicația deschisă, aducem noutatea imediat (service worker-ul ne anunță).
 navigator.serviceWorker?.addEventListener('message', e => { if (e.data?.tip === 'push' && V && !RULEAZA) { citestePrimite().then(() => reincarca()); } });
+// ===================== v0.34: Setări pe grupe, detaliile în foi =====================
+const rowS = (k, ico, titlu, sub, dreapta, on='') => `<button class="it" style="--k:var(${k})" ${on?`data-c="${esc(JSON.stringify(on))}"`:''}><span class="ib2">${ic(ico)}</span><span class="tx"><b>${titlu}</b>${sub?`<small>${sub}</small>`:''}</span>${dreapta??'<span class="ch">›</span>'}</button>`;
+// O foaie deschisă din Setări se redesenează după o schimbare făcută din ea (temă, efecte, mod), ca să arate alegerea nouă.
+const refaFoaie = () => { const f = $('sheet').classList.contains('on') && $('sheet').querySelector('[data-f]')?.dataset.f; if (f === 'aspect') aspectFoaie(); };
+// Ultima analiză văzută de aplicație (seara: snapshot; în timpul zilei: rularea scurtă). Fără cereri la GitHub.
+const ultimaAnaliza = () => { const a = SNAP?.generat || '', b = INTRA?.generat || ''; return a > b ? a : b; };
+function stareAutomat(){
+  const u = ultimaAnaliza(), min = u ? (Date.now() - Date.parse(u)) / 60e3 : Infinity;
+  if (!u) return ['atentie', 'încă nicio analiză'];
+  if (bursaDeschisa() && min > 75) return ['atentie', `nu a mai rulat de ${min < 120 ? Math.round(min) + ' de minute' : Math.round(min / 60) + ' ore'}`];
+  return ['ok', `ultima: ${cand(u)}`];
+}
+function conexiuniFoaie(){
+  const c = STARE?.conexiuni || SNAP?.conexiuni || {};
+  foaie(`${capFoaie('link','Conexiuni', STARE?.generat||SNAP?.generat ? `testate ${cand(STARE?.generat||SNAP.generat)}` : 'încă netestate')}
+    <div class="card grp">${Object.entries(NUMEC).filter(([k]) => c[k] && k !== 'push').map(([k, n]) => { const [sm, col] = STAREI[c[k].stare] || ['?','--mut'];
+      return rowS(col, k==='seif'?'scut':k==='bnr'?'glob':'link', n, esc(c[k].mesaj||''), `<b style="color:var(${col});font-size:var(--t3)">${sm}</b>`); }).join('') || '<div class="det sub">Încă nu am rezultatul unui test.</div>'}</div>
+    ${SNAP?.ultimaIncercare ? `<div class="sub" style="margin-top:8px">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn sm" style="flex:1;margin:0" data-c="${A('ruleaza',true)}">Testează din nou</button><button class="btn ghost sm" style="flex:1;margin:0" data-c="${A('closeSheet')}">Închide</button></div>`);
+}
+function parolaFoaie(){
+  foaie(`${capFoaie('lacat','Parola și cheile','tot ce ține de seiful de pe telefon')}
+    <div class="lbl" style="margin:0 0 8px">Schimbă parola</div>
+    ${PAROLA_SCURTA ? `<div class="al" style="margin:0 0 8px">Parola ta are sub ${PAROLA_MIN} caractere. Schimb-o.</div>` : ''}
+    <input id="pwv" type="password" autocomplete="current-password" placeholder="Parola actuală"><input id="pwn1" type="password" autocomplete="new-password" placeholder="Parola nouă (minimum ${PAROLA_MIN} caractere)" data-in="${A('arataForta','$val','fpn')}">${fortaHTML('fpn')}<input id="pwn2" type="password" autocomplete="new-password" placeholder="Parola nouă, încă o dată"><button class="btn ghost" data-c="${A('schimbaParola')}">Schimbă parola</button>
+    <div class="lbl" style="margin:16px 0 8px">Copie de rezervă a seifului</div>
+    <div class="sub" style="line-height:1.55;margin-bottom:8px">Un fișier criptat cu parola ta: tokenul, cheia de date și jurnalul. Fără parolă nu poate fi citit. Îl restaurezi la Pornire, pe acest telefon sau pe altul. Păstrează-l în afara telefonului (Drive, e-mail către tine).${S.copieSeif ? ` Ultima copie: ${new Date(S.copieSeif).toLocaleDateString('ro-RO')}.` : ''}</div>
+    <input id="pwbk" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('exportSeif')}">Descarcă copia</button>
+    <div class="lbl" style="margin:16px 0 8px">Cheia de date</div>
+    <div class="sub" style="line-height:1.55;margin-bottom:8px">Pentru managerul de parole. Fără ea, datele din GitHub nu mai pot fi citite dacă pierzi telefonul.</div>
+    <input id="pwa" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('aratăCheia')}">Arată</button><div id="dkv"></div>
+    <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button>`);
+}
+function aspectFoaie(){
+  const seg = (l, cur, f) => `<div class="seg">${l.map(([k,t]) => `<button class="${cur===k?'on':''}" data-c="${A(f,k)}">${t}</button>`).join('')}</div>`;
+  foaie(`<div data-f="aspect">${capFoaie('paleta','Aspect','tema, efectele și cât de multe detalii vezi')}
+    <div class="lbl" style="margin:0 0 8px">Tema</div>${seg([['auto','Automat'],['dark','Întunecat'],['light','Luminos']], S.tema, 'setTema')}
+    <div class="lbl" style="margin:16px 0 8px">Efecte vizuale</div>${seg([['complet','Complete'],['redus','Reduse']], S.fx||'complet', 'setFx')}
+    <div class="sub" style="margin-top:8px;line-height:1.5">Aurora din fundal, sigla animată și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div>
+    <div class="lbl" style="margin:16px 0 8px">Cât de multe detalii vezi</div>${seg([[true,'Începător'],[false,'Complet']], incepator(), 'setIncepator')}
+    <div class="sub" style="margin-top:8px;line-height:1.5">„Începător” ascunde graficele avansate, harta, sortarea și indicatorii tehnici, și adaugă explicații scurte.</div>
+    <button class="btn ghost" style="margin-top:16px" data-c="${A('closeSheet')}">Închide</button></div>`);
+}
+function ajutorFoaie(){
+  foaie(`${capFoaie('info','Ajutor','gesturi și turul aplicației')}
+    <div class="lbl" style="margin:0 0 8px">Gesturi</div>
+    <ul class="lst">${[['Reîncarci','trage în jos de sus. În timpul bursei, cere și prețurile de acum.'],['Schimbi tabul','glisează stânga sau dreapta. Pe grafice, cu un gest rapid.'],['Afli ce înseamnă un termen','atinge cuvântul subliniat sau „?”.'],['Citești valorile unui grafic','atinge-l și trage ușor cu degetul.'],['Închizi o fereastră','trage-o în jos.']].map(([a,b])=>`<li><b>${a}:</b> ${b}</li>`).join('')}</ul>
+    <button class="btn ghost" style="margin-top:12px" data-c="${A('reiaTur')}">Reia turul aplicației</button>
+    <div class="sub" style="text-align:center;margin-top:16px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>
+    <button class="btn ghost" style="margin-top:8px" data-c="${A('closeSheet')}">Închide</button>`);
+}
+// Analiza automată: GitHub sare des rulările programate, așa că le poate porni cron-job.org (gratuit), la ora exactă.
+async function automatFoaie(){
+  const repo = esc(S.repo), url = `https://api.github.com/repos/${S.repo}/actions/workflows/analiza.yml/dispatches`;
+  const zi = '{"ref":"main","inputs":{"mod":"intraday","programat":"1"}}', seara = '{"ref":"main","inputs":{"mod":"zi","programat":"1"}}';
+  const cp = (t, v) => `<button class="btn ghost sm cpy" data-c="${A('copiaza', v)}"><span>${t} · atinge ca să copiezi</span><code>${esc(v)}</code></button>`;
+  const pas = (n, t, html) => `<div class="pasdu"><span class="nivn">${n}</span><div style="min-width:0;flex:1"><b>${t}</b><div class="sub" style="margin-top:4px;line-height:1.55">${html}</div></div></div>`;
+  foaie(`<div data-f="automat">${capFoaie('refresh','Analiza automată','la fiecare 30 de minute, în zilele de bursă')}
+    <div id="autst"><div class="sub" style="padding:8px 0">Citesc ultimele rulări din GitHub…</div></div>
+    <div class="lbl" style="margin:16px 0 8px">De ce cron-job.org</div>
+    <div class="sub" style="line-height:1.55">GitHub sare des rulările programate (în unele zile, aproape toate). cron-job.org e gratuit și pornește analiza exact la oră, prin GitHub. Primește un token care poate doar porni analiza: nu vede date, chei sau cod.</div>
+    <div class="lbl" style="margin:16px 0 8px">Configurarea, o singură dată (~5 minute)</div>
+    ${pas(1, 'Tokenul pentru cron-job.org', `În GitHub: Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token. Nume: „cron-job Analist”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${repo.split('/')[1]}. La Permissions → Repository permissions: <b>Actions: Read and write</b>. Nimic altceva. Copiază tokenul.`)}
+    ${pas(2, 'Contul', 'Pe <a href="https://cron-job.org" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">cron-job.org</a>, cont gratuit. La Settings, alege fusul orar <b>Europe/Bucharest</b>.')}
+    ${pas(3, 'Prima sarcină: „Analist, ziua”', `Create cronjob. Titlu: Analist, ziua. URL:${cp('URL', url)}Execution schedule: <b>Custom</b>. Days of week: luni–vineri. Hours: 9–22. Minutes: <b>15 și 45</b>. Pornește la 9:15 și ultima la 22:45.<br>În <b>Advanced</b>: Request method <b>POST</b>. Headers (Add header, de trei ori):${cp('Authorization', 'Bearer TOKENUL_TĂU')}${cp('Accept', 'application/vnd.github+json')}${cp('X-GitHub-Api-Version', '2022-11-28')}Request body:${cp('Body', zi)}Salvează.`)}
+    ${pas(4, 'A doua sarcină: „Analist, seara”', `La fel, cu același URL și aceleași headere. Days of week: luni–vineri. Hours: 23. Minutes: <b>35</b>. Request body:${cp('Body', seara)}`)}
+    ${pas(5, 'Verifică', 'În cron-job.org, apasă <b>Test run</b> la prima sarcină: răspunsul trebuie să fie <b>204</b>. Apoi redeschide această fereastră: în cel mult un minut apare rularea nouă. Bifează și „Notify me when the cronjob fails”: dacă tokenul expiră, primești un e-mail.')}
+    <div class="sub" style="margin-top:12px;line-height:1.55">Minute GitHub folosite: ~700 pe lună din cele 2.000 gratuite. Fără cron-job.org, aplicația merge ca înainte; „Actualizează” cere singur prețuri noi când bursa e deschisă.</div>
+    <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button></div>`);
+  try {
+    const j = await gh('/actions/workflows/analiza.yml/runs?per_page=30'), l = j?.workflow_runs || [], el = $('autst'); if (!el) return;
+    const ok = l.filter(r => r.conclusion === 'success'), ult = ok[0], azi = l.filter(r => Date.now() - Date.parse(r.created_at) < 3 * 3600e3).length;
+    const [st, txt] = !ult ? ['atentie', 'Încă nicio rulare reușită.'] : bursaDeschisa() && Date.now() - Date.parse(ult.created_at) > 75 * 60e3
+      ? ['atentie', `Ultima rulare reușită: ${cand(ult.created_at)}. În timpul bursei ar trebui să ruleze la fiecare 30 de minute.`]
+      : ['ok', `Ultima rulare reușită: ${cand(ult.created_at)}. ${azi} ${azi === 1 ? 'rulare' : 'rulări'} în ultimele 3 ore.`];
+    el.innerHTML = `<div class="vps ${st}"><b>${st === 'ok' ? 'Analiza rulează' : 'Analiza nu rulează la timp'}</b></div><div class="sub" style="line-height:1.55;margin-top:8px">${esc(txt)}</div>`;
+  } catch(e) { const el = $('autst'); if (el) el.innerHTML = `<div class="sub">Nu am putut citi rulările: ${esc(e.message)}</div>`; }
+}
 // Drepturi de autor și licență: avizul complet, deschis din Setări.
 function drepturiAutor(){
   const an = new Date().getFullYear(), ani = an > 2026 ? '2026–'+an : '2026';
@@ -1417,7 +1517,6 @@ const ICO = {
   extern:'<path d="M14 4h6v6M20 4l-8.5 8.5"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>',
   ochi:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><circle class="s" cx="12" cy="12" r="1.2"/>',
   stea:'<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/><circle class="s" cx="12" cy="12" r="1.4"/>',
-  sageata:'<path d="M5 12h13M13 6.5 18.5 12 13 17.5"/><circle class="s" cx="5" cy="12" r="1.6"/>',
 };
 const ic = (n, c='') => `<svg class="ico ${c}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]||''}</svg>`;
 // Titlurile secțiunilor primesc automat iconița potrivită.
@@ -2511,7 +2610,8 @@ function galaxie(){
     if (!st.drag) { st.yaw += st.vy; st.vy *= 0.94; if (!calm && Math.abs(st.vy)<0.0004) st.yaw += 0.0009*pas; }
     GX.yaw = st.yaw; GX.tilt = st.tilt;
     // reluarea: ziua curentă
-    let zi = null; if (st.rel) { const f = Math.min((now-st.rel.t0)/9000, 1); zi = Math.round(f*(D.istoric.zile.length-1)); if (f>=1) { st.rel=null; $('gxp')?.classList.remove('on'); setTimeout(()=>{ if($('gxd')) $('gxd').textContent=''; }, 1600); } }
+    // timpul cadrului poate fi cu câteva milisecunde înaintea apăsării (performance.now): fracțiunea se încadrează în [0, 1]
+    let zi = null; if (st.rel && D.istoric.zile.length) { const f = Math.max(0, Math.min((now-st.rel.t0)/9000, 1)); zi = Math.min(D.istoric.zile.length-1, Math.max(0, Math.round(f*(D.istoric.zile.length-1)))); if (f>=1) { st.rel=null; $('gxp')?.classList.remove('on'); setTimeout(()=>{ if($('gxd')) $('gxd').textContent=''; }, 1600); } }
     const pond = p => zi==null ? p.pondere : D.istoric.w[SNAP.pozitii.indexOf(p)][zi];
     if (zi!=null && $('gxd')) { const tz=D.istoric.tot, ch=(tz[zi]/tz[0]-1)*100; $('gxd').innerHTML = `${ziRo(D.istoric.zile[zi])} <b class="${ch>=0?'pos':'neg'}">${sg(ch,1)}%</b>`; }
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(fond,0,0);
@@ -2699,23 +2799,20 @@ function md(t){
 function raport(){ openSheet(`<div class="grab"></div><div class="rap">${md(RAP||'Raportul de dimineață nu a sosit încă.')}</div><button class="btn ghost" style="margin-top:16px" data-c="${A('closeSheet')}">Închide</button>`); }
 
 // ===== Setări =====
-const PASI = [
-  ['repo','Creează două repo-uri goale'],['chei','Pune cheile în GitHub'],['token','Conectează telefonul'],['test','Testează']];
 const SECRETE = [
   ['DATA_KEY','Analist','obligatoriu','Cheia care criptează datele tale în GitHub. Se generează aici, pe telefon. Pune-o ca secret și salveaz-o și în managerul de parole: fără ea, datele nu mai pot fi citite dacă pierzi telefonul.',null],
   ['T212_KEY','Trading 212','obligatoriu','În aplicația Trading 212: Setări → API (Beta) → Generate. Bifează Account data, Metadata, Portfolio, History și History - Orders (plus Dividends și Transactions, dacă apar). Fără Orders - Execute. Primești o cheie și un secret. Secretul apare o singură dată.',null],
   ['T212_SECRET','Trading 212','obligatoriu','Secretul generat odată cu cheia.',null],
   ['ETORO_API_KEY','eToro','recomandat','Pe site (nu din aplicație): Setări → Trading → API Key Management → Create New Key. Environment Real, Permissions Read. Fără eToro lipsesc pozițiile de acolo și graficele.','https://www.etoro.com/settings/trade'],
   ['ETORO_USER_KEY','eToro','recomandat','A doua cheie din aceeași pagină.','https://www.etoro.com/settings/trade'],
-  ['FINNHUB_KEY','Finnhub','opțional','Cont gratuit. Cheia apare în dashboard. Aduce P/E, recomandările analiștilor și datele rezultatelor.','https://finnhub.io/register'],
-  ['NTFY_TOPIC','ntfy','opțional','Pentru notificări pe telefon. Generează un nume aici, pune-l ca secret și abonează-te la el în aplicația ntfy.',null]];
+  ['FINNHUB_KEY','Finnhub','opțional','Cont gratuit. Cheia apare în dashboard. Aduce P/E, recomandările analiștilor și datele rezultatelor.','https://finnhub.io/register']];
 const copiaza = t => { (navigator.clipboard?.writeText(t)||Promise.reject()).then(()=>{vib();toast(t.length>30?'Copiat.':'Copiat: '+t);}).catch(()=>toast(t)); };
 async function verificaParola(pw){ const o=citesteSeif(); const k=await cheieParola(pw, b64d(o.sare), o.iter); if (o.v===2) await despacheteaza(k, o.w); else await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, k, b64d(o.ct)); }
 async function schimbaParola(){
   const a=$('pwv').value, n1=$('pwn1').value, n2=$('pwn2').value;
   if (!parolaAcceptata(n1)) { toast(putereParola(n1).t || `Minimum ${PAROLA_MIN} caractere.`); return; } if (n1!==n2) { toast('Parolele noi nu coincid.'); return; }
   try { await verificaParola(a); } catch(e) { vib(); toast('Parola actuală e greșită.'); return; }
-  const o=citesteSeif(), sare=rnd(16); o.sare=b64e(sare); o.iter=ITER; o.v=2; o.w=await impacheteaza(await cheieParola(n1, sare, ITER), MK); localStorage.setItem(SEIF, JSON.stringify(o)); PAROLA_SCURTA=false; S.desc=''; vib(); toast('Parola a fost schimbată. Fă o copie nouă a seifului: cea veche se deschide tot cu parola veche.'); render();
+  const o=citesteSeif(), sare=rnd(16); o.sare=b64e(sare); o.iter=ITER; o.v=2; o.w=await impacheteaza(await cheieParola(n1, sare, ITER), MK); localStorage.setItem(SEIF, JSON.stringify(o)); PAROLA_SCURTA=false; vib(); toast('Parola a fost schimbată. Fă o copie nouă a seifului: cea veche se deschide tot cu parola veche.'); render();
 }
 async function aratăCheia(){
   try { await verificaParola($('pwa').value); } catch(e) { vib(); toast('Parola e greșită.'); return; }
@@ -2761,67 +2858,45 @@ async function importSeif(f){
 // Valorile generate la pornire stau temporar pe telefon, până se creează seiful (apoi se mută în el).
 const PORN = () => { try { return JSON.parse(localStorage.getItem(KEY+'_pornire')||'{}'); } catch(e){ return {}; } };
 const setPorn = o => localStorage.setItem(KEY+'_pornire', JSON.stringify({...PORN(), ...o}));
-function topicNou(){ const a=new Uint8Array(15); crypto.getRandomValues(a); setPorn({topic:'analist-'+[...a].map(x=>(x%36).toString(36)).join('')}); render(); }
 function cheieNoua(){ setPorn({dataKey:b64url(crypto.getRandomValues(new Uint8Array(32)))}); render(); }
 function cheieExistenta(){ const k=($('fdk').value||'').trim(); try { if(unb64url(k).length!==32) throw 0; } catch(e){ toast('Cheia nu are formatul corect (43 de caractere).'); return; } setPorn({dataKey:k, existenta:true}); render(); toast('Cheia de date a fost preluată.'); }
 const STAREI = {ok:['✓','--pos'],eroare:['✗','--neg'],lipsa:['!','--warn'],optional:['○','--mut']};
-const NUMEC = {seif:'Cheia de date (DATA_KEY)',t212:'Trading 212',etoro:'eToro',finnhub:'Finnhub',push:'Notificări pe telefon',ntfy:'Notificări prin ntfy (rezervă)',bnr:'Curs BNR'};
-function conexiuniHTML(){
-  const c = STARE?.conexiuni || SNAP?.conexiuni; if (!c) return `<div class="sub">Încă nu am rezultatul unui test.</div>`;
-  return Object.entries(NUMEC).filter(([k])=>c[k] && k!=='push').map(([k,n])=>{ const [ic,col]=STAREI[c[k].stare]||['?','--mut'];
-    return `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)"><b style="color:var(${col});width:16px;text-align:center">${ic}</b><div><div style="font-weight:600">${n}</div><div class="sub">${esc(c[k].mesaj||'')}</div></div></div>`; }).join('')
-    + (SNAP.ultimaIncercare?`<div class="sub" style="margin-top:8px">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>`:'');
-}
+const NUMEC = {seif:'Cheia de date (DATA_KEY)',t212:'Trading 212',etoro:'eToro',finnhub:'Finnhub',push:'Notificări pe telefon',bnr:'Curs BNR'};
 function vSetari(){
   const aspect = `<div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div><div class="lbl" style="margin:12px 0 8px">Efecte vizuale</div><div class="seg">${[['complet','Complete'],['redus','Reduse']].map(([k,t])=>`<button class="${(S.fx||'complet')===k?'on':''}" data-c="${A('setFx',k)}">${t}</button>`).join('')}</div><div class="sub" style="margin-top:8px">Aurora din fundal, granulația și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div></div>`;
   const ver = `<div class="card sub">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>`;
   if (live()) {
     const c = STARE?.conexiuni || SNAP?.conexiuni || {}, bio = !!citesteSeif()?.bio;
-    const ok = Object.values(c).filter(x=>x.stare==='ok').length, rau = Object.values(c).filter(x=>x.stare==='eroare').length;
-    const it = (k, ico, titlu, sub, dreapta, on='') => `<button class="it" style="--k:var(${k})" ${on?`data-c="${esc(JSON.stringify(on))}"`:''}><span class="ib2">${ic(ico)}</span><span class="tx"><b>${titlu}</b>${sub?`<small>${sub}</small>`:''}</span>${dreapta??'<span class="ch">›</span>'}</button>`;
-    const D = S.desc || '';
-    const des = (k, html) => D===k ? `<div class="det">${html}</div>` : '';
-    const tg = k => ['comutaDesc', k];
-    return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO('logo-big',2).replace('logo-big','" style="width:56px;height:56px')}<div><div style="font-size:var(--t4);font-weight:800">Analist</div><div class="sub">Analistul tău personal pe bursă · ${APP_VER}</div>
+    const cx = Object.entries(c).filter(([k]) => NUMEC[k] && k !== 'push'), ok = cx.filter(([,x]) => x.stare === 'ok').length, rau = cx.filter(([,x]) => x.stare === 'eroare').length;
+    const [aSt, aTxt] = stareAutomat(), [pSt, pTxt] = starePush(), z = zileToken();
+    const cul = st => st === 'ok' ? '--pos' : st === 'nu' ? '--neg' : '--warn', avert = t => `<span style="color:var(--warn)">${t}</span>`;
+    return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO_VIU().replace('class="lv"','class="lv mare"')}<div><div style="font-size:var(--t4);font-weight:800">Analist</div><div class="sub">Analistul tău personal pe bursă · ${APP_VER}</div>
       <div class="sub" style="margin-top:4px;color:var(${rau?'--neg':'--pos'})">${rau?`${rau} ${rau===1?'conexiune are':'conexiuni au'} probleme`:`${ok} conexiuni active · date criptate`}</div></div></div>
-    <div class="sec"><h2>Conexiuni</h2>${STARE?.generat||SNAP?.generat?`<span class="sub">test ${cand(STARE?.generat||SNAP.generat)}</span>`:''}</div>
-    <div class="card grp">${Object.entries(NUMEC).filter(([k])=>c[k] && k!=='push').map(([k,n])=>{ const [sm,col]=STAREI[c[k].stare]||['?','--mut'];
-      return it(col, k==='ntfy'||k==='push'?'bec':k==='seif'?'scut':k==='bnr'?'glob':'link', n, esc(c[k].mesaj||''), `<b style="color:var(${col});font-size:var(--t3)">${sm}</b>`); }).join('') || `<div class="det sub">Încă nu am rezultatul unui test.</div>`}
-      ${SNAP?.ultimaIncercare?`<div class="det sub">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>`:''}
-      <div class="det" style="display:flex;gap:8px;padding-top:12px"><button class="btn sm" style="flex:1" data-c="${A('ruleaza',true)}">Testează din nou</button><button class="btn ghost sm" style="flex:1" data-c="${A('ruleaza')}">Rulează analiza</button></div>
-      ${it('--s4','lacat','Schimbă tokenul GitHub','',null,tg('tok'))}
-      ${des('tok',`<input id="ft" type="password" autocomplete="off" placeholder="Tokenul nou (github_pat_…)"><button class="btn ghost" data-c="${A('salveaza',true)}">Salvează și testează</button>`)}
-      ${(()=>{ const z=zileToken(); return it(z!=null&&z<=30?'--warn':'--s3','calendar','Expirarea tokenului', z==null?'adaugă data din GitHub':z<=0?'<span style="color:var(--neg)">a expirat</span>':`${esc(ziLunga(S.tokenExp))}${S.tokenEstimat?', estimat':''} · ${z} ${z===1?'zi':'zile'}`,null,['tokenFoaie']); })()}
-      ${it('--pos','scut','Verificarea pornirii','token, repo, analiză, chei: totul dintr-o privire',null,['verificaPornire'])}</div>
+    <div class="sec"><h2>Analiza</h2></div>
+    <div class="card grp">
+      ${rowS(cul(aSt),'refresh','Analiza automată', aSt==='ok' ? aTxt : avert(aTxt), null, ['automatFoaie'])}
+      ${rowS(rau?'--neg':'--pos','link','Conexiuni', rau ? `<span style="color:var(--neg)">${rau} cu probleme</span>` : `${ok} active`, null, ['conexiuniFoaie'])}
+      ${rowS('--pos','scut','Verificarea pornirii','tot ce trebuie să meargă, dintr-o privire',null,['verificaPornire'])}
+      ${rowS(z!=null&&z<=30?'--warn':'--s4','lacat','Tokenul GitHub', z==null?'schimbare și data expirării':z<=0?'<span style="color:var(--neg)">a expirat</span>':`expiră pe ${esc(ziLunga(S.tokenExp))}${S.tokenEstimat?' (estimat)':''}`,null,['tokenFoaie'])}</div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" style="flex:1;margin:0" data-c="${A('ruleaza')}">Rulează analiza acum</button></div>
     <div class="sec"><h2>Notificări</h2></div>
-    <div class="card grp">${(()=>{ const [st,txt]=starePush(); return it(st==='ok'?'--pos':st==='nu'?'--neg':'--warn','bec','Notificări pe acest telefon', st==='ok'?txt:`<span style="color:var(--warn)">${txt}</span>`,null,['notificariFoaie']); })()}</div>
-    <div class="sec"><h2>Datele tale</h2></div>
-    <div class="card grp">${it('--acc','descarca','Exportă datele','JSON și CSV: poziții, evoluție, vânzări, dividende, jurnal',null,['exportFoaie'])}</div>
-    <div class="sec"><h2>Aplicațiile brokerilor</h2></div>${butoaneBrokeri()}
-    <div class="card grp" style="margin-top:8px">${it('--acc','extern','Cum se deschide Trading 212', t212M()==='play'?'prin Magazin Play':'direct în aplicație, metoda '+esc(t212M().replace('D:','')),null,['laboratorT212'])}</div>
+    <div class="card grp">${rowS(cul(pSt),'bec','Notificări pe acest telefon', pSt==='ok'?pTxt:avert(pTxt),null,['notificariFoaie'])}</div>
     <div class="sec"><h2>Securitate</h2></div>
     <div class="card grp">
-      ${it('--pos','mana','Deblocare cu amprenta', bio?'Activă pe acest telefon':'Parola rămâne mereu variantă de rezervă', `<span class="sw ${bio?'on':''}"></span>`, bio?['dezactiveazaAmprenta']:['activeazaAmprenta']).replace('class="it"','class="it" id="bact"')}
-      ${it('--acc','lacat','Blochează acum','Se blochează singură după 2 minute în fundal sau 10 minute fără activitate',null,['blocheazaAcum'])}
-      ${it('--s5','scut','Schimbă parola',PAROLA_SCURTA?`<span style="color:var(--warn)">Parola ta are sub ${PAROLA_MIN} caractere. Schimb-o.</span>`:'',null,tg('pw'))}
-      ${des('pw',`<input id="pwv" type="password" autocomplete="current-password" placeholder="Parola actuală"><input id="pwn1" type="password" autocomplete="new-password" placeholder="Parola nouă (minimum ${PAROLA_MIN} caractere)" data-in="${A('arataForta','$val','fpn')}">${fortaHTML('fpn')}<input id="pwn2" type="password" autocomplete="new-password" placeholder="Parola nouă, încă o dată"><button class="btn ghost" data-c="${A('schimbaParola')}">Schimbă parola</button>`)}
-      ${it('--s3','descarca','Copie de rezervă a seifului',S.copieSeif?`ultima: ${new Date(S.copieSeif).toLocaleDateString('ro-RO')}`:'încă nu ai făcut una',null,tg('bk'))}
-      ${des('bk',`<div class="sub" style="line-height:1.55;margin-bottom:8px">Un fișier criptat cu parola ta: tokenul, cheia de date și jurnalul. Fără parolă nu poate fi citit. Îl restaurezi la Pornire, pe acest telefon sau pe altul. Păstrează-l în afara telefonului (Drive, e-mail către tine).</div><input id="pwbk" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('exportSeif')}">Descarcă copia</button>`)}
-      ${it('--s4','info','Arată cheia de date','pentru copia de siguranță',null,tg('dk'))}
-      ${des('dk',`<input id="pwa" type="password" autocomplete="current-password" placeholder="Parola actuală"><button class="btn ghost" data-c="${A('aratăCheia')}">Arată</button><div id="dkv"></div>`)}
-      ${it(SEC()?.alarme?.some(a=>a.nivel==='critic')?'--neg':'--pos','scut','Paza tranzacțiilor', SEC()?.garda?(alarmeActive().length?`<span style="color:var(--warn)">${alarmeActive().length} de verificat</span>`:'activă · analiza doar citește'):'apare după prima analiză nouă',null,['pazaDetalii'])}
-      ${it('--neg','alerta','Oprire de urgență', S.kill?'<span style="color:var(--neg)">activă</span>':'oprește analiza și îți arată pașii',null,[S.kill?'pasiOprire':'confirmaOprire'])}
-      <div class="det sub" style="padding-top:12px;line-height:1.55">Datele din GitHub sunt criptate. Pe telefon, totul stă criptat cu parola ta (sau cu amprenta). Notificările nu conțin simboluri sau sume.</div></div>
-    <div class="sec"><h2>Drepturi de autor</h2></div>
-    <div class="card grp">${it('--s4','carte','Drepturi de autor și licență','© Constantin Enache · ce e interzis și ce urmează',null,['drepturiAutor'])}</div>
-    <div class="sec"><h2>Aspect</h2></div><div class="card"><div class="seg">${[['auto','Automat'],['dark','Întunecat'],['light','Luminos']].map(([k,t])=>`<button class="${S.tema===k?'on':''}" data-c="${A('setTema',k)}">${t}</button>`).join('')}</div><div class="lbl" style="margin:12px 0 8px">Efecte vizuale</div><div class="seg">${[['complet','Complete'],['redus','Reduse']].map(([k,t])=>`<button class="${(S.fx||'complet')===k?'on':''}" data-c="${A('setFx',k)}">${t}</button>`).join('')}</div><div class="sub" style="margin-top:8px">Aurora din fundal, granulația și liniile care se desenează. „Reduse” păstrează doar culorile, pentru telefoane mai vechi sau baterie.</div>
-      <div class="lbl" style="margin:16px 0 8px">Cât de multe detalii vezi</div><div class="seg">${[[true,'Începător'],[false,'Complet']].map(([k,t])=>`<button class="${incepator()===k?'on':''}" data-c="${A('setIncepator',k)}">${t}</button>`).join('')}</div>
-      <div class="sub" style="margin-top:8px">„Începător” ascunde graficele avansate, harta, sortarea și indicatorii tehnici, și adaugă explicații scurte. Poți schimba oricând.</div>
-      <button class="btn ghost sm" style="margin-top:12px" data-c="${A('reiaTur')}">Reia turul aplicației</button></div>
-    <div class="sec"><h2>Gesturi</h2></div><div class="card"><ul class="lst">${[['Reîncarci','trage în jos de sus.'],['Schimbi tabul','glisează stânga sau dreapta. Pe grafice, cu un gest rapid.'],['Afli ce înseamnă un termen','atinge cuvântul subliniat sau „?”.'],['Citești valorile unui grafic','atinge-l și trage ușor cu degetul.'],['Închizi o fereastră','trage-o în jos.']].map(([a,b])=>`<li><b>${a}:</b> ${b}</li>`).join('')}</ul></div>
-    <div class="card grp">${it('--neg','extern','Deconectează telefonul','șterge seiful de pe acest telefon',null,['deconecteaza'])}</div>
-    <div class="sub" style="text-align:center;margin:8px 0 4px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>
-    <button class="link" style="display:block;margin:0 auto 4px;text-align:center" data-c="${A('drepturiAutor')}">© 2026${new Date().getFullYear()>2026?'–'+new Date().getFullYear():''} Constantin Enache. Toate drepturile rezervate.</button>`;
+      ${rowS('--pos','mana','Deblocare cu amprenta', bio?'activă pe acest telefon':'parola rămâne mereu variantă de rezervă', `<span class="sw ${bio?'on':''}"></span>`, bio?['dezactiveazaAmprenta']:['activeazaAmprenta']).replace('class="it"','class="it" id="bact"')}
+      ${rowS('--acc','lacat','Blochează acum','singură după 2 minute în fundal sau 10 fără activitate',null,['blocheazaAcum'])}
+      ${rowS(PAROLA_SCURTA?'--warn':'--s5','scut','Parola și cheile', PAROLA_SCURTA?avert(`parola are sub ${PAROLA_MIN} caractere`):'schimbă parola, copie de rezervă, cheia de date',null,['parolaFoaie'])}
+      ${rowS(SEC()?.alarme?.some(a=>a.nivel==='critic')?'--neg':'--pos','scut','Paza tranzacțiilor', SEC()?.garda?(alarmeActive().length?avert(`${alarmeActive().length} de verificat`):'activă · analiza doar citește'):'apare după prima analiză nouă',null,['pazaDetalii'])}
+      ${rowS('--neg','alerta','Oprire de urgență', S.kill?'<span style="color:var(--neg)">activă</span>':'oprește analiza și îți arată pașii',null,[S.kill?'pasiOprire':'confirmaOprire'])}</div>
+    <div class="sec"><h2>Aplicația</h2></div>
+    <div class="card grp">
+      ${rowS('--acc','paleta','Aspect', `${({auto:'tema automată',dark:'întunecată',light:'luminoasă'})[S.tema]||'tema automată'} · ${incepator()?'mod începător':'mod complet'}`,null,['aspectFoaie'])}
+      ${rowS('--acc','extern','Trading 212', t212M()==='play'?'se deschide prin Magazin Play':'se deschide direct în aplicație',null,['laboratorT212'])}
+      ${rowS('--acc','descarca','Exportă datele','JSON și CSV: poziții, evoluție, vânzări, dividende, jurnal',null,['exportFoaie'])}
+      ${rowS('--s4','info','Ajutor','gesturi, turul aplicației, versiunea',null,['ajutorFoaie'])}
+      ${rowS('--s4','carte','Drepturi de autor și licență','© Constantin Enache',null,['drepturiAutor'])}</div>
+    <div class="card grp" style="margin-top:16px">${rowS('--neg','extern','Deconectează telefonul','șterge seiful de pe acest telefon',null,['deconecteaza'])}</div>
+    <button class="link" style="display:block;margin:12px auto 4px;text-align:center" data-c="${A('drepturiAutor')}">© 2026${new Date().getFullYear()>2026?'–'+new Date().getFullYear():''} Constantin Enache. Toate drepturile rezervate.</button>`;
   }
   const R = S.repo||'costi1622/analist-date', [own] = R.split('/'), pas = S.pasi||{};
   const PR = PORN();
@@ -2835,7 +2910,6 @@ function vSetari(){
     ${R!=='costi1622/analist-date'?`<a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener noreferrer">Deschide pagina de secrete ↗</a>`:'<div class="sub" style="margin-bottom:8px">În repo-ul tău <b class="ink2">analist-date</b>: Settings → Secrets and variables → Actions → New repository secret.</div>'}
     ${SECRETE.map(([n,b,tip,cum,url])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="row"><button class="chip" style="color:var(--acc)" data-c="${A('copiaza',n)}">${n} ⧉</button><span class="sub" style="color:var(${tip==='obligatoriu'?'--neg':tip==='recomandat'?'--warn':'--mut'})">${tip}</span></div>
       <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
-      ${n==='NTFY_TOPIC'?(PORN().topic?`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost sm" style="flex:1" data-c="${A('copiaza',PORN().topic)}">${PORN().topic} ⧉</button><a class="btn ghost sm" style="text-decoration:none" href="https://ntfy.sh/${PORN().topic}" target="_blank" rel="noopener noreferrer">Abonează-te ↗</a></div>`:`<button class="btn ghost sm" style="margin-top:8px" data-c="${A('topicNou')}">Generează un nume</button>`):''}
       ${n==='DATA_KEY'?(PORN().dataKey?`<button class="btn ghost sm num" style="margin-top:8px;width:100%;word-break:break-all;font-size:var(--t1)" data-c="${A('copiaza',PORN().dataKey)}">${PORN().dataKey} ⧉</button>${PORN().existenta?'<div class="sub pos" style="margin-top:4px">Cheie existentă, preluată. Nu o pune din nou în GitHub dacă e deja acolo.</div>':''}`
         :`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost sm" style="flex:1" data-c="${A('cheieNoua')}">Generează cheia de date</button></div>
           <details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Am deja o cheie de date (telefon nou)</summary><input id="fdk" autocomplete="off" placeholder="Cheia de date (43 de caractere)"><button class="btn ghost sm" data-c="${A('cheieExistenta')}">Folosește cheia</button></details>`):''}</div>`).join('')}`)}
@@ -2872,7 +2946,7 @@ async function salveaza(test){
   if (pornire) {
     toast('Se generează cheile și se criptează seiful…');
     const pr = PORN(), kp = await perecheRaport();
-    await creeazaSeif($('pw1').value, { token:t, dataKey:pr.dataKey, topic:pr.topic||'', priv:kp.priv, pub:kp.pub, jurnal:[] });
+    await creeazaSeif($('pw1').value, { token:t, dataKey:pr.dataKey, priv:kp.priv, pub:kp.pub, jurnal:[] });
     if (S.incepator===undefined) S.incepator = true; // configurare nouă: pornește în modul începător, cu turul la prima deschidere
     localStorage.removeItem(KEY+'_pornire');
   } else { V.token = t; await salveazaSeif(); }
@@ -2889,22 +2963,23 @@ function deconecteaza(){
 let PROGRES_TEXT = '';
 function progres(t){ PROGRES_TEXT = t||''; document.querySelectorAll('#rulc .pt').forEach(x=>x.textContent=PROGRES_TEXT); const el=$('prog'); if (!el) return; if (t==null) { el.classList.remove('on'); return; } el.innerHTML=`<i></i><span>${esc(t)}</span>`; el.classList.add('on'); }
 let RULEAZA = false;
-async function ruleaza(test){
-  if (RULEAZA) return;
+async function ruleaza(test, scurta){
+  if (RULEAZA) return; test = test === true; scurta = scurta === true && !test;
   if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; logoRuleaza(true); if (!test && ['azi'].includes(VIEW) || !SNAP) render();
   const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
-    await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:V.pub}:{mod:'zi'}})});
-    progres(test?'Testez conexiunile…':'Pornește analiza…');
+    await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:V.pub}:{mod:scurta?'intraday':'zi'}})});
+    progres(test?'Testez conexiunile…':scurta?'Cer prețuri proaspete…':'Pornește analiza…');
     let run = null;
     for (let i=0;i<120;i++) {
       await new Promise(r=>setTimeout(r, i<3?2000:3000));
       const j = await gh('/actions/workflows/analiza.yml/runs?event=workflow_dispatch&per_page=1');
       run = j.workflow_runs?.[0]; if (!run || run.created_at < inainte.slice(0,19)) { progres(`GitHub pregătește rularea… ${sec()} s`); continue; }
-      if (run.status!=='completed') { progres(`${run.status==='in_progress'?'Citesc brokerii și prețurile':'În așteptare la GitHub'}… ${sec()} s`); continue; }
+      if (run.status!=='completed') { progres(`${run.status==='in_progress'?(scurta?'Citesc prețurile de acum':'Citesc brokerii și prețurile'):'În așteptare la GitHub'}… ${sec()} s`); continue; }
       progres('Aduc rezultatele…'); await new Promise(r=>setTimeout(r,1200)); await reincarca(); progres(null);
-      if (test || run.conclusion!=='success') { go('setari'); toast(run.conclusion==='success'?`Testul s-a terminat în ${sec()} s. Rezultatul e mai jos.`:'O conexiune nu merge. Detaliile sunt mai jos.'); return; }
+      if (test || run.conclusion!=='success') { go('setari'); if (live()) setTimeout(conexiuniFoaie, 350); toast(run.conclusion==='success'?`Testul s-a terminat în ${sec()} s.`:'O conexiune nu merge. Vezi ce trebuie reparat.'); return; }
+      if (scurta) { render(); toast(`Prețuri actualizate în ${sec()} s.`); return; }
       go('azi'); toast(`Analiză actualizată în ${sec()} s.`); return;
     }
     progres(null); toast('Încă rulează. Reîncarcă peste un minut.');
@@ -2976,7 +3051,7 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('touchend',e=>{
     if(x0==null) return; const t=e.changedTouches[0], ddx=t.clientX-x0, ddy=t.clientY-y0, v=vz.get(), rapid=performance.now()-t0<320;
     $('ptr').style.transform='translate(-50%,-60px)'; $('ptr').style.opacity=0;
-    if (axa==='y' && pull && ddy>110 && Math.abs(ddx)<60) reincarca(true);
+    if (axa==='y' && pull && ddy>110 && Math.abs(ddx)<60) actualizeaza();
     else if (axa==='x' && zona!=='nu' && TABS.includes(VIEW)) {
       const prag = zona==='rapid' ? (Math.abs(ddx)>60 && (Math.abs(v)>0.5 || rapid)) : (Math.abs(ddx)>70 || (Math.abs(v)>0.35 && Math.abs(ddx)>24));
       const dir = !prag ? 0 : ddx<0 ? 1 : -1, i=TABS.indexOf(VIEW)+dir, m=main();
@@ -3217,9 +3292,8 @@ function setCont(k){ if (S.cont===k) return; S.cont=k; save(); vib(); tranzitie(
 function comutaPrivat(){ S.privat=!S.privat; save(); vib(); render(); }
 function setViz(k){ if (S.vizAzi===k) return; S.vizAzi=k; save(); vib(); tranzitie(render, 'lin'); }
 function setSort(k){ if (S.sort===k) return; S.sort=k; save(); vib(); tranzitie(render, 'lin'); }
-function setTema(k){ S.tema=k; save(); aplicaTema(); render(); }
-function setFx(k){ S.fx=k; save(); aplicaTema(); render(); }
-function comutaDesc(k){ S.desc = S.desc===k ? '' : k; render(); }
+function setTema(k){ S.tema=k; save(); aplicaTema(); render(); refaFoaie(); }
+function setFx(k){ S.fx=k; save(); aplicaTema(); render(); refaFoaie(); }
 function comutaPas(k){ const p=S.pasi||{}; S.pasi={...p, [k]:!p[k]}; save(); render(); }
 function detComuta(sym){ DET.det=!DET.det; detaliu(sym, DET.zile); }
 function detNota(sym){ DET.nota=true; detaliu(sym, DET.zile); setTimeout(()=>$('jnota')?.focus(), 50); }
@@ -3238,19 +3312,19 @@ function quizUrm(){ QZ.i++; QZ.ales=null; arataQuiz(); }
 function alegeFisier(){ $('fimp').click(); }
 function stergeJConfirmat(id){ J=J.filter(x=>x.id!==id); saveJ(); closeSheet(); if($('sheet').classList.contains('on')) closeSheet(); render(); }
 const CMD = Object.freeze(Object.assign(Object.create(null), {
-  go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, ruleaza, salveaza, raport, verificare, vib,
-  deblocheaza, deblocheazaAmprenta, uitatParola, stergeSeif, schimbaParola, aratăCheia, topicNou, cheieNoua, cheieExistenta,
+  go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
+  deblocheaza, deblocheazaAmprenta, uitatParola, stergeSeif, schimbaParola, aratăCheia, cheieNoua, cheieExistenta,
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan,
   deschideLectie, arataModul, quiz, cautaTermen, deschideSect, gxReluare, avErr,
-  blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, hartaRest, laboratorT212, t212Dom, t212Metoda, drepturiAutor, confirmaOprire, opresteUrgenta, pasiOprire, pornesteDinNou, alarmeVazute, activitateConfirmata, codConfirmat, pazaDetalii, t212Verificat, comutaPrivat, setViz, setSort, setTema, comutaDesc, comutaPas,
+  blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, hartaRest, laboratorT212, t212Dom, t212Metoda, drepturiAutor, confirmaOprire, opresteUrgenta, pasiOprire, pornesteDinNou, alarmeVazute, activitateConfirmata, codConfirmat, pazaDetalii, t212Verificat, comutaPrivat, setViz, setSort, setTema, comutaPas,
   detComuta, detNota, detAd, setFx, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, renuntaProfil,
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,
   exportSeif, importSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
   deschideLectiePotrivita, arataRecap, raspundeRecap, simulator, verificaInainte, verifRasp, verifGata,
   tokenFoaie, setTokenExp, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
   activeazaPush, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie,
-  setFiltruNout, deschideDinNout, ghidFundal
+  setFiltruNout, deschideDinNout, ghidFundal, conexiuniFoaie, parolaFoaie, aspectFoaie, ajutorFoaie, automatFoaie
 }));
 function ruleazaCmd(spec, el, ev){
   let a; try { a = JSON.parse(spec); } catch(e) { return; }

@@ -36,7 +36,6 @@
 --adauga:#147c3b;--pastreaza:#5d6b7c;--nu_adauga:#9b5d00;--asteapta:#2a6fb8;--verifica:#c8304b;--reechilibreaza:#7351c4;--opor:#8c6600;
 --pos:#147c3b;--neg:#c8304b;--flat:#5f6e84;--warn:#9b5d00;
 --s1:#276bca;--s2:#e45b19;--s3:#159767;--s4:#ad7d00;--s5:#d4537f;--grid:#e8edf3;--shadow:var(--sh3);--glow:rgba(42,114,214,.10)}}
-
 /* ===== v0.21: un singur sistem de proporții (D1) =====
    Spațiere: multipli de 4 px. Text: 5 mărimi (+1 pentru cifra principală), în rem, ca să crească odată cu textul din setările telefonului (D3).
    Colțuri: 8 / 12 / 16 / 24. Umbre: 3 niveluri. */
@@ -56,7 +55,7 @@ button{font:inherit;color:inherit}
 header::before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
 header{position:sticky;top:0;z-index:10;isolation:isolate;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
 .hrow{display:flex;align-items:center;gap:12px;max-width:760px;margin:0 auto}
-.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:var(--t3);letter-spacing:.2px}.brand svg{width:28px;height:28px;flex:none}.brand small{display:block;font-size:var(--t1);font-weight:600;color:var(--mut);letter-spacing:.4px;margin-top:-2px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:var(--t3);letter-spacing:.2px}.brand small{display:block;font-size:var(--t1);font-weight:600;color:var(--mut);letter-spacing:.4px;margin-top:-2px}
 .pill{font-size:var(--t1);font-weight:700;padding:2px 8px;border-radius:var(--r1);border:1px solid currentColor}
 .pill{display:none}.pill.off{display:inline-block;color:var(--warn)}
 body.nolive nav,body.nolive #bref,body.nolive #blk{display:none}
@@ -82,8 +81,7 @@ nav .ico{width:23px;height:23px;stroke:currentColor;color:currentColor;transitio
 nav button.on{color:var(--acc)}nav button.on .ico .f{opacity:.3}
 @keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.18) translateY(-2px)}100%{transform:none}}
 @keyframes draw{from{stroke-dashoffset:80}to{stroke-dashoffset:0}}
-nav .dot{position:absolute;top:4px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--verifica);box-shadow:0 0 0 2px var(--panel);animation:puls 2s 4}
-@keyframes puls{0%{box-shadow:0 0 0 2px var(--panel),0 0 0 2px color-mix(in srgb,var(--verifica) 60%,transparent)}70%{box-shadow:0 0 0 2px var(--panel),0 0 0 9px transparent}100%{box-shadow:0 0 0 2px var(--panel),0 0 0 2px transparent}}
+
 main{padding:16px 16px calc(var(--navh,84px) + 36px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;overflow-x:clip}
 html,body{overflow-x:clip}
 .al,.sub,.card p{overflow-wrap:anywhere}
@@ -163,8 +161,7 @@ input,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
 .rap h2{font-size:var(--t1);text-transform:uppercase;letter-spacing:1.4px;color:var(--acc)}
 .rap p,.rap li{font-size:var(--t3);color:var(--ink2);line-height:1.6}.rap ul{padding-left:20px}.rap b{color:var(--ink)}
 /* diverse */
-.empty{color:var(--mut);text-align:center;padding:36px 16px;font-size:var(--t2)}
-.banner{display:flex;gap:12px;align-items:flex-start;font-size:var(--t2);padding:12px 12px;border-radius:var(--r2);margin-bottom:12px;background:color-mix(in srgb,var(--asteapta) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--asteapta) 35%,var(--line));color:var(--ink2)}
+
 .sk{background:linear-gradient(90deg,var(--panel2) 25%,var(--line) 50%,var(--panel2) 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:var(--r2)}
 @keyframes sk{to{background-position:-200% 0}}
 #ptr{position:fixed;left:50%;top:calc(60px + env(safe-area-inset-top));z-index:9;transform:translate(-50%,-60px);opacity:0;transition:transform .2s,opacity .2s;width:34px;height:34px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--shadow)}
@@ -206,7 +203,6 @@ nav button.pop .ico:not(.nvi) .s,.ib:active .ico .s{transform-box:view-box;trans
 .rapc{cursor:pointer;background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 10%,var(--panel)),var(--panel) 55%) padding-box,linear-gradient(160deg,color-mix(in srgb,var(--acc) 45%,transparent),transparent 60%) border-box}
 .pr{grid-template-columns:40px 1fr 62px auto;gap:12px}
 .pr .av{width:40px;height:40px;border-radius:var(--r2);font-size:var(--t1)}
-.pr .sd{font-size:var(--t1);font-weight:700;margin-right:4px}
 .pr .r{gap:4px}.pr .r .mv{font-size:var(--t1);padding:2px 8px}
 /* Fișa acțiunii v0.14 */
 .av.lg{width:62px;height:62px;border-radius:var(--r3);font-size:var(--t3)}
@@ -225,7 +221,6 @@ nav button.pop .ico:not(.nvi) .s,.ib:active .ico .s{transform-box:view-box;trans
 .trk .dotm{position:absolute;top:50%;width:13px;height:13px;margin:-8px 0 0 -8px;border-radius:50%;box-shadow:0 0 0 3px var(--panel),0 0 12px currentColor}
 .trk.stk{display:flex;overflow:hidden;gap:2px}.trk.stk i{height:100%;display:block}
 /* Analiză v0.14 */
-.orbc{padding:8px 12px 16px;background:radial-gradient(70% 60% at 50% 45%,color-mix(in srgb,var(--acc) 10%,var(--panel)),var(--panel)) padding-box,linear-gradient(160deg,color-mix(in srgb,var(--acc) 40%,transparent),transparent 55%) border-box}
 .orb{display:block;width:100%;height:auto}
 .sanc{display:flex;gap:16px;align-items:center;width:100%;cursor:pointer;color:inherit;font:inherit}.sanc .ch{color:var(--mut);font-size:var(--t4)}
 .mini4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}.mini4 span{height:6px;border-radius:3px;background:var(--panel2);overflow:hidden}.mini4 i{display:block;height:100%;border-radius:3px}
@@ -248,11 +243,8 @@ nav button.pop .ico:not(.nvi) .s,.ib:active .ico .s{transform-box:view-box;trans
 .hcard{position:relative;overflow:hidden;--t:var(--flat)}
 .hcard::before{content:"";position:absolute;inset:-40% -20% auto auto;width:75%;height:120%;background:radial-gradient(closest-side,color-mix(in srgb,var(--t) 22%,transparent),transparent);pointer-events:none}
 .hcard.up{--t:var(--pos)}.hcard.down{--t:var(--neg)}.hcard>*{position:relative}.hcard.up,.hcard.down,.hcard.flat{color:inherit}
-.hcard .bigrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.tmap{position:relative;height:210px;border-radius:var(--r3);overflow:hidden;background:var(--panel2)}
-.tmap button{position:absolute;border:0;padding:8px 8px;text-align:left;color:#fff;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);font:inherit}
-.tmap b{font-size:var(--t2);letter-spacing:.3px;line-height:1.1}.tmap span{font-size:var(--t1);font-weight:700;opacity:.95}
-.tmap button.mic b{font-size:var(--t1)}.tmap button.mic span{display:none}
+
+
 .car{overscroll-behavior-x:contain}.car>*{scroll-snap-stop:normal}
 .car{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 8px;scrollbar-width:none}.car::-webkit-scrollbar{display:none}
 .car>.ks{flex:0 0 84%;max-width:340px;scroll-snap-align:center;margin:0;display:flex;flex-direction:column;border-top:3px solid var(--k,var(--warn))}
@@ -305,7 +297,6 @@ input[type=range]{padding:0;margin:16px 0 4px;accent-color:var(--acc);background
 .st{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r3);padding:12px 8px;text-align:center}
 .st .ico{width:16px;height:16px;stroke:var(--mut);margin-bottom:2px}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
-
 /* ===== v0.16: sigle, recomandări, Învață, un singur limbaj vizual ===== */
 .av.img{background:#fff;padding:0;overflow:hidden;box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent),0 8px 18px -8px var(--c)}
 .av.img img{width:100%;height:100%;object-fit:contain;padding:14%;display:block}
@@ -381,7 +372,6 @@ html[data-vt] .sheet,html[data-vt] .veil{transition:none!important}
 .mod .ch,.mod .pill2{position:absolute;right:24px}.mod.incurs .tx{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
 .lpas{margin-top:12px;font-size:var(--t1);color:var(--mut);text-align:center}
 /* sigla și ecranul de pornire */
-.brand .logo{width:30px;height:30px;flex:none;filter:drop-shadow(0 4px 12px rgba(90,162,255,.35))}
 #splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(90% 60% at 50% 42%,#13233d 0%,#070b11 62%);overflow:hidden;transition:opacity .6s ease,transform .7s cubic-bezier(.6,0,.4,1)}
 #splash::before,#splash::after{content:'';position:absolute;inset:-50%;background-image:radial-gradient(1.2px 1.2px at 20% 30%,#cfe3ff,transparent),radial-gradient(1px 1px at 70% 20%,#cfe3ff,transparent),radial-gradient(1.4px 1.4px at 40% 75%,#cfe3ff,transparent),radial-gradient(1px 1px at 85% 65%,#cfe3ff,transparent),radial-gradient(1.1px 1.1px at 10% 85%,#cfe3ff,transparent),radial-gradient(.9px .9px at 55% 45%,#cfe3ff,transparent);background-size:260px 260px;opacity:.55;animation:spStele 14s linear infinite}
 #splash::after{background-size:420px 420px;opacity:.3;animation-duration:22s}
@@ -456,7 +446,7 @@ p{margin:12px 0}.stepper .ib{flex:none}.btn.sm{min-height:44px}
 .bila{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;min-width:var(--w);min-height:var(--w);padding:8px 12px;border-radius:999px;font:700 var(--t1)/1.2 system-ui,sans-serif;text-align:center;color:var(--ink);background:color-mix(in srgb,var(--k) 18%,var(--panel2));border:1px solid color-mix(in srgb,var(--k) 45%,transparent)}
 .bila small{font-weight:600;color:var(--ink2);margin-top:2px}
 .crit{margin-top:12px;display:flex;flex-direction:column;gap:4px;font-size:var(--t2)}.crit>div:not(.sub){display:grid;grid-template-columns:48px 1fr;gap:8px;color:var(--ink2)}.crit b{font-size:var(--t1);color:var(--mut)}.crit .up b{color:var(--pos)}.crit .down b{color:var(--neg)}
-.pasdu{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}.pasdu .nivn{width:32px;height:32px;flex:none}.pasdu b{font-size:var(--t3)}
+.pasdu{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}.pasdu .nivn{width:32px;height:32px;flex:none}.pasdu>div>b{font-size:var(--t3)}.pasdu .sub b{font-size:1em;color:var(--ink2)}
 /* ===== v0.23: verificare vizuală — nimic tăiat, nimic ieșit din căsuță ===== */
 .kpi3 .mv.lg{font-size:var(--t1);padding:2px 8px}.kpi3>div{overflow:hidden}.kpi3 small{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
 .pr .n{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
@@ -484,7 +474,6 @@ p{margin:12px 0}.stepper .ib{flex:none}.btn.sm{min-height:44px}
 .tile .tv{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}
 .dh .mv.lg{white-space:nowrap}
 div[style*="display:flex"]:has(>.btn){flex-wrap:wrap}div[style*="display:flex"]>.btn{flex:1 1 8.5rem!important}
-
 /* ===================== v0.24 „Orbital”: pachetul vizual =====================
    1. Aurora vie în fundal: culoarea respiră după ziua portofoliului (verde-turcoaz pe plus, magenta pe minus).
    2. Granulație fină de film peste tot: profunzime, fără să încarce (o singură imagine SVG, 1 KB).
@@ -620,7 +609,6 @@ html.fx-redus .pr.p2 .pfund{display:none}
 .sec::before{content:"";position:absolute;left:-4px;right:-4px;top:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ink) 16%,transparent) 12%,color-mix(in srgb,var(--m1) 45%,transparent) 50%,color-mix(in srgb,var(--ink) 16%,transparent) 88%,transparent)}
 .sec::after{content:"";position:absolute;left:50%;top:-3px;width:7px;height:7px;transform:translateX(-50%);border-radius:50%;background:var(--bg);box-shadow:0 0 0 1px color-mix(in srgb,var(--m1) 55%,transparent),0 0 10px color-mix(in srgb,var(--m1) 45%,transparent)}
 #v>.sec:first-child,.fisa>.sec:first-child{margin-top:8px!important;padding-top:0}#v>.sec:first-child::before,#v>.sec:first-child::after,.fisa>.sec:first-child::before,.fisa>.sec:first-child::after{display:none}
-
 /* v0.29: antetul — numele cu starea datelor dedesubt, trei acțiuni cu etichete, într-o capsulă de sticlă */
 .brand .bt{display:flex;flex-direction:column;gap:2px;min-width:0}.brand .bt b{font-size:var(--t3);font-weight:800;letter-spacing:.2px;line-height:1.1}
 .brand .stamp{margin:0;font-weight:600;line-height:1.2}
@@ -723,7 +711,8 @@ header.compact .ib.ha{min-width:44px;padding:4px 4px!important}header.compact .i
   @page{margin:16mm}
 }
 /* v0.31: sigla vie din antet (doar transform și opacitate, pe placa video) */
-.brand .lv{--lvs:30px;--u:calc(var(--lvs) / 64);position:relative;display:block;width:var(--lvs);height:var(--lvs);flex:none;contain:layout paint;border-radius:var(--r1)}
+.lv{--lvs:30px;--u:calc(var(--lvs) / 64);position:relative;display:block;width:var(--lvs);height:var(--lvs);flex:none;contain:layout paint;border-radius:var(--r1)}
+.lv.mare{--lvs:56px;border-radius:var(--r3)}
 .lv>svg{position:absolute;inset:0;width:100%;height:100%}
 .lv .lvf{filter:drop-shadow(0 4px 12px rgba(90,162,255,.35))}
 .lv i,.lv span,.lv b{position:absolute;display:block}
@@ -751,7 +740,6 @@ header.compact .ib.ha{min-width:44px;padding:4px 4px!important}header.compact .i
 @keyframes lvAdanc{0%,100%{transform:scale(1);opacity:1}25%{transform:scale(1.16);opacity:1}50%{transform:scale(1);opacity:.95}75%{transform:scale(.74);opacity:.7}}
 @keyframes lvAdancInv{0%,100%{transform:scale(1);opacity:1}25%{transform:scale(.74);opacity:.7}50%{transform:scale(1);opacity:.95}75%{transform:scale(1.16);opacity:1}}
 @keyframes lvSclipire{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1.2)}}
-
 /* v0.31: iconițele din bara de jos */
 nav .ni{position:relative;display:grid;place-items:center;width:28px;height:28px}
 nav .ni::before{content:"";position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--acc) 42%,transparent),transparent 66%);opacity:0;transform:scale(.5);transition:opacity .35s,transform .35s;pointer-events:none}
@@ -836,6 +824,9 @@ nav button.on .noutati .k{stroke:#f5c84b}
 @keyframes nvClopot{0%{transform:none}15%{transform:rotate(18deg)}35%{transform:rotate(-14deg)}55%{transform:rotate(8deg)}75%{transform:rotate(-4deg)}100%{transform:none}}
 @keyframes nvLimba{0%{transform:none}20%{transform:translateX(-2px)}40%{transform:translateX(2px)}60%{transform:translateX(-1px)}100%{transform:none}}
 @keyframes nvUnde{0%{opacity:0;transform:scale(.5)}40%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1.3)}}
+/* v0.34: ghidul cron-job.org: valori de copiat */
+.btn.cpy{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;max-width:100%;min-width:0;white-space:normal;margin:8px 0;padding:8px 12px;text-align:left;min-height:44px}
+.btn.cpy span{font-size:var(--t1);color:var(--mut);font-weight:600;white-space:normal;max-width:100%}.btn.cpy code{font-size:var(--t1);color:var(--ink);white-space:normal;word-break:break-all;font-weight:500}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;
@@ -852,7 +843,7 @@ html.fx-redus .card.hcard::before{animation:none;opacity:.35}
 <header><div class="hrow">
   <div class="brand"><span id="blogo"></span><div class="bt"><b>Analist</b><span class="stamp num" id="stare"></span></div></div><span class="pill" id="pill">…</span>
   <div class="hact" role="toolbar" aria-label="Acțiuni">
-    <button class="ib ha" id="bref" aria-label="Actualizează datele" data-c='["reincarca",true]'><span class="ni" data-i="refresh"></span><small>Actualizează</small></button>
+    <button class="ib ha" id="bref" aria-label="Actualizează datele" data-c='["actualizeaza"]'><span class="ni" data-i="refresh"></span><small>Actualizează</small></button>
     <button class="ib ha" id="blk" aria-label="Blochează aplicația" data-c='["blocheazaAnim","$el"]'><span class="ni" data-i="lacat"></span><small>Blochează</small></button>
     <button class="ib ha" id="bset" aria-label="Setări" data-c='["go","setari"]'><span class="ni" data-i="setari"></span><small>Setări</small></button>
   </div>

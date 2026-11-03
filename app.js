@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.34.0';
+const APP_VER = '0.35.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -509,7 +509,10 @@ function deschideDetaliu(sym, el){
 }
 function spatiuJos(){ const n=document.querySelector('nav .in'); if(n) document.documentElement.style.setProperty('--navh', (n.getBoundingClientRect().height+12)+'px'); }
 // Antetul: etichetele de sub iconițe rămân cât încap; pe ecrane foarte înguste sau cu text mărit rămân doar iconițele.
-function antet(){ const h=document.querySelector('header'), r=h?.querySelector('.hrow'); if (!r) return; h.classList.remove('compact'); if (r.scrollWidth > r.clientWidth + 1) h.classList.add('compact'); $('bset')?.classList.toggle('on', VIEW==='setari'); }
+// Antetul păstrează numele butoanelor: întâi strânge spațiile, apoi ascunde titlul (sigla rămâne); fără nume doar dacă tot nu încape.
+function antet(){ const h=document.querySelector('header'), r=h?.querySelector('.hrow'); if (!r) return; h.classList.remove('c1','c2','compact');
+  for (const c of ['c1','c2','compact']) { if (r.scrollWidth <= r.clientWidth + 1) break; h.classList.add(c); }
+  $('bset')?.classList.toggle('on', VIEW==='setari'); }
 function muta(){ spatiuJos(); antet(); const b=document.querySelector('nav button.on'), ind=$('ind'); if(!ind) return; if(!b){ ind.style.opacity=0; return; } ind.style.opacity=1; ind.style.width=b.offsetWidth+'px'; ind.style.transform=`translateX(${b.offsetLeft}px)`; }
 function render(){
   ascundeSplash();
@@ -522,7 +525,7 @@ function render(){
   const v=$('v'), intra = !!TRANZ || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
   $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,noutati:vNoutati,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.</footer>`;
   montaGrafice(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
-  if (VIEW === 'noutati') intraNoutati(); else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
+  if (VIEW === 'noutati') { intraNoutati(); if (intra) filtreVizibile(); } else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }
 }
 const skeleton = () => `<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:110px;margin-bottom:12px"></div>${'<div class="sk" style="height:58px;margin-bottom:8px"></div>'.repeat(5)}`;
@@ -993,7 +996,7 @@ function exporta(tip){
   if (!SNAP) { toast('Nu sunt date de exportat încă.'); return; }
   const z = aziISO();
   if (tip==='tot') {
-    const pastreaza = ['repo','suma','tema','cont','sort','privat','fx','incepator','perioada','tokenExp','t212Metoda','luniFacute','citite','quiz','pushTipuri','pushDiscret'];
+    const pastreaza = ['repo','suma','tema','cont','sort','privat','fx','incepator','perioada','tokenExp','cronExp','t212Metoda','luniFacute','citite','quiz','pushTipuri','pushDiscret'];
     const o = { aplicatie:'Analist', versiuneAplicatie:APP_VER, versiuneAnaliza:SNAP.versiune||null, exportat:new Date().toISOString(), portofoliu:SNAP, istoric:IST||[], profil:V?.profil||null,
       jurnal:jurnalTot_(), setari:Object.fromEntries(pastreaza.filter(k=>S[k]!==undefined).map(k=>[k,S[k]])) };
     descarca(`analist-date-${z}.json`, JSON.stringify(o, null, 1), 'application/json');
@@ -1185,7 +1188,11 @@ function vNoutati(){
   }
   return h;
 }
-function setFiltruNout(k){ if (!FILTRE_NOUT.some(([x]) => x === k)) return; S.notifFiltru = k; save(); vib(); render(); }
+// Bara de filtre se derulează pe orizontală: după redesenare rămâne unde era, iar filtrul ales se vede întreg.
+function setFiltruNout(k){ if (!FILTRE_NOUT.some(([x]) => x === k)) return; const sl = document.querySelector('.nout-ch')?.scrollLeft || 0;
+  S.notifFiltru = k; save(); vib(); render(); filtreVizibile(sl); }
+function filtreVizibile(sl=0){ const c = document.querySelector('.nout-ch'), b = c?.querySelector('.on'); if (!c) return; c.scrollLeft = sl;
+  if (b && (b.offsetLeft < c.scrollLeft || b.offsetLeft + b.offsetWidth > c.scrollLeft + c.clientWidth)) c.scrollTo({ left: Math.max(0, b.offsetLeft - (c.clientWidth - b.offsetWidth) / 2), behavior: 'smooth' }); }
 // La intrarea în Noutăți: ce era nou rămâne evidențiat cât stai aici, iar bulina dispare.
 function intraNoutati(){
   if (NOUT_ANT === null) NOUT_ANT = S.notifVazut || '';
@@ -1227,8 +1234,12 @@ function stareAutomat(){
   const u = ultimaAnaliza(), min = u ? (Date.now() - Date.parse(u)) / 60e3 : Infinity;
   if (!u) return ['atentie', 'încă nicio analiză'];
   if (bursaDeschisa() && min > 75) return ['atentie', `nu a mai rulat de ${min < 120 ? Math.round(min) + ' de minute' : Math.round(min / 60) + ' ore'}`];
+  const zc = zileCron(); if (zc != null && zc <= 30) return ['atentie', zc <= 0 ? 'tokenul din cron-job.org a expirat' : `tokenul din cron-job.org expiră în ${zc} ${zc === 1 ? 'zi' : 'zile'}`];
   return ['ok', `ultima: ${cand(u)}`];
 }
+// Tokenul din cron-job.org: îl ții minte doar ca dată, ca să primești avertismentul cu o lună înainte. Tokenul nu ajunge în aplicație.
+const zileCron = () => S.cronExp ? Math.round((Date.parse(S.cronExp)-Date.parse(aziISO()))/864e5) : null;
+function setCronExp(){ const v=$('cexp')?.value||''; if (!/^\d{4}-\d\d-\d\d$/.test(v)) { toast('Alege data din calendar.'); return; } S.cronExp=v; save(); vib(); toast('Data expirării a fost salvată.'); render(); automatFoaie(); }
 function conexiuniFoaie(){
   const c = STARE?.conexiuni || SNAP?.conexiuni || {};
   foaie(`${capFoaie('link','Conexiuni', STARE?.generat||SNAP?.generat ? `testate ${cand(STARE?.generat||SNAP.generat)}` : 'încă netestate')}
@@ -1279,11 +1290,14 @@ async function automatFoaie(){
     <div class="lbl" style="margin:16px 0 8px">De ce cron-job.org</div>
     <div class="sub" style="line-height:1.55">GitHub sare des rulările programate (în unele zile, aproape toate). cron-job.org e gratuit și pornește analiza exact la oră, prin GitHub. Primește un token care poate doar porni analiza: nu vede date, chei sau cod.</div>
     <div class="lbl" style="margin:16px 0 8px">Configurarea, o singură dată (~5 minute)</div>
-    ${pas(1, 'Tokenul pentru cron-job.org', `În GitHub: Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token. Nume: „cron-job Analist”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${repo.split('/')[1]}. La Permissions → Repository permissions: <b>Actions: Read and write</b>. Nimic altceva. Copiază tokenul.`)}
+    ${pas(1, 'Tokenul pentru cron-job.org', `Deschide direct <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a> (Fine-grained token). Nume: „cron-job Analist”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${repo.split('/')[1]}. La Permissions → Repository permissions: <b>Actions: Read and write</b>. Nimic altceva. Copiază tokenul.`)}
     ${pas(2, 'Contul', 'Pe <a href="https://cron-job.org" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">cron-job.org</a>, cont gratuit. La Settings, alege fusul orar <b>Europe/Bucharest</b>.')}
     ${pas(3, 'Prima sarcină: „Analist, ziua”', `Create cronjob. Titlu: Analist, ziua. URL:${cp('URL', url)}Execution schedule: <b>Custom</b>. Days of week: luni–vineri. Hours: 9–22. Minutes: <b>15 și 45</b>. Pornește la 9:15 și ultima la 22:45.<br>În <b>Advanced</b>: Request method <b>POST</b>. Headers (Add header, de trei ori):${cp('Authorization', 'Bearer TOKENUL_TĂU')}${cp('Accept', 'application/vnd.github+json')}${cp('X-GitHub-Api-Version', '2022-11-28')}Request body:${cp('Body', zi)}Salvează.`)}
     ${pas(4, 'A doua sarcină: „Analist, seara”', `La fel, cu același URL și aceleași headere. Days of week: luni–vineri. Hours: 23. Minutes: <b>35</b>. Request body:${cp('Body', seara)}`)}
     ${pas(5, 'Verifică', 'În cron-job.org, apasă <b>Test run</b> la prima sarcină: răspunsul trebuie să fie <b>204</b>. Apoi redeschide această fereastră: în cel mult un minut apare rularea nouă. Bifează și „Notify me when the cronjob fails”: dacă tokenul expiră, primești un e-mail.')}
+    <div class="lbl" style="margin:16px 0 8px">Când expiră tokenul din cron-job.org</div>
+    <div class="sub" style="line-height:1.55;margin-bottom:8px">${S.cronExp ? `Expiră pe <b>${esc(ziLunga(S.cronExp))}</b>. Cu o lună înainte, Setări îți arată un avertisment.` : 'Scrie data din GitHub (o vezi și în răspunsul de la Test run, la „token-expiration”). Cu o lună înainte, Setări îți arată un avertisment.'}</div>
+    <div style="display:flex;gap:8px;align-items:center"><input id="cexp" type="date" value="${esc(S.cronExp||'')}" style="flex:1;margin:0"><button class="btn sm" style="flex:none;margin:0;padding:0 20px" data-c="${A('setCronExp')}">Salvează</button></div>
     <div class="sub" style="margin-top:12px;line-height:1.55">Minute GitHub folosite: ~700 pe lună din cele 2.000 gratuite. Fără cron-job.org, aplicația merge ca înainte; „Actualizează” cere singur prețuri noi când bursa e deschisă.</div>
     <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button></div>`);
   try {
@@ -2579,6 +2593,7 @@ function gxDate(){
   const istoric = { zile, tot, w: SNAP.pozitii.map((p,k)=>val[k].map((v,i)=>v/tot[i]*100)) };
   return { pr, etfP, orb, pl, istoric, star:gxCul('--acc'), star2:gxCul('--acc2'), ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg'), mut:gxCul('--mut'), bg:gxCul('--panel') };
 }
+const SHEET_ON = () => document.getElementById('sheet')?.classList.contains('on');
 function galaxie(){
   const cv = $('gxc'); if (!cv) return;
   cancelAnimationFrame(GX.raf);
@@ -2593,7 +2608,7 @@ function galaxie(){
   const deseneazaFond = () => { fond.width = cv.width; fond.height = cv.height; fc.setTransform(dpr,0,0,dpr,0,0);
     D.orb.slice(0,4).forEach((o,i)=>{ const a=i*1.7, x=W/2+Math.cos(a)*W*0.28, y=H/2+Math.sin(a*1.3)*H*0.22, g=fc.createRadialGradient(x,y,0,x,y,W*0.45); g.addColorStop(0,o.c+'1f'); g.addColorStop(1,o.c+'00'); fc.fillStyle=g; fc.fillRect(0,0,W,H); });
     fc.fillStyle=D.ink; stele.forEach((s,i)=>{ if (i%6===0) return; fc.globalAlpha=0.18+0.4*s.d; fc.beginPath(); fc.arc(s.x*W,s.y*H,s.r,0,6.283); fc.fill(); }); fc.globalAlpha=1; };
-  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 3); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
+  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 2); /* peste 2 nu se vede diferența pe un desen care se mișcă, dar costă cu ~40% mai mult */ W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
   marime(); GX.marime = marime;
   const proj = (R, a) => { const S=Math.min(W*0.41,H*0.62), x=R*S*Math.cos(a+st.yaw), z=R*S*Math.sin(a+st.yaw), y=z*st.tilt, k=1+z/(S*4.5); return { x:W/2+x*k, y:H/2+y*k, z, k }; };
   const rStar = () => (14 + 30*Math.sqrt(Math.max(D.etfP,1)/100)) * Math.min(W,360)/360;
@@ -2601,10 +2616,11 @@ function galaxie(){
   function cadru(now){
     if (!cv.isConnected || VIEW!=='analiza') { GX.on=false; return; }
     if (GX.viz===false && !st.drag) { GX.on=false; return; } // galaxia nu se vede (ai derulat mai jos): nu se desenează deloc
-    // rotirea lentă de fond merge la 30 de cadre pe secundă; atingerea, inerția și reluarea rămân la 60
+    // atingerea, inerția și reluarea merg la 60 de cadre pe secundă
     const activ = st.drag || Math.abs(st.vy)>=0.0004 || st.rel;
-    if (!activ && now-(GX.atins||0) > 20000 && GX.ult) { GX.on=false; return; } // 20 s fără atingere: rămâne ultima imagine, fără consum; o atingere o pornește din nou
-    if (!activ && !calm && now-(GX.ult||0) < 31) { GX.raf = requestAnimationFrame(cadru); return; }
+    if (!activ && SHEET_ON()) { GX.raf = requestAnimationFrame(cadru); return; } // o foaie acoperă galaxia: nu se desenează degeaba
+    // galaxia se rotește tot timpul cât o vezi; după 20 s fără atingere coboară la 20 de cadre pe secundă, ca să nu consume degeaba
+    if (!activ && !calm && now-(GX.ult||0) < (now-(GX.atins||0) > 20000 ? 49 : 31)) { GX.raf = requestAnimationFrame(cadru); return; }
     const pas = Math.min((now-(GX.ult||now))/16.7, 3) || 1; GX.ult = now;
     const t = calm ? 0 : (now - st.t0)/1000;
     if (!st.drag) { st.yaw += st.vy; st.vy *= 0.94; if (!calm && Math.abs(st.vy)<0.0004) st.yaw += 0.0009*pas; }
@@ -3320,9 +3336,9 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, hartaRest, laboratorT212, t212Dom, t212Metoda, drepturiAutor, confirmaOprire, opresteUrgenta, pasiOprire, pornesteDinNou, alarmeVazute, activitateConfirmata, codConfirmat, pazaDetalii, t212Verificat, comutaPrivat, setViz, setSort, setTema, comutaPas,
   detComuta, detNota, detAd, setFx, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, renuntaProfil,
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,
-  exportSeif, importSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
+  exportSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
   deschideLectiePotrivita, arataRecap, raspundeRecap, simulator, verificaInainte, verifRasp, verifGata,
-  tokenFoaie, setTokenExp, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
+  tokenFoaie, setTokenExp, setCronExp, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
   activeazaPush, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie,
   setFiltruNout, deschideDinNout, ghidFundal, conexiuniFoaie, parolaFoaie, aspectFoaie, ajutorFoaie, automatFoaie
 }));

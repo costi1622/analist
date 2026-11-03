@@ -620,7 +620,7 @@ header .ib.ha small{font-size:var(--t1);font-weight:600;color:var(--ink2);line-h
 header .ib.ha .ico{width:22px;height:22px}
 header .ib.ha.spin small{color:var(--acc)}
 #bset.on{background:color-mix(in srgb,var(--m1) 18%,transparent)!important}#bset.on small{color:var(--ink)}
-header.compact .ib.ha{min-width:44px;padding:4px 4px!important}header.compact .ib.ha small{display:none}header.compact .brand .bt b{font-size:var(--t2)}
+header.c1 .ib.ha{min-width:0;padding:4px!important}header.c2 .brand .bt b{display:none}header.compact .ib.ha{min-width:44px;padding:4px!important}header.compact .ib.ha small{display:none}
 /* v0.29: Învață — academia */
 .acad{padding:20px!important;background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--acc2) 22%,transparent),transparent 60%) padding-box,radial-gradient(90% 80% at 0% 100%,color-mix(in srgb,var(--pos) 14%,transparent),transparent 60%) padding-box,var(--sticla) padding-box,linear-gradient(160deg,color-mix(in srgb,var(--acc2) 55%,transparent),transparent 45%,color-mix(in srgb,var(--pos) 40%,transparent)) border-box!important}
 .acs{display:flex;gap:16px;align-items:center}.acr{flex:none}
@@ -801,7 +801,7 @@ html.fx-redus .lv *,html.fx-redus nav .ni::before{animation:none!important}
 nav .ni .nb{position:absolute;top:-4px;left:calc(50% + 4px);min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--neg);color:#fff;font-size:var(--t1);font-weight:800;font-style:normal;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--panel);z-index:2;animation:nbIntra .4s cubic-bezier(.3,1.6,.5,1)}
 @keyframes nbIntra{from{transform:scale(0)}to{transform:none}}
 .nout-zi{margin:16px 0 8px}
-.chips.nout-ch{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}.chips.nout-ch button{flex:none}
+.chips.nout-ch{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;-webkit-mask:linear-gradient(90deg,#000 calc(100% - 24px),transparent);mask:linear-gradient(90deg,#000 calc(100% - 24px),transparent)}.chips.nout-ch::-webkit-scrollbar{display:none}.chips.nout-ch button:last-child{margin-right:24px}.chips.nout-ch button{flex:none}
 .card.nout{padding:16px;margin-bottom:8px;border-left:3px solid transparent;transition:border-color .3s,box-shadow .3s}
 .card.nout.nou{border-left-color:var(--k)}
 .card.nout.sel{box-shadow:0 0 0 2px var(--k),var(--sh2)}
@@ -812,7 +812,7 @@ nav .ni .nb{position:absolute;top:-4px;left:calc(50% + 4px);min-width:18px;heigh
 .nout b{display:block;font-size:var(--t3);color:var(--ink);line-height:1.3}
 .nout p{margin:8px 0 0;color:var(--ink2);font-size:var(--t2);line-height:1.5}
 .nout .nf{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}.nout .nf .btn{margin:0;flex:none}
-.card.nout-gol{display:flex;gap:16px;align-items:flex-start;padding:20px}.card.nout-gol .tic{flex:none;width:44px;height:44px;border-radius:var(--r2);display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.card.nout-gol{--k:var(--acc);display:flex;gap:16px;align-items:flex-start;padding:20px}.card.nout-gol .tic{flex:none;width:44px;height:44px;border-radius:var(--r2);display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
 /* Noutăți: clopoțelul se leagănă, limba lui bate, apar undele */
 nav .noutati .c,nav .noutati .b{transform-origin:12px 4px}
 nav button.pop .noutati .b{animation:nvClopot .9s cubic-bezier(.3,.7,.4,1) both}

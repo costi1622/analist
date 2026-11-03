@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.36.0';
+const APP_VER = '0.36.1';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -287,6 +287,7 @@ function vBlocat(){
     <button class="btn ${bio?'ghost':''}" id="bdeb" data-c="${A('deblocheaza')}" ${astept?'disabled':''}>${astept?'Prea multe încercări greșite':'Deblochează'}</button>
     ${e.n?`<div class="sub" style="margin-top:12px">Încercări greșite: ${e.n}</div>`:''}
     <button class="link" style="margin-top:28px;color:var(--mut);font-size:var(--t2)" data-c="${A('uitatParola')}">Ai uitat parola?</button>
+    <footer style="margin-top:24px">${versiuneHTML()}</footer>
     ${ePCdisp()?`<button class="link altcont" data-c="${A('conectCalcFoaie',true)}">${S.nume?`Nu ești ${esc(S.nume)}? `:'Alt cont? '}Deschide-l pe al tău, fără să salvezi nimic</button>`:''}</div>`;
 }
 function uitatParola(){
@@ -543,6 +544,8 @@ function panouri(v){
   v.classList.add('pan2');
 }
 DESK.addEventListener?.('change', () => { if (V || !are_seif()) render(); });
+// Ce versiune rulezi: aplicația (de pe telefon) și analiza (din GitHub), jos pe fiecare ecran.
+const versiuneHTML = () => `<span class="verx num">Aplicația ${APP_VER}${SNAP?.versiune ? ` · analiza ${esc(SNAP.versiune)}` : ''}</span>`;
 function render(){
   ascundeSplash(); $('v').classList.remove('pan2'); // panourile se refac doar pentru ecranele cu date
   document.documentElement.classList.toggle('inchis', are_seif() && !V); // pe ecranul de blocare, antetul nu are butoane
@@ -556,7 +559,7 @@ function render(){
   if (!live()) VIEW='setari';
   if (!SNAP && VIEW!=='setari') { $('v').innerHTML = LOADED ? ecranFaraDate() : skeleton(); opresteIlustratii(); return; }
   const v=$('v'), intra = !!TRANZ || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
-  $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,noutati:vNoutati,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.</footer>`;
+  $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,noutati:vNoutati,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.${versiuneHTML()}</footer>`;
   panouri(v); montaGrafice(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
   if (VIEW === 'noutati') { intraNoutati(); if (intra) filtreVizibile(); } else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }

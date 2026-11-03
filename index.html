@@ -83,7 +83,7 @@ nav button.on{color:var(--acc)}nav button.on .ico .f{opacity:.3}
 @keyframes draw{from{stroke-dashoffset:80}to{stroke-dashoffset:0}}
 
 main{padding:16px 16px calc(var(--navh,84px) + 36px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;overflow-x:clip}
-html,body{overflow-x:clip}
+html,body{overflow-x:clip}body{min-height:100vh;min-height:100dvh}
 .al,.sub,.card p{overflow-wrap:anywhere}
 .sheet{overflow-x:hidden}
 /* ===== Componente ===== */
@@ -172,7 +172,7 @@ input,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
 footer{color:var(--mut);font-size:var(--t1);text-align:center;padding:8px 20px 0}
 code{font-size:var(--t1);background:var(--panel2);padding:1px 4px;border-radius:var(--r1)}
 body.ascuns main,body.ascuns .sheet{visibility:hidden}
-html.blocat,html.blocat body{overflow:hidden;overscroll-behavior:none}
+html.inchis .hact,html.inchis #pill,html.inchis #stare{display:none}html.blocat,html.blocat body{overflow:hidden;overscroll-behavior:none}
 /* ===== v0.14: identitatea „nucleu și sateliți” ===== */
 :root{--fd:SG,system-ui,sans-serif}
 .hero,.brand,h3,.val,.ks .val,.tier b,.st div[style*="font-weight:700"],.big,.fd{font-family:var(--fd);letter-spacing:-.4px}
@@ -812,6 +812,10 @@ nav .ni .nb{position:absolute;top:-4px;left:calc(50% + 4px);min-width:18px;heigh
 .nout b{display:block;font-size:var(--t3);color:var(--ink);line-height:1.3}
 .nout p{margin:8px 0 0;color:var(--ink2);font-size:var(--t2);line-height:1.5}
 .nout .nf{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}.nout .nf .btn{margin:0;flex:none}
+.contul{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--ink2);font-size:var(--t2);margin-bottom:24px}.contul b{color:var(--ink)}
+.link.altcont{display:block;margin:12px auto 0;color:var(--acc);font-size:var(--t2)}
+.codc{font-size:var(--t4);font-weight:800;letter-spacing:0;white-space:nowrap;text-align:center;padding:16px 8px;border-radius:var(--r3);background:color-mix(in srgb,var(--acc) 10%,var(--panel2));border:1px dashed color-mix(in srgb,var(--acc) 45%,transparent);word-break:break-all;user-select:all}
+@media (max-width:420px){.codc{font-size:var(--t3)}}#cfb.ok{color:var(--pos);border-color:var(--pos)}.card.pcc{margin-top:8px}
 .card.nout-gol{--k:var(--acc);display:flex;gap:16px;align-items:flex-start;padding:20px}.card.nout-gol .tic{flex:none;width:44px;height:44px;border-radius:var(--r2);display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
 /* Noutăți: clopoțelul se leagănă, limba lui bate, apar undele */
 nav .noutati .c,nav .noutati .b{transform-origin:12px 4px}
@@ -835,6 +839,33 @@ nav button.on .noutati .k{stroke:#f5c84b}
 @keyframes orbita2{to{--orb:360deg}}
 html.fx-redus .card.hcard::before{animation:none;opacity:.35}
 @media (prefers-reduced-motion: reduce){.card.hcard::before{animation:none}}
+
+/* ===== v0.36: ecran de calculator. Meniul în stânga, conținutul pe două coloane de panouri (fiecare secțiune = un panou). Telefonul nu se schimbă. ===== */
+@media (min-width:1100px){
+  :root{--side:236px}
+  header{padding-left:24px;padding-right:32px}
+  .hrow{max-width:none;margin:0}
+  nav{left:16px;right:auto;top:96px;bottom:auto;width:calc(var(--side) - 16px);justify-content:flex-start}
+  nav .in{flex-direction:column;max-width:none;padding:8px;gap:4px}
+  nav .ind{left:8px;right:8px;top:0;bottom:auto;width:auto!important;transition:transform .45s var(--ease),height .45s var(--ease)!important}
+  nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 16px;font-size:var(--t3);border-radius:var(--r3)}
+  nav button:hover:not(.on){color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent)}
+  nav .ico{width:22px;height:22px}
+  nav .ni .nb{left:auto;right:-12px}
+  main{margin:0 0 0 var(--side);max-width:1240px;padding:24px 32px 48px}
+  body.nolive main{margin:0 auto;max-width:760px}
+  #v.pan2{columns:2;column-gap:24px}
+  #v.pan2>.pan{break-inside:avoid;display:flow-root;margin-bottom:24px}
+  #v.pan2>.pan.lat,#v.pan2>footer{column-span:all}
+  #v.pan2>.pan>.sec:first-child{margin-top:0}
+  #v.pan2 .list2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #v.pan2 .car{margin:0;padding:2px 0 8px}
+  .sheet{left:50%;right:auto;bottom:auto;top:50%;width:min(720px,calc(100vw - 64px));max-height:86vh;border-radius:var(--r4);transform:translate(-50%,-46%) scale(.98);opacity:0;padding-bottom:28px;transition:transform .25s var(--ease),opacity .2s,visibility 0s .25s}
+  .sheet.on{transform:translate(-50%,-50%);opacity:1;transition:transform .3s var(--ease),opacity .2s}
+  .sheet .grab{display:none}
+  .turb{left:calc(var(--side) + 24px)}
+  #toast{left:calc(50% + var(--side) / 2);bottom:32px}
+}
 </style>
 </head>
 <body>

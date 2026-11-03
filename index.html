@@ -809,6 +809,33 @@ nav button.pop .invata .k2{transform-origin:17.8px 2.5px;animation:nvScanteie .7
 @keyframes nvScanteie{0%{opacity:0;transform:scale(.3)}45%{opacity:1;transform:scale(1.25)}100%{opacity:0;transform:scale(.8)}}
 html.fx-redus .lv *,html.fx-redus nav .ni::before{animation:none!important}
 @media (prefers-reduced-motion:reduce){.lv *,nav .nvi,nav .nvi *,nav .ni::before,nav .ni::after{animation:none!important}}
+/* v0.33: Noutăți */
+nav .ni .nb{position:absolute;top:-4px;left:calc(50% + 4px);min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--neg);color:#fff;font-size:var(--t1);font-weight:800;font-style:normal;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--panel);z-index:2;animation:nbIntra .4s cubic-bezier(.3,1.6,.5,1)}
+@keyframes nbIntra{from{transform:scale(0)}to{transform:none}}
+.nout-zi{margin:16px 0 8px}
+.chips.nout-ch{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}.chips.nout-ch button{flex:none}
+.card.nout{padding:16px;margin-bottom:8px;border-left:3px solid transparent;transition:border-color .3s,box-shadow .3s}
+.card.nout.nou{border-left-color:var(--k)}
+.card.nout.sel{box-shadow:0 0 0 2px var(--k),var(--sh2)}
+.nout .nh{display:flex;gap:12px;align-items:flex-start}
+.nout .tic{flex:none;width:40px;height:40px;border-radius:var(--r2);display:grid;place-items:center;background:color-mix(in srgb,var(--k) 16%,transparent);color:var(--k)}
+.nout .tic .ico{width:22px;height:22px;stroke:currentColor}
+.nout .nt{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px}.nout .nt .lbl{color:var(--k)}
+.nout b{display:block;font-size:var(--t3);color:var(--ink);line-height:1.3}
+.nout p{margin:8px 0 0;color:var(--ink2);font-size:var(--t2);line-height:1.5}
+.nout .nf{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}.nout .nf .btn{margin:0;flex:none}
+.card.nout-gol{display:flex;gap:16px;align-items:flex-start;padding:20px}.card.nout-gol .tic{flex:none;width:44px;height:44px;border-radius:var(--r2);display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+/* Noutăți: clopoțelul se leagănă, limba lui bate, apar undele */
+nav .noutati .c,nav .noutati .b{transform-origin:12px 4px}
+nav button.pop .noutati .b{animation:nvClopot .9s cubic-bezier(.3,.7,.4,1) both}
+nav button.pop .noutati .c{animation:nvLimba .9s .06s cubic-bezier(.3,.7,.4,1) both}
+nav button.pop .noutati .k1{transform-origin:4px 11px;animation:nvUnde .7s .15s ease-out both}
+nav button.pop .noutati .k2{transform-origin:20px 11px;animation:nvUnde .7s .22s ease-out both}
+nav .noutati .k{stroke:currentColor;stroke-width:1.6}
+nav button.on .noutati .k{stroke:#f5c84b}
+@keyframes nvClopot{0%{transform:none}15%{transform:rotate(18deg)}35%{transform:rotate(-14deg)}55%{transform:rotate(8deg)}75%{transform:rotate(-4deg)}100%{transform:none}}
+@keyframes nvLimba{0%{transform:none}20%{transform:translateX(-2px)}40%{transform:translateX(2px)}60%{transform:translateX(-1px)}100%{transform:none}}
+@keyframes nvUnde{0%{opacity:0;transform:scale(.5)}40%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1.3)}}
 /* semnătura Orbital: o orbită de lumină care se rotește încet în jurul cardului principal */
 @property --orb{syntax:'<angle>';inherits:false;initial-value:0deg}
 .card.hcard::before{content:"";position:absolute;inset:-1px;width:auto;height:auto;border-radius:inherit;padding:1px;pointer-events:none;
@@ -837,6 +864,7 @@ html.fx-redus .card.hcard::before{animation:none;opacity:.35}
   <button data-v="azi" class="on" data-c='["go","azi"]'><span class="ni" data-i="azi"></span>Acasă</button>
   <button data-v="plan" data-c='["go","plan"]'><span class="ni" data-i="plan"></span>Plan</button>
   <button data-v="analiza" data-c='["go","analiza"]'><span class="ni" data-i="analiza"></span>Analiză</button>
+  <button data-v="noutati" data-c='["go","noutati"]'><span class="ni" data-i="noutati"></span>Noutăți</button>
   <button data-v="invata" data-c='["go","invata"]'><span class="ni" data-i="invata"></span>Învață</button>
 </div></nav>
 <div class="veil" id="veil" data-c='["closeSheet"]'></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>

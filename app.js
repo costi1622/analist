@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.32.0';
+const APP_VER = '0.33.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -38,7 +38,7 @@ function verdict(p){
     asteapta:p.atentie[0] || 'Momentul nu e bun pentru cumpărat. Revino peste câteva săptămâni.' })[p.semnal] || '';
 }
 const ACT = {cumparat:'Am cumpărat',vandut:'Am vândut',ignorat:'Am ignorat semnalul',altceva:'Notă'};
-const TABS = ['azi','plan','analiza','invata'];
+const TABS = ['azi','plan','analiza','noutati','invata'];
 let LOADED=false;
 let S = {repo:'costi1622/analist-date',suma:null,tema:'auto',cont:'toate',planFacut:'',luniFacute:[],sort:'semnal',privat:false,stiut:false,pasi:{}}, SNAP=null, RAP=null, INTRA=null, IST=null, VIEW='azi', J=[], OFFLINE=false;
 try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY)||'{}')); } catch(e){}
@@ -184,7 +184,7 @@ async function perecheRaport(){
   return { priv: await crypto.subtle.exportKey('jwk', kp.privateKey), pub: `-----BEGIN PUBLIC KEY-----\n${spki.match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----` };
 }
 function blocheaza(){
-  vBlocat.incercat = false; V=null; VK=null; MK=null; DK=null; PRIV=null; J=[]; SNAP=null; RAP=null; INTRA=null; IST=null; STARE=null;
+  vBlocat.incercat = false; V=null; VK=null; MK=null; DK=null; PRIV=null; J=[]; SNAP=null; RAP=null; INTRA=null; IST=null; STARE=null; NOTIF=null;
   ['sheet','sheet2'].forEach(id=>$(id).classList.remove('on')); ['veil','veil2'].forEach(id=>$(id).classList.remove('on')); document.documentElement.classList.remove('blocat'); ED = null;
   stare(); render();
 }
@@ -256,6 +256,9 @@ const NAVI = {
     <circle class="s" cx="3.5" cy="15.5" r="1.7"/>`,
   analiza: `<circle class="f" cx="12" cy="12" r="5.6"/><g class="o"><ellipse cx="12" cy="12" rx="9.6" ry="4" transform="rotate(-25 12 12)"/></g>
     <circle class="c" cx="12" cy="12" r="3.2"/><g class="m"><circle class="s" cx="20.4" cy="7.8" r="1.8"/></g>`,
+  noutati: `<g class="b"><path class="f" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4z"/><path d="M12 3.2V5"/></g>
+    <path class="c" d="M10 20.6a2 2 0 0 0 4 0"/><path class="k k1" d="M3.6 13.6a8.5 8.5 0 0 1 0-5.2"/><path class="k k2" d="M20.4 8.4a8.5 8.5 0 0 1 0 5.2"/>
+    <circle class="s" cx="18.4" cy="4.6" r="1.6"/>`,
   invata: `<g class="h"><path class="f" d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.6V16c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.4"/>
     <g class="t"><path d="M21.5 9.5v5"/><circle class="s" cx="21.5" cy="16.2" r="1.6"/></g></g>
     <path class="k k1" d="M4.5 2.6v2.4M3.3 3.8h2.4"/><path class="k k2" d="M17.8 1.6v1.8M16.9 2.5h1.8"/>` };
@@ -380,7 +383,7 @@ async function dinCache(){
   if (!DK) return;
   // totul în paralel: motorul și cele patru fișiere criptate (înainte: unul după altul)
   const d = async f => { try { return J_(await decDate(FIS[f]?.text)); } catch(e) { return null; } };
-  [, SNAP, INTRA, IST, RAP] = await Promise.all([motor().catch(()=>null), d('date/snapshot.enc'), d('date/intraday.enc'), d('date/istoric.enc'), decRaport(FIS['rapoarte/ultimul.enc']?.text).catch(()=>null)]);
+  [, SNAP, INTRA, IST, RAP, NOTIF] = await Promise.all([motor().catch(()=>null), d('date/snapshot.enc'), d('date/intraday.enc'), d('date/istoric.enc'), decRaport(FIS['rapoarte/ultimul.enc']?.text).catch(()=>null), d('date/notificari.enc'), citestePrimite()]);
   STARE = J_(FIS['date/stare.json']?.text);
   aplicaProfil(); pregatesteCulori(); setTimeout(pazaAuto, 0);
 }
@@ -433,7 +436,7 @@ async function reincarca(manual) {
   $('bref').classList.add('spin'); OFFLINE=false;
   try {
     if (live()) {
-      const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
+      const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
       saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{});
       if (manual) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
@@ -463,9 +466,8 @@ function stare(){
   $('blk').style.display = live() ? '' : 'none';
   const ultim = intraValid() ? INTRA.generat : SNAP?.generat;
   $('stare').textContent = ultim ? cand(ultim) : ''; $('stare').classList.toggle('viu', !!ultim && Date.now()-Date.parse(ultim) < 90*60e3);
-  const imp = (SNAP?.schimbari||[]).some(x=>x.important);
   document.querySelector('nav button[data-v=azi]').querySelector('.dot')?.remove();
-  if (imp) document.querySelector('nav button[data-v=azi]').insertAdjacentHTML('beforeend','<span class="dot"></span>');
+  bulinaNout();
 }
 // ===== Tranziții continue (View Transitions, nativ în Chrome pe Android). Fără suport: animațiile de până acum. =====
 const VT = () => !!document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches && !ANIM_OPRIT;
@@ -500,8 +502,9 @@ function render(){
   if (!live()) VIEW='setari';
   if (!SNAP && VIEW!=='setari') { $('v').innerHTML = LOADED ? ecranFaraDate() : skeleton(); opresteIlustratii(); return; }
   const v=$('v'), intra = !!TRANZ || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
-  $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.</footer>`;
+  $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,noutati:vNoutati,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.</footer>`;
   montaGrafice(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
+  if (VIEW === 'noutati') intraNoutati(); else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }
 }
 const skeleton = () => `<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:110px;margin-bottom:12px"></div>${'<div class="sk" style="height:58px;margin-bottom:8px"></div>'.repeat(5)}`;
@@ -726,9 +729,10 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.32.0';
+const MIN_ANALIZA = '0.33.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
-  '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'] };
+  '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
+  '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -891,6 +895,7 @@ const TUR = [
   ['.list2 > :first-child', 'Pozițiile tale', 'Fiecare acțiune are o etichetă colorată: ce faci cu ea luna aceasta. Atinge o poziție ca să vezi de ce.'],
   ['nav button[data-v="plan"]', 'Plan', 'Ce cumperi luna aceasta, cu sume exacte și la ce broker.'],
   ['nav button[data-v="analiza"]', 'Analiză', 'Riscul, costurile, dividendele, impozitul și rapoartele lunare.'],
+  ['nav button[data-v="noutati"]', 'Noutăți', 'Tot ce a văzut analistul: ocazii, mișcări mari, semnale noi, raportul de dimineață. Cifra roșie îți spune câte sunt noi.'],
   ['nav button[data-v="invata"]', 'Învață', 'Lecții de două minute, legate de portofoliul tău.'],
   ['#bset', 'Setări', 'Conexiunile, siguranța și modul începător, pe care îl poți opri oricând.'] ];
 // Turul nu blochează aplicația: fundalul lasă atingerile să treacă, iar o atingere în afara casetei închide turul.
@@ -940,7 +945,7 @@ async function verificaPornire(){
   R.push(analizaVeche() ? rand('atentie','Versiunea analizei', `Repo-ul are ${esc(SNAP.versiune)}, aplicația are nevoie de ${MIN_ANALIZA}. Urcă: ${esc(fisiereDeUrcat().join(', '))}.`) : SNAP?.versiune ? rand('ok','Versiunea analizei', esc(SNAP.versiune)) : rand('atentie','Versiunea analizei','Apare după prima analiză.'));
   R.push(SNAP ? rand('ok','Cheia de date','Datele din GitHub se decriptează corect.') : rand('atentie','Cheia de date','Încă nu există date de decriptat.'));
   const cx = STARE?.conexiuni || SNAP?.conexiuni || {};
-  for (const [k,t] of Object.entries(NUMEC)) { const c = cx[k]; if (!c || k==='seif' || c.stare==='optional') continue; R.push(rand(c.stare==='ok'?'ok':c.stare==='eroare'?'nu':'atentie', t, esc(c.mesaj||''))); }
+  for (const [k,t] of Object.entries(NUMEC)) { const c = cx[k]; if (!c || k==='seif' || k==='push' || c.stare==='optional') continue; R.push(rand(c.stare==='ok'?'ok':c.stare==='eroare'?'nu':'atentie', t, esc(c.mesaj||''))); }
   const s = SEC();
   R.push(s?.etoroScrie===false ? rand('ok','Cheia eToro','Doar citire.') : s?.etoroScrie ? rand('nu','Cheia eToro poate tranzacționa','Generează una nouă doar cu „Read” și șterge-o pe cea veche.') : rand('atentie','Cheia eToro','Drepturile nu s-au putut verifica automat.'));
   R.push(S.t212Citire ? rand('ok','Cheia Trading 212',`Verificată de tine: fără „Orders execute”.`) : rand('atentie','Cheia Trading 212','Confirmă la Setări → Paza tranzacțiilor că nu are „Orders execute”.'));
@@ -1103,6 +1108,93 @@ navigator.serviceWorker?.addEventListener('message', e => { const h = e.data?.ti
   // o foaie deschisă se închide întâi (închiderea folosește istoricul browserului), apoi deschidem locul din notificare
   const sh = $('sheet').classList.contains('on') || $('sheet2').classList.contains('on');
   if (sh) { closeSheet(); setTimeout(() => ancora(h.slice(1)), 450); } else ancora(h.slice(1)); });
+// (dacă aplicația e blocată, ancora() o păstrează în ANCORA_ASTEAPTA până după deblocare)
+// ===================== v0.33: Noutăți, tot ce a văzut analistul =====================
+// Jurnalul vine din date/notificari.enc (criptat): fiecare eveniment, cu textul complet, chiar dacă notificarea pe telefon
+// a fost oprită, discretă sau n-a ajuns. Pe telefon, în localStorage, stă doar momentul ultimei vizite (fără conținut).
+let NOTIF = null, NOUT_ANT = null, NOUT_SEL = null, PRIMITE = new Set(), CHIT_START = null;
+const TIP_NOUT = { ocazii:['Ocazie','--pos','stea'], miscari:['Mișcare','--warn','puls'], semnale:['Semnal','--acc','bec'], alerte:['Alertă de preț','--opor','tinta'],
+  raport:['Raport','--acc2','raport'], rezumat:['Rezumatul zilei','--mut','calendar'], plan:['Planul lunii','--acc','lista'], rezultate:['Rezultate','--opor','calendar'],
+  securitate:['Securitate','--neg','scut'], sistem:['Analist','--mut','info'] };
+const FILTRE_NOUT = [['toate','Toate'],['ocazii','Ocazii'],['miscari','Mișcări'],['semnale','Semnale'],['alte','Altele']];
+const listaNout = () => (Array.isArray(NOTIF) ? NOTIF : []).filter(x => x && typeof x.id === 'string' && typeof x.cand === 'string').slice().sort((a,b) => b.cand.localeCompare(a.cand));
+const necitite = () => { const v = S.notifVazut || ''; return listaNout().filter(x => x.cand > v).length; };
+// bulina de pe tabul Noutăți: numărul de noutăți de la ultima vizită (dispare când intri în Noutăți)
+function bulinaNout(){
+  const b = document.querySelector('nav button[data-v=noutati] .ni'); if (!b) return;
+  b.querySelector('.nb')?.remove(); const n = VIEW === 'noutati' ? 0 : necitite();
+  if (n) b.insertAdjacentHTML('beforeend', `<i class="nb num" aria-label="${n} noutăți">${n > 9 ? '9+' : n}</i>`);
+}
+// Ce face butonul fiecărei noutăți, după ancora ei
+function actiuneNout(x){
+  const a = String(x.ancora || ''), m = a.match(/^#s=([A-Z0-9.]{1,12})$/);
+  if (m && SNAP?.pozitii?.some(p => p.symbol === m[1])) return [`Deschide ${m[1]}`, ['deschideDinNout', a]];
+  return ({ '#plan':['Vezi planul lunii',['deschideDinNout','#plan']], '#raport': RAP ? ['Citește raportul',['deschideDinNout','#raport']] : null,
+    '#securitate':['Vezi paza tranzacțiilor',['deschideDinNout','#securitate']], '#setari':['Deschide Setări',['deschideDinNout','#setari']] })[a] || null;
+}
+function deschideDinNout(a){ if (typeof a === 'string' && /^#[A-Za-z0-9=._-]{1,30}$/.test(a)) ancora(a.slice(1)); }
+const ziNout = iso => { const d = new Date(iso), k = d.toDateString(), azi = new Date(), ieri = new Date(Date.now() - 864e5);
+  return k === azi.toDateString() ? 'Azi' : k === ieri.toDateString() ? 'Ieri' : d.toLocaleDateString('ro-RO', { weekday:'long', day:'numeric', month:'long' }).replace(/^./, c => c.toUpperCase()); };
+const oraNout = iso => new Date(iso).toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+// Livrarea pe telefon: service worker-ul notează ce a primit (doar id și ora). O notificare trimisă acum peste 20 de minute,
+// dar neprimită, înseamnă de obicei că telefonul a oprit Chrome în fundal.
+const neprimita = x => x.trimisa === 'push' && pushActiv() && CHIT_START && x.cand > CHIT_START && !PRIMITE.has(x.id) && Date.now() - Date.parse(x.cand) > 20 * 60e3 && Date.now() - Date.parse(x.cand) < 7 * 864e5;
+function vNoutati(){
+  const l = listaNout(), f = S.notifFiltru || 'toate', vaz = NOUT_ANT ?? (S.notifVazut || '');
+  const fil = l.filter(x => f === 'toate' || (f === 'alte' ? !['ocazii','miscari','semnale'].includes(x.tip) : x.tip === f));
+  const nep = l.filter(neprimita).length;
+  let h = `<div class="sec" style="margin-top:8px"><h2>Noutăți</h2><span class="sub">${l.length ? `${l.length} în ultimele 60 de zile` : 'ce a văzut analistul'}</span></div>`;
+  if (NOTIF === null) return h + `<div class="card sub" style="line-height:1.55">Noutățile apar după prima analiză cu versiunea ${MIN_ANALIZA} a analizei din GitHub. De atunci, tot ce găsește analistul rămâne aici, chiar dacă notificarea pe telefon a fost ștearsă.</div>`;
+  if (nep) h += `<div class="card pz galben"><div class="pzt">${ic('bec')}<b>${nep === 1 ? 'O notificare n-a ajuns' : nep + ' notificări n-au ajuns'} pe telefon</b></div>
+    <div class="sub">De obicei, telefonul oprește Chrome în fundal ca să economisească bateria. Le găsești oricum aici.</div>
+    <div class="pzb"><button class="btn sm" data-c="${A('ghidFundal')}">Cum repari</button></div></div>`;
+  h += `<div class="chips nout-ch" data-noswipe style="margin:0 0 12px">${FILTRE_NOUT.map(([k,t]) => `<button class="${f===k?'on':''}" data-c="${A('setFiltruNout',k)}">${t}</button>`).join('')}</div>`;
+  if (!fil.length) return h + `<div class="card nout-gol"><span class="tic">${ic('bec')}</span><div><b>${l.length ? 'Nimic în categoria asta' : 'Încă nimic'}</b><div class="sub" style="margin-top:4px;line-height:1.5">${l.length ? 'Alege „Toate” ca să vezi tot.' : 'Analistul se uită la piață la fiecare 30 de minute în zilele de bursă și scrie aici tot ce găsește: ocazii, mișcări mari, semnale noi, raportul de dimineață.'}</div></div></div>`;
+  let zi = '';
+  for (const x of fil) {
+    const z = ziNout(x.cand); if (z !== zi) { zi = z; h += `<div class="lbl nout-zi">${esc(z)}</div>`; }
+    const [et, col, ico] = TIP_NOUT[x.tip] || TIP_NOUT.sistem, act = actiuneNout(x), nou = x.cand > vaz;
+    const liv = x.trimisa === 'oprit' ? 'fără notificare (oprită din setări)' : neprimita(x) ? '<span style="color:var(--warn)">n-a ajuns pe telefon</span>' : x.trimisa ? (PRIMITE.has(x.id) ? 'primită pe telefon' : 'trimisă pe telefon') : 'fără notificare pe telefon';
+    h += `<div class="card nout ${nou?'nou':''} ${NOUT_SEL===x.id?'sel':''}" id="n-${esc(x.id)}" style="--k:var(${col})">
+      <div class="nh"><span class="tic">${ic(ico)}</span><div style="flex:1;min-width:0"><div class="nt"><span class="lbl">${et}</span><span class="sub num">${oraNout(x.cand)}</span></div>
+      <b>${esc(String(x.titlu||'').slice(0,160))}</b></div></div>
+      <p>${esc(String(x.text||'').slice(0,600))}</p>
+      <div class="nf"><span class="sub">${liv}</span>${act ? `<button class="btn sm" data-c="${esc(JSON.stringify(act[1]))}">${esc(act[0])}</button>` : ''}</div></div>`;
+  }
+  return h;
+}
+function setFiltruNout(k){ if (!FILTRE_NOUT.some(([x]) => x === k)) return; S.notifFiltru = k; save(); vib(); render(); }
+// La intrarea în Noutăți: ce era nou rămâne evidențiat cât stai aici, iar bulina dispare.
+function intraNoutati(){
+  if (NOUT_ANT === null) NOUT_ANT = S.notifVazut || '';
+  const ult = listaNout()[0]?.cand; if (ult && ult > (S.notifVazut || '')) { S.notifVazut = ult; save(); }
+  bulinaNout();
+}
+function deschideNotif(id){
+  NOUT_SEL = typeof id === 'string' && /^[A-Za-z0-9_-]{12}$/.test(id) ? id : null; S.notifFiltru = 'toate';
+  if (VIEW === 'noutati') render(); else go('noutati');
+  setTimeout(() => { const e = NOUT_SEL && $('n-' + NOUT_SEL); if (e) e.scrollIntoView({ block:'center', behavior:'smooth' }); setTimeout(() => { NOUT_SEL = null; e?.classList.remove('sel'); }, 2600); }, 450);
+}
+// Chitanțele de primire scrise de service worker (IndexedDB): doar id-ul și ora, fără conținut.
+function citestePrimite(){
+  return new Promise(res => { try { const r = indexedDB.open('analist', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('primite', { keyPath: 'id' });
+    r.onsuccess = () => { try { const q = r.result.transaction('primite').objectStore('primite').getAll(); q.onsuccess = () => { const l = q.result || [], st = l.find(x => x.id === '_start');
+      CHIT_START = st ? new Date(st.t).toISOString() : null; PRIMITE = new Set(l.map(x => x.id)); r.result.close(); res(); }; q.onerror = () => { r.result.close(); res(); }; } catch(e) { r.result.close(); res(); } };
+    r.onerror = () => res(); } catch(e) { res(); } });
+}
+function ghidFundal(){
+  foaie(`${capFoaie('bec','Notificări cu aplicația închisă','Honor și alte telefoane Android')}
+    <div class="sub" style="margin:0 0 12px;line-height:1.55">Notificările vin prin Chrome, chiar dacă Analist e închis. Unele telefoane opresc însă Chrome în fundal ca să economisească bateria, iar notificarea ajunge abia când îl deschizi. Pe Honor, o dată:</div>
+    <ol class="lst"><li>Setări telefon → <b>Baterie</b> → <b>Lansare aplicații</b> (sau „Gestionare lansare aplicații”) → <b>Chrome</b>: oprește „Gestionează automat”, apoi pornește toate trei: lansare automată, lansare secundară, rulare în fundal.</li>
+      <li>Setări telefon → <b>Aplicații</b> → <b>Chrome</b> → <b>Notificări</b>: permise, inclusiv pentru costi1622.github.io.</li>
+      <li>Dacă ai Analist instalat pe ecranul principal, fă același lucru și pentru aplicația <b>Analist</b>.</li>
+      <li>Nu închide Chrome din lista aplicațiilor recente cu „Închide tot”.</li></ol>
+    <div class="sub" style="margin-top:12px;line-height:1.55">Apoi apasă „Trimite un test” și blochează telefonul: notificarea trebuie să apară în cel mult un minut. Ce n-a ajuns găsești oricum în Noutăți.</div>
+    <div style="display:flex;gap:8px;margin-top:16px"><button class="btn" style="flex:1;margin:0" data-c="${A('testPush')}" ${pushActiv()?'':'disabled'}>Trimite un test</button><button class="btn ghost" style="flex:1;margin:0" data-c="${A('closeSheet')}">Închide</button></div>`);
+}
+// Când sosește o notificare cu aplicația deschisă, aducem noutatea imediat (service worker-ul ne anunță).
+navigator.serviceWorker?.addEventListener('message', e => { if (e.data?.tip === 'push' && V && !RULEAZA) { citestePrimite().then(() => reincarca()); } });
 // Drepturi de autor și licență: avizul complet, deschis din Setări.
 function drepturiAutor(){
   const an = new Date().getFullYear(), ani = an > 2026 ? '2026–'+an : '2026';
@@ -1208,13 +1300,18 @@ function serieLuni(){ // câte luni la rând (până la luna curentă sau cea tr
   return n;
 }
 // ===== Linkuri directe din notificări: #plan, #analiza, #setari, #s=SIMBOL =====
+// Aplicația blocată sau încă fără date: ancora așteaptă și se deschide imediat după deblocare (înainte se pierdea).
+let ANCORA_ASTEAPTA = '';
 function ancora(direct){
-  const h = typeof direct === 'string' ? direct : decodeURIComponent(location.hash.slice(1)); if (!h || !SNAP && h!=='setari') return;
-  if (typeof direct !== 'string') history.replaceState(null,'',location.pathname+location.search);
+  let h = typeof direct === 'string' ? direct : decodeURIComponent(location.hash.slice(1));
+  if (typeof direct !== 'string' && location.hash) history.replaceState(null,'',location.pathname+location.search);
+  if (!h) { h = ANCORA_ASTEAPTA; ANCORA_ASTEAPTA = ''; } if (!h) return;
+  if (!SNAP && h!=='setari') { ANCORA_ASTEAPTA = h.slice(0, 40); return; }
+  if (h.startsWith('n=')) { deschideNotif(h.slice(2)); return; }
   if (h.startsWith('s=')) { const sym=h.slice(2); if (/^[A-Z0-9.]{1,12}$/.test(sym) && SNAP.pozitii.some(p=>p.symbol===sym)) { go('azi'); setTimeout(()=>detaliu(sym),60); } else go('azi'); }
   else if (h==='raport') { go('azi'); if (RAP) setTimeout(()=>raport(),60); }
   else if (h==='securitate') { go('setari'); setTimeout(()=>pazaDetalii(),60); }
-  else if (['plan','analiza','setari','azi'].includes(h)) go(h);
+  else if (['plan','analiza','setari','azi','noutati','invata'].includes(h)) go(h);
 }
 addEventListener('hashchange', ancora);
 
@@ -2671,7 +2768,7 @@ const STAREI = {ok:['✓','--pos'],eroare:['✗','--neg'],lipsa:['!','--warn'],o
 const NUMEC = {seif:'Cheia de date (DATA_KEY)',t212:'Trading 212',etoro:'eToro',finnhub:'Finnhub',push:'Notificări pe telefon',ntfy:'Notificări prin ntfy (rezervă)',bnr:'Curs BNR'};
 function conexiuniHTML(){
   const c = STARE?.conexiuni || SNAP?.conexiuni; if (!c) return `<div class="sub">Încă nu am rezultatul unui test.</div>`;
-  return Object.entries(NUMEC).filter(([k])=>c[k]).map(([k,n])=>{ const [ic,col]=STAREI[c[k].stare]||['?','--mut'];
+  return Object.entries(NUMEC).filter(([k])=>c[k] && k!=='push').map(([k,n])=>{ const [ic,col]=STAREI[c[k].stare]||['?','--mut'];
     return `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)"><b style="color:var(${col});width:16px;text-align:center">${ic}</b><div><div style="font-weight:600">${n}</div><div class="sub">${esc(c[k].mesaj||'')}</div></div></div>`; }).join('')
     + (SNAP.ultimaIncercare?`<div class="sub" style="margin-top:8px">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>`:'');
 }
@@ -2688,7 +2785,7 @@ function vSetari(){
     return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO('logo-big',2).replace('logo-big','" style="width:56px;height:56px')}<div><div style="font-size:var(--t4);font-weight:800">Analist</div><div class="sub">Analistul tău personal pe bursă · ${APP_VER}</div>
       <div class="sub" style="margin-top:4px;color:var(${rau?'--neg':'--pos'})">${rau?`${rau} ${rau===1?'conexiune are':'conexiuni au'} probleme`:`${ok} conexiuni active · date criptate`}</div></div></div>
     <div class="sec"><h2>Conexiuni</h2>${STARE?.generat||SNAP?.generat?`<span class="sub">test ${cand(STARE?.generat||SNAP.generat)}</span>`:''}</div>
-    <div class="card grp">${Object.entries(NUMEC).filter(([k])=>c[k]).map(([k,n])=>{ const [sm,col]=STAREI[c[k].stare]||['?','--mut'];
+    <div class="card grp">${Object.entries(NUMEC).filter(([k])=>c[k] && k!=='push').map(([k,n])=>{ const [sm,col]=STAREI[c[k].stare]||['?','--mut'];
       return it(col, k==='ntfy'||k==='push'?'bec':k==='seif'?'scut':k==='bnr'?'glob':'link', n, esc(c[k].mesaj||''), `<b style="color:var(${col});font-size:var(--t3)">${sm}</b>`); }).join('') || `<div class="det sub">Încă nu am rezultatul unui test.</div>`}
       ${SNAP?.ultimaIncercare?`<div class="det sub">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>`:''}
       <div class="det" style="display:flex;gap:8px;padding-top:12px"><button class="btn sm" style="flex:1" data-c="${A('ruleaza',true)}">Testează din nou</button><button class="btn ghost sm" style="flex:1" data-c="${A('ruleaza')}">Rulează analiza</button></div>
@@ -3152,7 +3249,8 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   exportSeif, importSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
   deschideLectiePotrivita, arataRecap, raspundeRecap, simulator, verificaInainte, verifRasp, verifGata,
   tokenFoaie, setTokenExp, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
-  activeazaPush, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie
+  activeazaPush, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie,
+  setFiltruNout, deschideDinNout, ghidFundal
 }));
 function ruleazaCmd(spec, el, ev){
   let a; try { a = JSON.parse(spec); } catch(e) { return; }

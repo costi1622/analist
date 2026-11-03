@@ -1,6 +1,6 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență: vezi LICENSE.
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.33.0';
+export const VERSION = '0.34.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -151,7 +151,6 @@ export const ETF_CATALOG = {
 // ETF-uri tratate ca nucleu: fără semnale de vânzare sau de protecție; împart ținta ETF.
 export const ETFS = Object.keys(ETF_CATALOG).filter(k => ['nucleu', 'obligatiuni'].includes(ETF_CATALOG[k].rol));
 // Toate ETF-urile din catalog (și cele tematice), pentru recunoaștere.
-export const TOATE_ETF = Object.keys(ETF_CATALOG);
 
 // Reguli de risc.
 export const RISK = {
@@ -209,6 +208,3 @@ export const TER = Object.fromEntries(Object.entries(ETF_CATALOG).map(([k, v]) =
 // Paza la date ciudate: peste aceste praguri, datele sunt marcate „de verificat” și nu trimitem notificări pe ele.
 export const PAZA = { miscareZi: 40, totalZi: 15, dif_broker: 0.5 };
 
-// Notificări discrete: ntfy.sh e un serviciu public, iar mesajele trec prin serverul lor.
-// true = fără simboluri și fără sume, doar tipul evenimentului; detaliile sunt în aplicație (după parolă).
-export const NOTIFICARI = { discrete: true };

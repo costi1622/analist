@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.37.0';
+const APP_VER = '0.38.0';
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -53,8 +53,9 @@ try { S = Object.assign(S, JSON.parse(LS.getItem(KEY)||'{}')); } catch(e){}
 // Moștenire din versiunile fără parolă: nimic sensibil nu rămâne în clar.
 if (S.token || S.topic) { delete S.token; delete S.topic; LS.setItem(KEY, JSON.stringify(S)); }
 ['_jurnal','_cache'].forEach(k=>LS.removeItem(KEY+k));
-const save = () => { try { LS.setItem(KEY, JSON.stringify(S)); } catch(e){} }; // setări fără secrete (temă, sortare, suma)
-const saveJ = () => { if(!V){ toast('Aplicația e blocată.'); return false; } V.jurnal=J; salveazaSeif(); return true; };
+const saveRaw = () => { try { LS.setItem(KEY, JSON.stringify(S)); } catch(e){} }; // setări fără secrete (temă, sortare, suma)
+const save = () => { saveRaw(); syncDetecteaza(); };
+const saveJ = () => { if(!V){ toast('Aplicația e blocată.'); return false; } V.jurnal=J; salveazaSeif(); syncDetecteaza(); return true; };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Acțiuni fără cod inline (CSP fără 'unsafe-inline'): elementele poartă data-c / data-in / data-ch / data-kd / data-tg / data-er
@@ -194,7 +195,7 @@ async function perecheRaport(){
 }
 function blocheaza(){
   if (SESIUNE()) { document.body.classList.add('ascuns'); location.reload(); return; } // sesiunea fără urme: se închide de tot, nu rămâne nimic
-  vBlocat.incercat = false; V=null; VK=null; MK=null; DK=null; PRIV=null; J=[]; SNAP=null; RAP=null; INTRA=null; IST=null; STARE=null; NOTIF=null;
+  vBlocat.incercat = false; SYNC_AMP = null; SYNC_JA = null; clearTimeout(SYNC_T); V=null; VK=null; MK=null; DK=null; PRIV=null; J=[]; SNAP=null; RAP=null; INTRA=null; IST=null; STARE=null; NOTIF=null;
   ['sheet','sheet2'].forEach(id=>$(id).classList.remove('on')); ['veil','veil2'].forEach(id=>$(id).classList.remove('on')); document.documentElement.classList.remove('blocat'); ED = null;
   stare(); render();
 }
@@ -319,7 +320,7 @@ aplicaTema();
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
 const GLOS = {
   harta:['Harta zilei','Fiecare dreptunghi e o poziție. Mărimea arată cât din portofoliu ocupă, culoarea arată mișcarea zilei: verde crește, roșu scade, gri stă pe loc (sub 0,3%). Cu cât culoarea e mai intensă, cu atât mișcarea e mai mare. Atinge un dreptunghi ca să deschizi acțiunea.'],
-  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar. În centru e ETF-ul global: cu cât e mai mare steaua, cu atât ai mai mult în el; cercul punctat din jurul ei e ținta ta. Fiecare orbită e un sector, iar fiecare planetă e o acțiune: mărimea e ponderea, inelul colorat e semnalul (verde: cumpără, gri: las-o, roșu: uită-te la ea), iar strălucirea arată cum a mers azi. Orbitele pline au trecut de plafonul pe sector. Trage cu degetul ca să rotești și să înclini sistemul, atinge o planetă ca s-o vezi și încă o dată ca să-i deschizi fișa. „Ultimul an” arată, în câteva secunde, cum s-au schimbat mărimile în ultimele 12 luni, după prețurile zilnice (cu cantitățile de azi).'],
+  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar. În centru e steaua portofoliului: arată cum a mers totul azi (o atingi și vezi valoarea). Pe orbita cea mai apropiată stau ETF-urile, apoi câte o orbită pentru fiecare sector. Fiecare planetă e o poziție: mărimea e ponderea, inelul colorat e semnalul (verde: cumpără, gri: las-o, roșu: uită-te la ea), iar strălucirea arată cum a mers azi. Orbitele pline au trecut de plafonul pe sector. Trage cu degetul ca să rotești și să înclini sistemul, atinge o planetă ca s-o vezi și încă o dată ca să-i deschizi fișa. „Ultimul an” arată, în câteva secunde, cum s-au schimbat mărimile în ultimele 12 luni, după prețurile zilnice (cu cantitățile de azi).'],
   proiectie:['Unde poți ajunge','Trei scenarii pentru valoarea portofoliului la orizontul tău: 3%, 6% și 9% pe an, în lei, înainte de inflație. Linia punctată e doar ce depui. Diferența până la scenarii e dobânda compusă: câștigurile fac la rândul lor câștiguri. Anii reali vor fi neregulați, cu scăderi de 20–30% pe drum. Nu e o promisiune, e un ordin de mărime.'],
   agitatie:['Cât de mult se mișcă portofoliul','Agitația (volatilitatea) arată cât urcă și coboară valoarea într-un an obișnuit, calculată din prețurile ultimelor până la 12 luni, cu ponderile de azi. VWCE e reperul. Cea mai mare scădere e de la un vârf la minimul de după. O lună proastă apare cam o dată la 20 de luni. Testele de stres arată cât ai pierde în scenarii plauzibile. Scăderile de felul ăsta sunt normale pe termen lung. Întrebarea e dacă le-ai privi liniștit, fără să vinzi.'],
   castigPoz:['De unde vine câștigul','Câștigul sau pierderea în lei a fiecărei poziții, de când o ai. Așa vezi care alegeri au contat cu adevărat, nu doar procentual: 50% pe o poziție mică poate valora mai puțin decât 10% pe una mare.'],
@@ -376,7 +377,7 @@ const link = s => { let h=esc(s); for(const [re,k] of TL) h=h.replace(re,m=>`<bu
 const GH = 'https://api.github.com/repos/';
 const ghErr = s => s===401?'Token GitHub greșit sau expirat.':s===403?'Tokenul nu are permisiunea necesară.':s===404?'Nu găsesc repo-ul sau fișierul.':'GitHub: HTTP '+s;
 async function gh(path, opt={}) {
-  if (V?.pc && opt.method && opt.method !== 'GET') throw new Error('Pe calculator, Analist doar citește. Fă asta de pe telefon.');
+  if (V?.pc && V.pc.acces !== 'complet' && opt.method && opt.method !== 'GET') throw new Error('Pe acest calculator, Analist doar citește. Fă asta de pe telefon.');
   const r = await fetch(GH+S.repo+path, {...opt, cache:'no-store', headers:{Authorization:'Bearer '+(opt.token||V?.token||''), Accept:opt.raw?'application/vnd.github.raw':'application/vnd.github+json', ...(opt.body?{'Content-Type':'application/json'}:{}), ...(opt.etag?{'If-None-Match':opt.etag}:{})}});
   if (opt.optional && r.status===404) return null;
   if (r.status===304) return {neschimbat:true};
@@ -401,6 +402,8 @@ async function dinCache(){
   const d = async f => { try { return J_(await decDate(FIS[f]?.text)); } catch(e) { return null; } };
   [, SNAP, INTRA, IST, RAP, NOTIF] = await Promise.all([motor().catch(()=>null), d('date/snapshot.enc'), d('date/intraday.enc'), d('date/istoric.enc'), decRaport(FIS['rapoarte/ultimul.enc']?.text).catch(()=>null), d('date/notificari.enc'), citestePrimite()]);
   STARE = J_(FIS['date/stare.json']?.text);
+  if (!SYNC_AMP) syncInit();
+  try { const u = J_(await decDate(FIS['date/utilizator.enc']?.text)); if (u) syncAplica(u); } catch(e) {}
   aplicaProfil(); pregatesteCulori(); setTimeout(pazaAuto, 0);
 }
 // ===== Motorul (exact același cod care rulează în GitHub Actions) și profilul tău =====
@@ -430,12 +433,12 @@ function aplicaProfil(u){
 async function salveazaProfil(){
   if (!ED || !V) return; if (doarCitire()) { ED = null; render(); return; }
   const v = V.profil || {};
-  V.profil = { anTinta: ED.anTinta, suma: ED.suma, tintaETF: ED.tintaETF ?? null, alese: ED.alese || v.alese || [], decizii: ED.decizii || v.decizii || {}, alerte: alerte(), sincronizat: false }; ED = null; await salveazaSeif();
+  V.profil = { anTinta: ED.anTinta, suma: ED.suma, tintaETF: ED.tintaETF ?? null, alese: ED.alese || v.alese || [], decizii: ED.decizii || v.decizii || {}, alerte: alerte(), sincronizat: false }; syncDetecteaza(); ED = null; await salveazaSeif();
   aplicaProfil(); vib(); render(); await sincronizeazaProfil();
 }
 // Profilul ajunge în GitHub criptat cu cheia de date, printr-o rulare a analizei (nu e nevoie de alte permisiuni).
 async function sincronizeazaProfil(mod='zi'){
-  if (!V?.profil || !DK || ePC()) return;
+  if (!V?.profil || !DK || ePCcitire()) return;
   try {
     const ct = await encDate(JSON.stringify({ anTinta: V.profil.anTinta, suma: V.profil.suma, tintaETF: V.profil.tintaETF ?? null, alese: V.profil.alese || [], alerte: V.profil.alerte || [] }));
     await gh('/actions/workflows/analiza.yml/dispatches', {method:'POST', body:JSON.stringify({ref:'main', inputs:{mod, profil:ct}})});
@@ -462,7 +465,7 @@ async function actualizeaza(){
   if (nou) { toast('Actualizat.'); return; }
   if (OFFLINE) return;
   const v = varstaDate();
-  if (bursaDeschisa() && v > 20*60e3 && !S.kill && !ePC()) { ruleaza(false, true); return; }
+  if (bursaDeschisa() && v > 20*60e3 && !S.kill && !ePCcitire()) { ruleaza(false, true); return; }
   toast(v < 20*60e3 ? `Datele sunt de acum ${Math.max(1, Math.round(v/60e3))} min. Nimic nou.` : bursaDeschisa() ? 'Nimic nou.' : 'Bursa e închisă. Datele sunt de la ultima analiză.');
 }
 async function reincarca(manual) {
@@ -470,7 +473,7 @@ async function reincarca(manual) {
   $('bref').classList.add('spin'); OFFLINE=false;
   try {
     if (live()) {
-      const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
+      const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/utilizator.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
       saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{});
       if (manual === true) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
@@ -790,7 +793,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.34.0': ['runner/notificari.js', 'runner/analiza.js', 'runner/sources.js', 'runner/paza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
-  '0.37.0': ['runner/paza.js', 'runner/analiza.js', 'runner/config.js'] };
+  '0.37.0': ['runner/paza.js', 'runner/analiza.js', 'runner/config.js'],
+  '0.38.0': ['runner/stare.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -1142,7 +1146,7 @@ async function verificaAbonament(){
 function amanaPush(){ S.pushAmanat = aziISO(); save(); vib(); render(); }
 // Banda de pe Acasă: o dată, apoi peste 14 zile dacă ai zis „Mai târziu”.
 function bandaPush(){
-  if (ePC() || pushActiv() || !pushSuport() || !pushCheie() || pushPerm() === 'denied') return '';
+  if (ePCcitire() || pushActiv() || !pushSuport() || !pushCheie() || pushPerm() === 'denied') return '';
   if (S.pushAmanat && (Date.parse(aziISO()) - Date.parse(S.pushAmanat)) / 864e5 < 14) return '';
   return `<div class="card pz"><div class="pzt">${ic('bec')}<b>Lasă analistul să te anunțe</b></div>
     <div class="sub">Primești o notificare când o acțiune din plan e la reducere, când portofoliul se mișcă mult, când apare un semnal nou și când raportul de dimineață e gata. Criptate, direct în aplicație.</div>
@@ -1284,7 +1288,7 @@ function conexiuniFoaie(){
     <div class="card grp">${Object.entries(NUMEC).filter(([k]) => c[k] && k !== 'push').map(([k, n]) => { const [sm, col] = STAREI[c[k].stare] || ['?','--mut'];
       return rowS(col, k==='seif'?'scut':k==='bnr'?'glob':'link', n, esc(c[k].mesaj||''), `<b style="color:var(${col});font-size:var(--t3)">${sm}</b>`); }).join('') || '<div class="det sub">Încă nu am rezultatul unui test.</div>'}</div>
     ${SNAP?.ultimaIncercare ? `<div class="sub" style="margin-top:8px">Ultima încercare: ${cand(SNAP.ultimaIncercare)}. Pozițiile afișate sunt din ultima analiză reușită.</div>` : ''}
-    <div style="display:flex;gap:8px;margin-top:12px">${ePC()?'':`<button class="btn sm" style="flex:1;margin:0" data-c="${A('ruleaza',true)}">Testează din nou</button>`}<button class="btn ghost sm" style="flex:1;margin:0" data-c="${A('closeSheet')}">Închide</button></div>`);
+    <div style="display:flex;gap:8px;margin-top:12px">${ePCcitire()?'':`<button class="btn sm" style="flex:1;margin:0" data-c="${A('ruleaza',true)}">Testează din nou</button>`}<button class="btn ghost sm" style="flex:1;margin:0" data-c="${A('closeSheet')}">Închide</button></div>`);
 }
 function parolaFoaie(){
   foaie(`${capFoaie('lacat','Parola și cheile','tot ce ține de seiful de pe telefon')}
@@ -1320,23 +1324,22 @@ function ajutorFoaie(){
 // Analiza automată: GitHub sare des rulările programate, așa că le poate porni cron-job.org (gratuit), la ora exactă.
 async function automatFoaie(){
   const repo = esc(S.repo), url = `https://api.github.com/repos/${S.repo}/actions/workflows/analiza.yml/dispatches`;
-  const zi = '{"ref":"main","inputs":{"mod":"intraday","programat":"1"}}', seara = '{"ref":"main","inputs":{"mod":"zi","programat":"1"}}';
+  const zi = '{"ref":"main","inputs":{"mod":"intraday","programat":"1"}}';
   const cp = (t, v) => `<button class="btn ghost sm cpy" data-c="${A('copiaza', v)}"><span>${t} · atinge ca să copiezi</span><code>${esc(v)}</code></button>`;
   const pas = (n, t, html) => `<div class="pasdu"><span class="nivn">${n}</span><div style="min-width:0;flex:1"><b>${t}</b><div class="sub" style="margin-top:4px;line-height:1.55">${html}</div></div></div>`;
-  foaie(`<div data-f="automat">${capFoaie('refresh','Analiza automată','la fiecare 30 de minute, în zilele de bursă')}
+  foaie(`<div data-f="automat">${capFoaie('refresh','Analiza automată','la fiecare 30 de minute în zilele de bursă, plus analiza completă după închidere')}
     <div id="autst"><div class="sub" style="padding:8px 0">Citesc ultimele rulări din GitHub…</div></div>
     <div class="lbl" style="margin:16px 0 8px">De ce cron-job.org</div>
     <div class="sub" style="line-height:1.55">GitHub sare des rulările programate (în unele zile, aproape toate). cron-job.org e gratuit și pornește analiza exact la oră, prin GitHub. Primește un token care poate doar porni analiza: nu vede date, chei sau cod.</div>
     <div class="lbl" style="margin:16px 0 8px">Configurarea, o singură dată (~5 minute)</div>
     ${pas(1, 'Tokenul pentru cron-job.org', `Deschide direct <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a> (Fine-grained token). Nume: „cron-job Analist”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${repo.split('/')[1]}. La Permissions → Repository permissions: <b>Actions: Read and write</b>. Nimic altceva. Copiază tokenul.`)}
     ${pas(2, 'Contul', 'Pe <a href="https://cron-job.org" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">cron-job.org</a>, cont gratuit. La Settings, alege fusul orar <b>Europe/Bucharest</b>.')}
-    ${pas(3, 'Prima sarcină: „Analist, ziua”', `Create cronjob. Titlu: Analist, ziua. URL:${cp('URL', url)}Execution schedule: <b>Custom</b>. Days of week: luni–vineri. Hours: 9–22. Minutes: <b>15 și 45</b>. Pornește la 9:15 și ultima la 22:45.<br>În <b>Advanced</b>: Request method <b>POST</b>. Headers (Add header, de trei ori):${cp('Authorization', 'Bearer TOKENUL_TĂU')}${cp('Accept', 'application/vnd.github+json')}${cp('X-GitHub-Api-Version', '2022-11-28')}Request body:${cp('Body', zi)}Salvează.`)}
-    ${pas(4, 'A doua sarcină: „Analist, seara”', `La fel, cu același URL și aceleași headere. Days of week: luni–vineri. Hours: 23. Minutes: <b>35</b>. Request body:${cp('Body', seara)}`)}
-    ${pas(5, 'Verifică', 'În cron-job.org, apasă <b>Test run</b> la prima sarcină: răspunsul trebuie să fie <b>204</b>. Apoi redeschide această fereastră: în cel mult un minut apare rularea nouă. Bifează și „Notify me when the cronjob fails”: dacă tokenul expiră, primești un e-mail.')}
+    ${pas(3, 'O singură sarcină: „Analist”', `Create cronjob. Titlu: Analist. URL:${cp('URL', url)}Execution schedule: <b>Custom</b>. Days of week: luni–vineri. Hours: <b>9–23</b>. Minutes: <b>15 și 45</b>. Pornește la 9:15 și ultima la 23:45. Rularea de la 23:15, după închiderea bursei US, devine singură analiza completă a zilei (semnale, planul lunii, istoric, rezumatul zilei).<br>În <b>Advanced</b>: Request method <b>POST</b>. Headers (Add header, de trei ori):${cp('Authorization', 'Bearer TOKENUL_TĂU')}${cp('Accept', 'application/vnd.github+json')}${cp('X-GitHub-Api-Version', '2022-11-28')}Request body:${cp('Body', zi)}Salvează.`)}
+    ${pas(4, 'Verifică', 'În cron-job.org, apasă <b>Test run</b> la prima sarcină: răspunsul trebuie să fie <b>204</b>. Apoi redeschide această fereastră: în cel mult un minut apare rularea nouă. Bifează și „Notify me when the cronjob fails”: dacă tokenul expiră, primești un e-mail.')}
     <div class="lbl" style="margin:16px 0 8px">Când expiră tokenul din cron-job.org</div>
     <div class="sub" style="line-height:1.55;margin-bottom:8px">${S.cronExp ? `Expiră pe <b>${esc(ziLunga(S.cronExp))}</b>. Cu o lună înainte, Setări îți arată un avertisment.` : 'Scrie data din GitHub (o vezi și în răspunsul de la Test run, la „token-expiration”). Cu o lună înainte, Setări îți arată un avertisment.'}</div>
     <div style="display:flex;gap:8px;align-items:center"><input id="cexp" type="date" value="${esc(S.cronExp||'')}" style="flex:1;margin:0"><button class="btn sm" style="flex:none;margin:0;padding:0 20px" data-c="${A('setCronExp')}">Salvează</button></div>
-    <div class="sub" style="margin-top:12px;line-height:1.55">Minute GitHub folosite: ~700 pe lună din cele 2.000 gratuite. Fără cron-job.org, aplicația merge ca înainte; „Actualizează” cere singur prețuri noi când bursa e deschisă.</div>
+    <div class="sub" style="margin-top:12px;line-height:1.55">Ai avut și sarcina „Analist, seara”? Șterge-o: nu mai trebuie. Minute GitHub folosite: ~800–1.100 pe lună din cele 2.000 gratuite (cu sincronizarea între dispozitive). Fără cron-job.org, aplicația merge ca înainte; „Actualizează” cere singur prețuri noi când bursa e deschisă.</div>
     <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button></div>`);
   try {
     const j = await gh('/actions/workflows/analiza.yml/runs?per_page=30'), l = j?.workflow_runs || [], el = $('autst'); if (!el) return;
@@ -2133,10 +2136,42 @@ const MODULE = [
   { q:'Contribuțiile la Pilonul 3 sunt deductibile până la…', o:['100 de euro pe an','400 de euro pe an','Fără limită'], ok:1, d:'Plafonul de deductibilitate e 400 de euro pe an.' } ] },
 ];
 // Cursul: trei niveluri, în ordinea în care merită parcurse.
+// v0.38: câte un modul nou pe fiecare nivel (primii pași la broker, construirea portofoliului, evaluarea companiilor)
+MODULE.push(
+ { id:'primii', t:'Primii pași la broker', ic:'portofel', l:[
+  { id:'ordine', t:'Ordinul de piață și ordinul limită', p:['Un ordin de piață cumpără imediat, la prețul de atunci. E simplu, dar la deschidere sau la acțiuni puțin tranzacționate prețul poate sări puțin.','Un ordin limită cumpără doar la prețul ales de tine sau mai jos. Dacă piața nu ajunge acolo, ordinul nu se execută.'], k:'Pentru investiția lunară într-un ETF mare, ordinul de piață în timpul bursei e de obicei suficient.' },
+  { id:'fractii', t:'Fracțiunile: investești și cu 50 de lei', p:['La Trading 212 și eToro poți cumpăra o parte dintr-o acțiune. Nu ai nevoie de prețul unei acțiuni întregi.','Așa poți respecta exact planul lunii: fiecare poziție primește suma ei, chiar dacă o acțiune costă câteva sute de dolari.'], tu:()=>{ const pl=SNAP?.planuri?.[sumaPlan()]||[]; return pl.length?`Planul tău de luna asta are ${pl.length} ${pl.length===1?'cumpărare':'cumpărări'}, toate posibile cu fracțiuni.`:''; }, k:'Suma lunară decide, nu prețul unei acțiuni.' },
+  { id:'custodie', t:'Ale cui sunt acțiunile de la broker', p:['Acțiunile cumpărate prin broker sunt ale tale. Brokerul le ține separat de banii lui, în conturi de client.','Dacă un broker reglementat dă faliment, acțiunile clienților nu intră în averea lui. Pentru bani lichizi există scheme de compensare, cu plafoane care diferă de la o țară la alta.'], k:'Alegi brokeri reglementați și ții în cont doar banii pe care îi investești.' },
+  { id:'indici', t:'Ce e un indice', p:['Un indice măsoară o piață întreagă printr-un coș de companii. S&P 500 urmărește 500 de companii mari din SUA, iar MSCI World aproape 1.400 din țările dezvoltate.','Un ETF copiază un indice. Când auzi că „piața a scăzut 2%”, de obicei e vorba de un indice.'], k:'Indicele e termometrul; ETF-ul e felul în care îl cumperi.' },
+  { id:'orar', t:'Când e deschisă bursa', p:['Bursele din Europa (unde e listat VWCE) sunt deschise de la 10:00 la 18:30, ora României. Bursa din SUA, de la 16:30 la 23:00.','Peste noapte și în weekend prețurile nu se mișcă. Ordinele date atunci se execută la deschidere, uneori la un preț diferit de cel din aplicație.'], k:'Cumperi în timpul bursei, ca să știi prețul pe care îl plătești.' }
+ ], quiz:[
+  { q:'Ce face un ordin limită?', o:['Cumpără imediat, la orice preț','Cumpără doar la prețul ales sau mai jos','Vinde automat după o lună'], ok:1, d:'Ordinul limită se execută doar dacă piața ajunge la prețul tău.' },
+  { q:'Ce se întâmplă cu acțiunile tale dacă un broker reglementat dă faliment?', o:['Sunt pierdute','Rămân ale tale, ținute separat','Devin ale statului'], ok:1, d:'Acțiunile clienților sunt ținute separat de averea brokerului.' },
+  { q:'Ce urmărește S&P 500?', o:['500 de companii mari din SUA','Toate companiile din lume','Prețul aurului'], ok:0, d:'S&P 500 e indicele celor mai mari 500 de companii americane.' } ] },
+ { id:'portofoliu', t:'Construiești portofoliul', ic:'tinta', l:[
+  { id:'corelatie', t:'Corelația: ce scade împreună', p:['Două acțiuni din același sector urcă și scad de obicei împreună. Zece companii de cipuri nu înseamnă diversificare.','Diversificarea reală înseamnă sectoare și țări care reacționează diferit la aceeași știre.'], tu:()=>{ const t=Object.entries(SNAP?.teme||{}).filter(([n])=>!n.startsWith('ETF')).sort((a,b)=>b[1]-a[1])[0]; return t?`Cel mai mare sector al tău, „${t[0]}”, are ${nf(t[1],1)}% din portofoliu.`:''; }, k:'Numără sectoarele, nu acțiunile.' },
+  { id:'plafon', t:'Cât pui într-o singură acțiune', p:['Orice companie poate avea un an foarte prost. Un plafon pe acțiune limitează cât te poate costa o singură greșeală.','Analistul folosește un plafon pe acțiune și unul pe sector. Peste ele, banii noi merg în altă parte.'], tu:()=>`Plafoanele tale: ${P().maxActiune}% pe acțiune și ${P().maxTema}% pe sector.`, k:'O singură acțiune nu trebuie să-ți poată strica tot planul.' },
+  { id:'transe', t:'Cumpărarea în tranșe', p:['Când o acțiune bună scade mult, e tentant să cumperi tot dintr-odată. Nimeni nu știe însă unde e minimul.','Trei tranșe, la câteva săptămâni distanță sau când prețul își revine peste media de 20 de zile, reduc riscul de a cumpăra prea devreme.'], k:'Tranșele schimbă ghicitul momentului cu o regulă.' },
+  { id:'candvinzi', t:'Când are sens să vinzi', p:['Un preț mai mic nu e un motiv de vânzare. Un motiv e o companie care s-a schimbat: afacerea se strică, datoriile cresc, motivul pentru care ai cumpărat nu mai e valabil.','Fiecare vânzare cu câștig se impozitează. Când poți, reechilibrezi din depuneri, nu din vânzări.'], tu:()=>`Cota de impozit pe câștig folosită de aplicație: ${M?.IMPOZIT?.cota ?? 16}%.`, k:'Vinzi când s-a schimbat compania, nu când s-a schimbat prețul.' },
+  { id:'reper', t:'Te compari cu un reper', p:['Un câștig de 10% pare bun până afli că piața a făcut 20%. De aceea aplicația îți arată mereu rezultatul față de VWCE.','Dacă ani la rând acțiunile alese rămân în urma ETF-ului, e un semn să muți mai mult spre ETF.'], k:'Reperul îți spune dacă alegerile tale adaugă ceva.' }
+ ], quiz:[
+  { q:'Ai 10 acțiuni, toate din sectorul cipurilor. Ești diversificat?', o:['Da, sunt 10 companii','Nu, scad de obicei împreună','Da, dacă sunt în SUA'], ok:1, d:'Acțiunile din același sector sunt corelate: diversificarea vine din sectoare diferite.' },
+  { q:'Care e un motiv bun de vânzare?', o:['Prețul a scăzut 15%','Motivul pentru care ai cumpărat nu mai e valabil','O știre negativă de o zi'], ok:1, d:'Contează compania, nu mișcarea de preț.' },
+  { q:'De ce cumperi în tranșe la o scădere mare?', o:['Ca să plătești mai puține comisioane','Pentru că nimeni nu știe unde e minimul','Pentru că așa cere brokerul'], ok:1, d:'Tranșele reduc riscul de a cumpăra tot prea devreme.' } ] },
+ { id:'evaluare', t:'Cât valorează o companie', ic:'raport', l:[
+  { id:'peg', t:'Creșterea contează: PEG', p:['Un P/E mare poate fi corect pentru o companie care își crește repede profitul. PEG împarte P/E la ritmul de creștere a profitului (în procente pe an).','Un PEG în jur de 1 sugerează un preț pe măsura creșterii. Mult peste 2 înseamnă că piața plătește deja mult pentru viitor.'], k:'Prețul se judecă împreună cu creșterea.' },
+  { id:'marje', t:'Marjele: cât rămâne din fiecare leu', p:['Marja de profit arată cât rămâne companiei din fiecare 100 de lei vânduți, după toate costurile.','Marjele care cresc de la an la an arată putere de a stabili prețul. Marjele care scad pot anunța concurență mai dură.'], k:'O afacere bună păstrează mai mult din ce vinde.' },
+  { id:'datorii', t:'Datoriile: când devin un risc', p:['Datoria ajută o companie să crească, dar trebuie plătită și în anii proști. Cu dobânzi mari, datoria scumpă apasă pe profit.','Un reper des folosit e datoria netă împărțită la profitul operațional (EBITDA). Sub 2–3 e considerat de obicei confortabil.'], k:'Firmele cu datorii mici trec mai ușor prin crize.' },
+  { id:'fcf', t:'Fluxul de numerar liber', p:['Profitul contabil poate include sume care încă nu au intrat în cont. Fluxul de numerar liber arată banii reali rămași după investițiile necesare.','Din el se plătesc dividendele, răscumpărările de acțiuni și datoriile.'], k:'Banii reali spun mai mult decât profitul de pe hârtie.' },
+  { id:'asteptari', t:'De ce scade o acțiune după rezultate bune', p:['Prețul conține deja ce așteaptă piața. Dacă rezultatele sunt bune, dar mai slabe decât se aștepta, acțiunea poate scădea.','Contează și prognoza: o companie care anunță un an viitor mai slab scade adesea, chiar după un trimestru record.'], k:'Bursa compară rezultatele cu așteptările, nu cu anul trecut.' }
+ ], quiz:[
+  { q:'O companie are P/E 30 și profitul crește cu 30% pe an. Cât e PEG-ul?', o:['0,5','1','30'], ok:1, d:'PEG = 30 / 30 = 1: prețul e pe măsura creșterii.' },
+  { q:'Ce arată fluxul de numerar liber?', o:['Banii reali rămași după investiții','Prețul acțiunii','Numărul de angajați'], ok:0, d:'Sunt banii din care se plătesc dividendele și datoriile.' },
+  { q:'De ce poate scădea o acțiune după un trimestru bun?', o:['Pentru că bursa e închisă','Pentru că rezultatele sau prognoza sunt sub așteptări','Pentru că brokerul vinde'], ok:1, d:'Prețul conținea deja așteptări mai mari.' } ] });
 const CURS = [
-  { n:'Începător', d:'ce cumperi, de ce și cu ce bani', m:['baza','romania'] },
-  { n:'Intermediar', d:'strategia ta și cât te costă', m:['strategie','costuri'] },
-  { n:'Avansat', d:'cum citești piața, cum îți ții nervii și ce arată istoria', m:['piata','mintea','istorie'] } ];
+  { n:'Începător', d:'ce cumperi, de ce, cu ce bani și cum dai primul ordin', m:['baza','primii','romania'] },
+  { n:'Intermediar', d:'strategia ta, cum îți construiești portofoliul și cât te costă', m:['strategie','portofoliu','costuri'] },
+  { n:'Avansat', d:'cum citești piața, cât valorează o companie, cum îți ții nervii, ce arată istoria', m:['piata','evaluare','mintea','istorie'] } ];
 const MODULE_ORD = () => { if (!MODULE.some(m=>m.id==='istorie')) MODULE.push(ISTORIE); return CURS.flatMap(c=>c.m.map(id=>({...MODULE.find(x=>x.id===id), nivel:c.n}))); };
 const TOATE_LECTIILE = () => MODULE_ORD().flatMap(m=>m.l.map(l=>({...l, m})));
 const modulGata = m => m.l.every(l=>citit(l.id)) && ((S.quiz||{})[m.id]??-1) >= m.quiz.length-1;
@@ -2197,7 +2232,8 @@ function vInvata(){
     h += `<div class="sec"><h2>Acum, pentru tine</h2></div><div class="agrid">`;
     if (lp) h += tile('lat', '--opor', lp.l.m.ic, 'Potrivită acum', esc(lp.l.t), esc(lp.motiv), A('deschideLectiePotrivita',lp.l.id));
     if (rc) h += tile('', '--acc2', 'stea', 'Recapitulare', 'O întrebare de recapitulare', esc(TOATE_LECTIILE().find(x=>x.id===rc)?.t||''), A('arataRecap',rc));
-    h += tile('', '--s2', 'puls', 'Exersează', 'Simulator pe date reale', 'lunar sau o dată, cu costurile pe 20 de ani', A('simulator'));
+    { const e = S.exercitii; h += tile('', '--pos', 'tinta', 'Exerciții', 'Cu cifrele tale de azi', e ? `ultima rundă: ${e.ultimScor}` : '6 întrebări despre portofoliul tău', A('exercitii')); }
+    h += tile('', '--s2', 'puls', 'Simulator', 'Ce s-ar fi întâmplat dacă', 'lunar sau o dată, crize, panică sau răbdare, costuri', A('simulator'));
     h += tile('', '--acc', 'carte', 'Termeni', 'Dicționarul complet', `${Object.keys(GLOS).length} de termeni explicați simplu`, A('glosar'));
     h += `</div>`; }
   // 3) Drumul tău: nivelurile ca etape, modulele ca stații, cu progres
@@ -2310,7 +2346,7 @@ async function decideETF(k, r){
   const d = {...(v.decizii||{})}, al = [...(v.alese||[])], inainte = al.join();
   if (r === 'anuleaza') { delete d[k]; const i = al.indexOf(k); if (i >= 0) al.splice(i, 1); }
   else { d[k] = {r, data: azi}; if (r === 'da' && !al.includes(k)) al.push(k); }
-  V.profil = {...v, decizii: d, alese: al.slice(0,10)};
+  V.profil = {...v, decizii: d, alese: al.slice(0,10)}; syncDetecteaza();
   if (ED) { ED.decizii = d; ED.alese = V.profil.alese; }
   const schimbat = inainte !== V.profil.alese.join(); if (schimbat) V.profil.sincronizat = false;
   await salveazaSeif();
@@ -2601,7 +2637,7 @@ function alerteHTML(p){
 }
 async function scrieAlerte(lista, sym){
   if (doarCitire()) return;
-  const u = profilUser(); V.profil = { anTinta:u.anTinta, suma:u.suma, alerte:lista, sincronizat:false };
+  const u = profilUser(); V.profil = { anTinta:u.anTinta, suma:u.suma, alerte:lista, sincronizat:false }; syncDetecteaza();
   await salveazaSeif(); vib(); detaliu(sym, DET.zile); await sincronizeazaProfil('profil');
 }
 function adaugaAlerta(sym){
@@ -2619,12 +2655,12 @@ function deschideSect(k){
 }
 const tile = (k, ico, titlu, val, sub, viz='', lat='') => `<button class="tile ${lat}" data-c="${A('deschideSect',k)}"><div class="th">${ic(ico)}<span>${titlu}</span></div><div class="tv fd num">${val}</div>${sub?`<div class="sub">${sub}</div>`:''}${viz}</button>`;
 // ===== Galaxia ta: portofoliul ca un sistem solar 3D, desenat pe canvas =====
-// ETF-ul e steaua din centru, sectoarele sunt orbite, acțiunile sunt planete (mărimea = ponderea, inelul = semnalul,
+// Portofoliul e steaua din centru (cum a mers azi), ETF-urile au orbita cea mai apropiată, sectoarele sunt orbite, acțiunile sunt planete (mărimea = ponderea, inelul = semnalul,
 // sigla pe planetă). Tragi cu degetul ca s-o rotești și s-o înclini; atingi o planetă ca s-o vezi; „Reluare” arată
 // cum s-a schimbat sistemul în ultimul an, după prețurile zilnice.
 const GX = { on:false, raf:0 };
 function galaxieHTML(){
-  return `<div class="gx" data-noswipe><canvas id="gxc" aria-label="Portofoliul ca sistem solar: ETF-ul în centru, acțiunile pe orbitele sectoarelor"></canvas>
+  return `<div class="gx" data-noswipe><canvas id="gxc" aria-label="Portofoliul ca sistem solar: portofoliul în centru, ETF-urile și acțiunile pe orbite"></canvas>
     <div class="gxtop"><span class="gxd" id="gxd"></span><button class="gxb" id="gxp" data-c="${A('gxReluare')}">${ic('play')}<span>Ultimul an</span></button></div>
     <div class="gxinfo" id="gxi"></div></div>`;
 }
@@ -2633,9 +2669,12 @@ function gxDate(){
   const pr = P(), etf = SNAP.pozitii.filter(p=>p.etf), etfP = etf.reduce((a,p)=>a+p.pondere,0);
   const sect = BUCKETE().filter(b=>!b.n.startsWith('ETF')), n = sect.length;
   const cnt = b => SNAP.pozitii.filter(p=>!p.etf && p.tema===b.n).length; // orbitele cu mai multe planete stau mai departe, unde au loc
-  const orb = [...sect].sort((a,b)=>cnt(a)-cnt(b)).map((b,k)=>({ n:b.n, c:gxCul(b.c), plin:(SNAP.teme[b.n]||0)>pr.maxTema, R: 0.36 + 0.62*(n<2?0.5:k/(n-1)) }));
+  // v0.38: în centru e portofoliul; ETF-urile (VWCE etc.) sunt planete pe orbita cea mai apropiată, ca orice altă poziție
+  const orb = [...(etf.length ? [{ n:'ETF', etf:true, c:gxCul('--acc'), plin:false, R:0.3 }] : []),
+    ...[...sect].sort((a,b)=>cnt(a)-cnt(b)).map((b,k)=>({ n:b.n, c:gxCul(b.c), plin:(SNAP.teme[b.n]||0)>pr.maxTema, R: (etf.length?0.46:0.36) + (etf.length?0.52:0.62)*(n<2?0.5:k/(n-1)) }))];
+  const zi = ziua(SNAP.pozitii), ziP = SNAP.totalRON-zi ? zi/(SNAP.totalRON-zi)*100 : 0;
   const pl = [];
-  orb.forEach((o,k)=>{ const ps = SNAP.pozitii.filter(p=>!p.etf && p.tema===o.n);
+  orb.forEach((o,k)=>{ const ps = SNAP.pozitii.filter(p=>o.etf ? p.etf : !p.etf && p.tema===o.n);
     ps.forEach((p,j)=>{ const cl = culoriActiune(p.symbol), l = sigla(p); let im = null; if (l) { im = new Image(); im.src = l; }
       pl.push({ p, o, R:o.R, a0:(j/ps.length)*Math.PI*2 + k*1.3, w:0.32/Math.pow(o.R+0.25,1.5), c: cl ? cl.c : o.c, s: gxCul(SEMC[sem(p)]), im, pond:p.pondere, m: MISC(p) }); }); });
   // reluarea: ponderea fiecărei zile, din prețurile istorice (cantitățile de azi)
@@ -2643,7 +2682,7 @@ function gxDate(){
   const val = SNAP.pozitii.map(p=>{ const s=p.serie; if(!s?.c?.length) return zile.map(()=>p.valueRON); const m=new Map(s.d.map((d,i)=>[d,s.c[i]])), u=s.c.at(-1); let x=null; return zile.map(d=>{ x=m.get(d)??x; return x&&u ? p.valueRON*x/u : p.valueRON; }); });
   const tot = zile.map((_,i)=>val.reduce((a,v)=>a+v[i],0));
   const istoric = { zile, tot, w: SNAP.pozitii.map((p,k)=>val[k].map((v,i)=>v/tot[i]*100)) };
-  return { pr, etfP, orb, pl, istoric, star:gxCul('--acc'), star2:gxCul('--acc2'), ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg'), mut:gxCul('--mut'), bg:gxCul('--panel') };
+  return { pr, etfP, ziP, orb, pl, istoric, star:gxCul('--acc'), star2:gxCul('--acc2'), ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg'), mut:gxCul('--mut'), bg:gxCul('--panel') };
 }
 const GX_LIN = matchMedia('(pointer:fine)').matches && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const SHEET_ON = () => document.getElementById('sheet')?.classList.contains('on');
@@ -2665,7 +2704,7 @@ function galaxie(){
   const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 2); /* peste 2 nu se vede diferența pe un desen care se mișcă, dar costă cu ~40% mai mult */ W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
   marime(); GX.marime = marime;
   const proj = (R, a) => { const S=Math.min(W*0.41,H*0.62), x=R*S*Math.cos(a+st.yaw), z=R*S*Math.sin(a+st.yaw), y=z*st.tilt, k=1+z/(S*4.5); return { x:W/2+x*k, y:H/2+y*k, z, k }; };
-  const rStar = () => (14 + 30*Math.sqrt(Math.max(D.etfP,1)/100)) * Math.min(W,360)/360;
+  const rStar = () => 24 * Math.min(W,360)/360; // steaua portofoliului: mărime fixă (în reluare crește și scade cu valoarea)
   const rPl = q => Math.max(3.5, (4 + 22*Math.sqrt(q/100)) * Math.min(W,360)/360);
   function cadru(now){
     if (!cv.isConnected || VIEW!=='analiza') { GX.on=false; return; }
@@ -2714,13 +2753,14 @@ function galaxie(){
         ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(W/2,H/2); ctx.strokeStyle=x.c; ctx.globalAlpha=0.35; ctx.stroke(); }
       ctx.globalAlpha=behind?0.55:0.9; ctx.fillStyle=D.ink; ctx.font=`600 ${Math.max(9,10*q.k)}px system-ui,sans-serif`; ctx.textAlign='center'; ctx.fillText(x.p.symbol.replace(/\..*$/,''), q.x, q.y+r+14*q.k); ctx.globalAlpha=1; };
     P_.filter(x=>x.q.z<0).forEach(planeta);
-    // steaua: ETF-ul, cu coroană care pulsează și ținta ca un cerc punctat
-    const rs = rStar()*(zi==null?1:Math.sqrt(Math.max(D.istoric.w.reduce((a,w,k)=>a+(SNAP.pozitii[k].etf?w[zi]:0),0),0.5)/Math.max(D.etfP,0.5))), cx=W/2, cy=H/2;
+    // steaua: portofoliul, cu coroană care pulsează; culoarea spune cum a mers azi (în reluare: față de începutul anului arătat)
+    const tz = D.istoric.tot, ch = zi==null ? D.ziP : (tz[zi]/tz[0]-1)*100;
+    const rs = rStar()*(zi==null?1:Math.sqrt(Math.max(tz[zi],1)/Math.max(tz.at(-1),1))), cx=W/2, cy=H/2;
     for (let i=0;i<3;i++) { const g=ctx.createRadialGradient(cx,cy,rs*0.6,cx,cy,rs*(2.2+i*0.9+0.15*Math.sin(t*1.3+i))); g.addColorStop(0,D.star+(i?'30':'55')); g.addColorStop(1,D.star+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,rs*3.6,0,6.283); ctx.fill(); }
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.15); for (let i=0;i<12;i++) { ctx.rotate(Math.PI/6); const L=rs*(1.5+0.35*Math.sin(t*2+i*1.7)); const g=ctx.createLinearGradient(0,0,L,0); g.addColorStop(0,D.star2+'aa'); g.addColorStop(1,D.star2+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-rs*0.12); ctx.lineTo(L,0); ctx.lineTo(0,rs*0.12); ctx.fill(); } ctx.restore();
     const gs=ctx.createRadialGradient(cx-rs*0.3,cy-rs*0.35,rs*0.1,cx,cy,rs); gs.addColorStop(0,'#ffffff'); gs.addColorStop(0.35,D.star); gs.addColorStop(1,D.star2); ctx.fillStyle=gs; ctx.beginPath(); ctx.arc(cx,cy,rs,0,6.283); ctx.fill();
-    const rT=(14 + 30*Math.sqrt(Math.max(D.pr.tintaETF,1)/100))*Math.min(W,360)/360; ctx.beginPath(); ctx.arc(cx,cy,rT+6,0,6.283); ctx.strokeStyle=D.star; ctx.globalAlpha=0.55; ctx.setLineDash([2,4]); ctx.lineWidth=1.2; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
-    ctx.fillStyle='#04101d'; ctx.font=`700 ${Math.max(11,rs*0.42)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(nf(zi==null?D.etfP:D.istoric.w.reduce((a,w,k)=>a+(SNAP.pozitii[k].etf?w[zi]:0),0),0)+'%', cx, cy+1); ctx.textBaseline='alphabetic';
+    if (Math.abs(ch) >= 0.05) { ctx.beginPath(); ctx.arc(cx,cy,rs+5,0,6.283); ctx.strokeStyle=ch>0?D.pos:D.neg; ctx.globalAlpha=0.8; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
+    ctx.fillStyle='#04101d'; ctx.font=`700 ${Math.max(10,rs*0.36)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(sg(ch,1)+'%', cx, cy+1); ctx.textBaseline='alphabetic';
     D.orb.forEach(o=>orbita(o,true));
     P_.filter(x=>x.q.z>=0).forEach(planeta);
     GX.cadru = P_;
@@ -2749,7 +2789,7 @@ function gxAtinge(e){
 function gxInfo(){
   const el=$('gxi'); if (!el) return; const s=GX.st?.sel;
   if (!s) { el.innerHTML = `<span class="sub">Trage ca s-o rotești. Atinge o planetă ca s-o vezi.</span>`; return; }
-  if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0); el.innerHTML = `<b>ETF-ul de bază</b><span class="sub"> ${nf(w,1)}% din portofoliu, ținta ta e ${P().tintaETF}%</span>`; return; }
+  if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Portofoliul tău</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
   el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${SEMC[u]})">${SEM[u]}</span><div class="sub">${esc(p.tema)} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div></div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
@@ -2962,13 +3002,86 @@ async function importSeif(f){
   if (c.repo) S.repo = c.repo; S.esec={n:0,pana:0}; save(); LS.removeItem(KEY+'_pornire');
   vib(); toast('Copia a fost restaurată. Deblochează cu parola ei.'); blocheaza();
 }
+// ===== v0.38: starea comună a dispozitivelor (telefon, calculatoare) =====
+// Se sincronizează: planul bifat, lecțiile, testele și exercițiile, Noutățile văzute, alarmele și activitatea confirmate, codul
+// confirmat, data tokenului din cron-job.org, modul începător, profilul (orizont, sumă, alerte, decizii) și jurnalul.
+// Fiecare câmp are ora ultimei schimbări și câștigă cea mai nouă. Pleacă doar diferența, criptată cu DATA_KEY, printr-o rulare
+// scurtă a analizei (tokenurile nu au drept de scriere în repo). Ce nu ajunge (o rulare anulată de alta) se retrimite singur.
+const SYNC_CAMPURI = ['planFacut','luniFacute','citite','quiz','notifVazut','alVazute','actConf','cod','cronExp','incepator','profil','exercitii','simulari'];
+const acumISO = () => new Date().toISOString();
+let SYNC_AMP = null, SYNC_JA = null, SYNC_T = 0, SYNC_OCUPAT = false;
+const syncVal = k => { if (k !== 'profil') return S[k] ?? null; if (!V?.profil) return null; const { sincronizat, ...r } = V.profil; return r; };
+// tipul așteptat al fiecărui câmp: o valoare de alt tip (dintr-o versiune viitoare sau stricată) se ignoră, nu strică aplicația
+const SYNC_TIP = { planFacut:'string', luniFacute:'array', citite:'array', quiz:'object', notifVazut:'string', alVazute:'array', actConf:'array', cod:'object', cronExp:'string', incepator:'boolean', profil:'object', exercitii:'object', simulari:'object' };
+const tipOk = (k, v) => v === null || (SYNC_TIP[k] === 'array' ? Array.isArray(v) : SYNC_TIP[k] === 'object' ? v && typeof v === 'object' && !Array.isArray(v) : typeof v === SYNC_TIP[k]);
+function syncSet(k, v){ if (!tipOk(k, v)) return; if (k === 'profil') { if (V) V.profil = v && typeof v === 'object' ? { ...v, sincronizat: true } : V.profil; } else if (v === null || v === undefined) delete S[k]; else S[k] = v; }
+const syncAmp = () => Object.fromEntries(SYNC_CAMPURI.map(k => [k, JSON.stringify(syncVal(k))]));
+const syncJA = () => new Map(J.map(x => [String(x.id), JSON.stringify(x)]));
+const SY = () => (S.sync ||= { t:{}, jm:{}, js:{}, rt:{}, rj:{}, rs:{} });
+const golit = v => v == null || v === '' || (Array.isArray(v) && !v.length) || (typeof v === 'object' && !Object.keys(v).length);
+function syncInit(){
+  if (!V) return; const prima = !S.sync, z = SY();
+  // prima dată pe telefon: ce există deja pleacă în GitHub; un calculator nou doar primește (nu suprascrie telefonul)
+  if (prima && !ePC()) { const t = acumISO(); for (const k of SYNC_CAMPURI) if (!golit(syncVal(k))) z.t[k] = t; for (const x of J) z.jm[String(x.id)] = t; }
+  SYNC_AMP = syncAmp(); SYNC_JA = syncJA(); saveRaw(); if (prima && !ePC()) syncProgrameaza(3000);
+}
+function syncDetecteaza(){
+  if (!V || !SYNC_AMP) return; const a = syncAmp(), z = SY(), t = acumISO(); let sch = false;
+  for (const k of SYNC_CAMPURI) if (a[k] !== SYNC_AMP[k]) { z.t[k] = t; sch = true; }
+  const ja = syncJA();
+  for (const [id, x] of ja) if (SYNC_JA.get(id) !== x) { z.jm[id] = t; delete z.js[id]; sch = true; }
+  for (const id of SYNC_JA.keys()) if (!ja.has(id)) { z.js[id] = t; delete z.jm[id]; sch = true; }
+  SYNC_AMP = a; SYNC_JA = ja; if (sch) { saveRaw(); syncProgrameaza(); }
+}
+function syncDiferenta(){
+  const z = SY(), d = { v:1, t:{}, c:{}, j:[], s:{} };
+  for (const k of SYNC_CAMPURI) if (z.t[k] && (!z.rt[k] || z.t[k] > z.rt[k])) { d.t[k] = z.t[k]; d.c[k] = syncVal(k); }
+  for (const x of J) { const id = String(x.id), m = z.jm[id]; if (m && (!z.rj[id] || m > z.rj[id])) d.j.push({ ...x, m }); }
+  for (const [id, t] of Object.entries(z.js)) if (!z.rs[id] || t > z.rs[id]) d.s[id] = t;
+  return d;
+}
+const syncDeTrimis = d => Object.keys(d.t).length + d.j.length + Object.keys(d.s).length;
+function syncProgrameaza(ms = 20000){ clearTimeout(SYNC_T); SYNC_T = setTimeout(syncTrimite, ms); }
+async function syncTrimite(){
+  SYNC_T = 0; if (SYNC_OCUPAT || !live() || !DK || ePCcitire() || OFFLINE) return;
+  const d = syncDiferenta(); if (!syncDeTrimis(d)) return;
+  SYNC_OCUPAT = true;
+  try {
+    let ct = await encDate(JSON.stringify(d));
+    while (ct.length > 60000 && d.j.length > 1) { d.j = d.j.slice(0, Math.ceil(d.j.length / 2)); ct = await encDate(JSON.stringify(d)); } // jurnal mare: pleacă în tranșe
+    if (ct.length > 60000) return;
+    await gh('/actions/workflows/analiza.yml/dispatches', { method:'POST', body: JSON.stringify({ ref:'main', inputs:{ mod:'sync', stare: ct } }) });
+    SY().trimis = acumISO(); saveRaw();
+  } catch(e) {} finally { SYNC_OCUPAT = false; }
+}
+// Starea comună citită din GitHub: câmpurile mai noi decât cele de aici le înlocuiesc; jurnalul se îmbină notiță cu notiță.
+function syncAplica(u){
+  if (!V || !u || typeof u !== 'object') return false; const z = SY(); let sch = false, schJ = false;
+  const lj = Array.isArray(u.j) ? u.j.filter(x => x && x.id != null && typeof x.m === 'string') : [];
+  z.rt = u.t && typeof u.t === 'object' ? { ...u.t } : {}; z.rs = u.s && typeof u.s === 'object' ? { ...u.s } : {};
+  z.rj = Object.fromEntries(lj.map(x => [String(x.id), x.m]));
+  for (const k of SYNC_CAMPURI) { const rt = z.rt[k]; if (typeof rt === 'string' && (!z.t[k] || rt > z.t[k]) && u.c && Object.hasOwn(u.c, k) && tipOk(k, u.c[k])) { syncSet(k, u.c[k]); z.t[k] = rt; sch = true; } }
+  const loc = new Map(J.map(x => [String(x.id), x]));
+  for (const x of lj) { const id = String(x.id);
+    if (loc.has(id) ? (!z.jm[id] || x.m > z.jm[id]) : !(z.js[id] >= x.m)) { const { m, ...rest } = x; loc.set(id, rest); z.jm[id] = m; delete z.js[id]; schJ = true; } }
+  for (const [id, t] of Object.entries(z.rs)) if (loc.has(id) && (!z.jm[id] || t >= z.jm[id])) { loc.delete(id); z.js[id] = t; delete z.jm[id]; schJ = true; }
+  if (schJ) { J = [...loc.values()].sort((a, b) => (b.id > a.id ? 1 : -1)); V.jurnal = J; }
+  if (sch || schJ) salveazaSeif();
+  SYNC_AMP = syncAmp(); SYNC_JA = syncJA(); saveRaw();
+  // ce n-a ajuns încă în GitHub pleacă din nou, dacă a trecut destul de la ultima trimitere
+  if (syncDeTrimis(syncDiferenta()) && !SYNC_T && (!z.trimis || Date.now() - Date.parse(z.trimis) > 4 * 60e3)) syncProgrameaza(5000);
+  return sch || schJ;
+}
+// când pleci din aplicație, ce aștepta să plece pleacă imediat
+document.addEventListener('visibilitychange', () => { if (document.hidden && SYNC_T && live()) { clearTimeout(SYNC_T); syncTrimite(); } });
 // ===== v0.36: calculatoarele =====
 // Telefonul face un fișier pentru calculator: cheia de date, cheia rapoartelor, profilul și un token GitHub separat, doar de citire.
 // Fișierul e criptat cu un cod aleator de 20 de caractere (~99 de biți, plus PBKDF2 600.000), afișat doar pe telefon:
-// fișierul și codul nu călătoresc împreună. Calculatorul doar citește: nu pornește analize, nu schimbă planul sau alertele.
+// fișierul și codul nu călătoresc împreună. „Calculatorul meu” are toate funcțiile; „De la muncă” doar citește (token fără Actions).
 const ePCdisp = () => matchMedia('(pointer:fine)').matches && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const ePC = () => !!V?.pc;
-function doarCitire(){ if (!ePC()) return false; toast('Pe calculator, Analist doar citește. Planul, alertele și analiza se schimbă de pe telefon.'); return true; }
+const ePCcitire = () => !!V?.pc && V.pc.acces !== 'complet'; // calculator „doar citire” (de la muncă)
+function doarCitire(){ if (!ePCcitire()) return false; toast('Calculatorul acesta doar citește. Planul, alertele și analiza se schimbă de pe telefon sau de pe calculatorul tău.'); return true; }
 const COD_ALF = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // fără 0/O și 1/I/L, ca să nu se confunde la scris
 function codCalc(){ let o = ''; while (o.length < 20) for (const b of rnd(32)) if (b < 248 && o.length < 20) o += COD_ALF[b % 31]; return o.match(/.{5}/g).join('-'); }
 const normCod = c => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -2979,15 +3092,20 @@ async function cripteazaCalc(pkg, cod){
   const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(JSON.stringify(pkg)));
   return {tip:'analist-calculator', format:1, creat:new Date().toISOString(), iter:ITER, sare:b64e(sare), iv:b64e(iv), ct:b64e(ct)};
 }
+let CALC_ACCES = 'complet';
+function calcAcces(k){ CALC_ACCES = k === 'citire' ? 'citire' : 'complet'; const t = $('ctok')?.value, n = $('cnume')?.value, d = $('cdisp')?.value; calculatoareFoaie(); if ($('ctok')) { $('ctok').value = t||''; $('cnume').value = n||''; $('cdisp').value = d||''; } }
 const pasG = (n, t, html) => `<div class="pasdu"><span class="nivn">${n}</span><div style="min-width:0;flex:1"><b>${t}</b><div class="sub" style="margin-top:4px;line-height:1.55">${html}</div></div></div>`;
 // --- pe telefon ---
 function calculatoareFoaie(){
   if (!V || ePC()) return; const l = V.calculatoare || [];
-  foaie(`<div data-f="calc">${capFoaie('ecran','Calculatoare','vezi datele pe PC, doar pentru citire')}
-    <div class="sub" style="line-height:1.55">Pe calculator vezi tot ce vezi aici, pe ecran mare. Calculatorul doar citește: nu pornește analize și nu schimbă planul sau alertele. Fiecare calculator are tokenul lui GitHub: dacă îl ștergi, calculatorul nu mai vede nimic, iar telefonul merge mai departe.</div>
-    ${l.length ? `<div class="lbl" style="margin:16px 0 8px">Conectate (${l.length})</div><div class="card grp">${l.map(c => rowS('--acc','ecran',esc(c.nume),`fișier făcut pe ${esc(ziLunga(c.creat.slice(0,10)))}`,null,['calculatorDetalii', c.id])).join('')}</div>` : ''}
+  const cplt = CALC_ACCES === 'complet';
+  foaie(`<div data-f="calc">${capFoaie('ecran','Calculatoare','Analist pe PC, sincronizat cu telefonul')}
+    <div class="sub" style="line-height:1.55">Pe calculator vezi tot ce vezi aici, pe ecran mare. Ce schimbi pe un dispozitiv (jurnal, plan bifat, lecții, alerte, decizii) ajunge criptat și pe celelalte, în aproximativ un minut. Fiecare calculator are tokenul lui GitHub: dacă îl ștergi, calculatorul nu mai vede nimic, iar telefonul merge mai departe.</div>
+    ${l.length ? `<div class="lbl" style="margin:16px 0 8px">Conectate (${l.length})</div><div class="card grp">${l.map(c => rowS('--acc','ecran',esc(c.nume),`${c.acces==='complet'?'toate funcțiile':'doar citire'} · fișier din ${esc(ziLunga(c.creat.slice(0,10)))}`,null,['calculatorDetalii', c.id])).join('')}</div>` : ''}
     <div class="lbl" style="margin:16px 0 8px">Conectează un calculator nou</div>
-    ${pasG(1, 'Un token nou, doar pentru calculator', `Deschide <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a>. Nume: „Analist PC”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${esc(S.repo.split('/')[1]||'')}. La Permissions → Repository permissions: doar <b>Contents: Read-only</b>. Nimic altceva, fără Actions. Copiază tokenul.`)}
+    <div class="seg" style="margin-bottom:8px"><button class="${cplt?'on':''}" data-c="${A('calcAcces','complet')}">Calculatorul meu</button><button class="${cplt?'':'on'}" data-c="${A('calcAcces','citire')}">De la muncă</button></div>
+    <div class="sub" style="line-height:1.55;margin-bottom:8px">${cplt ? '<b>Toate funcțiile</b>, ca pe telefon: analiza la cerere, planul, alertele, notificările pe calculator.' : '<b>Doar citire</b>: vezi totul, dar calculatorul nu pornește analize și nu schimbă nimic. Potrivit pentru un calculator pe care nu-l controlezi tu.'}</div>
+    ${pasG(1, 'Un token nou, doar pentru calculator', `Deschide <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a>. Nume: „Analist PC”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${esc(S.repo.split('/')[1]||'')}. La Permissions → Repository permissions: <b>Contents: Read-only</b>${cplt ? ' și <b>Actions: Read and write</b>' : ', fără Actions'}. Nimic altceva. Copiază tokenul.`)}
     <input id="ctok" type="password" autocomplete="off" spellcheck="false" placeholder="Lipește tokenul calculatorului (github_pat_…)">
     ${pasG(2, 'Nume', 'Numele tău apare pe calculator, ca să știi mereu în ce cont ești. Numele calculatorului te ajută să-l recunoști în listă.')}
     <input id="cnume" autocomplete="off" maxlength="24" placeholder="Numele tău (ex. Costi)" value="${esc(S.nume||'')}">
@@ -3008,15 +3126,16 @@ async function creeazaCalculator(){
     const sn = await gh('/contents/date/snapshot.enc', {token:tok, raw:true, optional:true});
     if (sn === null) throw new Error('Tokenul nu vede datele analizei. Verifică repo-ul ales la crearea lui.');
     const act = await fetch(GH+S.repo+'/actions/workflows', {cache:'no-store', headers:{Authorization:'Bearer '+tok, Accept:'application/vnd.github+json'}});
-    if (act.ok) throw new Error('Tokenul are acces la Actions. Pentru calculator bifează doar Contents: Read-only.');
+    if (CALC_ACCES === 'complet' && !act.ok) throw new Error('Tokenul nu are acces la Actions. Pentru calculatorul tău bifează și Actions: Read and write.');
+    if (CALC_ACCES !== 'complet' && act.ok) throw new Error('Tokenul are acces la Actions. Pentru calculatorul de la muncă bifează doar Contents: Read-only.');
   } catch(e) { toast(e.message || 'Tokenul nu a putut fi verificat.'); if (b) { b.disabled = false; b.textContent = 'Fă fișierul pentru calculator'; } return; }
-  const c = {id:b64url(rnd(6)), nume:disp, creat:new Date().toISOString(), cod:codCalc(), token:tok};
+  const c = {id:b64url(rnd(6)), nume:disp, creat:new Date().toISOString(), cod:codCalc(), token:tok, acces:CALC_ACCES === 'complet' ? 'complet' : 'citire'};
   V.calculatoare = [...(V.calculatoare||[]), c]; S.nume = nume; save(); await salveazaSeif();
   await descarcaCalculator(c.id); vib(); calculatorDetalii(c.id);
 }
 async function descarcaCalculator(id){
   const c = (V?.calculatoare||[]).find(x => x.id === id); if (!c || ePC()) return;
-  const pkg = {tip:'analist-calculator-date', repo:S.repo, nume:S.nume||'', dispozitiv:c.nume, creat:c.creat, token:c.token, dataKey:V.dataKey, priv:V.priv||null, profil:V.profil||null, tokenExp:plusZile(c.creat.slice(0,10), 365)};
+  const pkg = {tip:'analist-calculator-date', repo:S.repo, nume:S.nume||'', dispozitiv:c.nume, creat:c.creat, acces:c.acces||'citire', token:c.token, dataKey:V.dataKey, priv:V.priv||null, profil:V.profil||null, tokenExp:plusZile(c.creat.slice(0,10), 365)};
   const slug = c.nume.normalize('NFD').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'').toLowerCase().slice(0,24) || 'pc';
   descarca(`analist-calculator-${slug}.json`, JSON.stringify(await cripteazaCalc(pkg, c.cod)), 'application/json');
 }
@@ -3046,7 +3165,7 @@ let CALC_F = null, CALC_MOD = 'meu';
 function conectCalcFoaie(sesiune){
   const alt = are_seif(), ses = sesiune === true || alt; CALC_F = null; CALC_MOD = ses ? 'sesiune' : 'meu';
   openSheet(`${capFoaie('ecran','Conectează acest calculator','cu fișierul și codul de pe telefon')}
-    <div class="sub" style="line-height:1.55">Pe telefon: Setări → Securitate → <b>Calculatoare</b>. Telefonul îți dă un fișier și un cod. Pe calculator, Analist doar citește.</div>
+    <div class="sub" style="line-height:1.55">Pe telefon: Setări → Securitate → <b>Calculatoare</b>. Telefonul îți dă un fișier și un cod. Ce poate face calculatorul (toate funcțiile sau doar citire) ai ales pe telefon.</div>
     <div style="margin-top:12px">${pasG(1, 'Fișierul de pe telefon', '<button class="btn ghost sm" id="cfb" style="width:100%;margin-top:8px" data-c="'+A('alegeFisCalc')+'">Alege fișierul analist-calculator-….json</button>')}
     ${pasG(2, 'Codul de pe telefon', '<input id="ccod" class="num" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="29" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" style="margin-top:8px">')}
     ${pasG(3, 'Cum rămâne', ses
@@ -3094,7 +3213,7 @@ async function deschideCalculator(){
     const o = JSON.parse(await r.text()), k = await crypto.subtle.importKey('raw', dk, 'AES-GCM', false, ['decrypt']);
     await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, k, b64d(o.ct));
   } catch(e) { return gata(e instanceof TypeError ? 'Fără internet. Reîncearcă.' : 'Fișierul nu se potrivește cu datele din GitHub.'); }
-  const cont = {token:pkg.token, dataKey:pkg.dataKey, priv:pkg.priv, profil:pkg.profil||null, jurnal:[], pc:{dispozitiv:pkg.dispozitiv, creat:pkg.creat}};
+  const cont = {token:pkg.token, dataKey:pkg.dataKey, priv:pkg.priv, profil:pkg.profil||null, jurnal:[], pc:{dispozitiv:pkg.dispozitiv, creat:pkg.creat, acces:pkg.acces === 'complet' ? 'complet' : 'citire'}};
   const setari = {repo:pkg.repo, nume:pkg.nume, tokenExp:typeof pkg.tokenExp === 'string' && /^\d{4}-\d\d-\d\d$/.test(pkg.tokenExp) ? pkg.tokenExp : null, tokenEstimat:true, turVazut:true, stiut:true};
   try {
     if (ses) { LS.mem = new Map(); FIS = {}; S = Object.assign(S_IMPLICIT(), setari, {privat:true}); save(); V = cont; await pregatesteChei(); }
@@ -3110,12 +3229,12 @@ function cheieNoua(){ setPorn({dataKey:b64url(crypto.getRandomValues(new Uint8Ar
 function cheieExistenta(){ const k=($('fdk').value||'').trim(); try { if(unb64url(k).length!==32) throw 0; } catch(e){ toast('Cheia nu are formatul corect (43 de caractere).'); return; } setPorn({dataKey:k, existenta:true}); render(); toast('Cheia de date a fost preluată.'); }
 const STAREI = {ok:['✓','--pos'],eroare:['✗','--neg'],lipsa:['!','--warn'],optional:['○','--mut']};
 const NUMEC = {seif:'Cheia de date (DATA_KEY)',t212:'Trading 212',etoro:'eToro',finnhub:'Finnhub',push:'Notificări pe telefon',bnr:'Curs BNR'};
-// Setări pe calculator: doar citire. Fără analiză la cerere, notificări, amprentă sau oprire de urgență (se fac de pe telefon).
+// Setări pe calculatorul „de la muncă”: doar citire. Fără analiză la cerere, notificări, amprentă sau oprire de urgență (se fac de pe telefon).
 function setariPC(rau, ok, z, avert){
   const ses = SESIUNE(), d = V.pc?.dispozitiv || 'calculator';
   return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO_VIU().replace('class="lv"','class="lv mare"')}<div><div style="font-size:var(--t4);font-weight:800">Analist${S.nume?' · '+esc(S.nume):''}</div><div class="sub">${ses?'Sesiune fără urme':esc(d)} · doar citire · ${APP_VER}</div>
       <div class="sub" style="margin-top:4px;color:var(${rau?'--neg':'--pos'})">${rau?`${rau} ${rau===1?'conexiune are':'conexiuni au'} probleme`:`${ok} conexiuni active · date criptate`}</div></div></div>
-    <div class="card sub" style="line-height:1.55">Pe calculator, Analist doar citește. Analiza, planul, alertele și notificările se schimbă de pe telefon; aici apar la următoarea actualizare.${ses?' <b class="ink2">Nimic nu se salvează pe acest calculator.</b> Sesiunea se închide după 5 minute fără activitate sau când închizi tabul.':''}</div>
+    <div class="card sub" style="line-height:1.55">Pe acest calculator, Analist doar citește. Analiza, planul, alertele și notificările se schimbă de pe telefon; aici apar la următoarea actualizare.${ses?' <b class="ink2">Nimic nu se salvează pe acest calculator.</b> Sesiunea se închide după 5 minute fără activitate sau când închizi tabul.':''}</div>
     <div class="sec"><h2>Analiza</h2></div>
     <div class="card grp">
       ${rowS(rau?'--neg':'--pos','link','Conexiuni', rau ? `<span style="color:var(--neg)">${rau} cu probleme</span>` : `${ok} active`, null, ['conexiuniFoaie'])}
@@ -3142,7 +3261,7 @@ function vSetari(){
     const cx = Object.entries(c).filter(([k]) => NUMEC[k] && k !== 'push'), ok = cx.filter(([,x]) => x.stare === 'ok').length, rau = cx.filter(([,x]) => x.stare === 'eroare').length;
     const [aSt, aTxt] = stareAutomat(), [pSt, pTxt] = starePush(), z = zileToken();
     const cul = st => st === 'ok' ? '--pos' : st === 'nu' ? '--neg' : '--warn', avert = t => `<span style="color:var(--warn)">${t}</span>`;
-    if (ePC()) return setariPC(rau, ok, z, avert);
+    if (ePCcitire()) return setariPC(rau, ok, z, avert);
     return `<div class="card" style="display:flex;gap:16px;align-items:center;margin-top:8px">${LOGO_VIU().replace('class="lv"','class="lv mare"')}<div><div style="font-size:var(--t4);font-weight:800">Analist</div><div class="sub">Analistul tău personal pe bursă · ${APP_VER}</div>
       <div class="sub" style="margin-top:4px;color:var(${rau?'--neg':'--pos'})">${rau?`${rau} ${rau===1?'conexiune are':'conexiuni au'} probleme`:`${ok} conexiuni active · date criptate`}</div></div></div>
     <div class="sec"><h2>Analiza</h2></div>
@@ -3153,12 +3272,12 @@ function vSetari(){
       ${rowS(z!=null&&z<=30?'--warn':'--s4','lacat','Tokenul GitHub', z==null?'schimbare și data expirării':z<=0?'<span style="color:var(--neg)">a expirat</span>':`expiră pe ${esc(ziLunga(S.tokenExp))}${S.tokenEstimat?' (estimat)':''}`,null,['tokenFoaie'])}</div>
     <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" style="flex:1;margin:0" data-c="${A('ruleaza')}">Rulează analiza acum</button></div>
     <div class="sec"><h2>Notificări</h2></div>
-    <div class="card grp">${rowS(cul(pSt),'bec','Notificări pe acest telefon', pSt==='ok'?pTxt:avert(pTxt),null,['notificariFoaie'])}</div>
+    <div class="card grp">${rowS(cul(pSt),'bec',`Notificări pe acest ${ePC()?'calculator':'telefon'}`, pSt==='ok'?pTxt:avert(pTxt),null,['notificariFoaie'])}</div>
     <div class="sec"><h2>Securitate</h2></div>
     <div class="card grp">
       ${rowS('--pos','mana','Deblocare cu amprenta', bio?'activă pe acest telefon':'parola rămâne mereu variantă de rezervă', `<span class="sw ${bio?'on':''}"></span>`, bio?['dezactiveazaAmprenta']:['activeazaAmprenta']).replace('class="it"','class="it" id="bact"')}
       ${rowS('--acc','lacat','Blochează acum','singură după 2 minute în fundal sau 10 fără activitate',null,['blocheazaAcum'])}
-      ${rowS('--acc','ecran','Calculatoare', (V.calculatoare||[]).length ? `${V.calculatoare.length} ${V.calculatoare.length===1?'conectat':'conectate'} · doar citire` : 'vezi datele pe PC, doar pentru citire',null,['calculatoareFoaie'])}
+      ${ePC()?'':rowS('--acc','ecran','Calculatoare', (V.calculatoare||[]).length ? `${V.calculatoare.length} ${V.calculatoare.length===1?'conectat':'conectate'}` : 'Analist pe PC, sincronizat cu telefonul',null,['calculatoareFoaie'])}
       ${rowS(PAROLA_SCURTA?'--warn':'--s5','scut','Parola și cheile', PAROLA_SCURTA?avert(`parola are sub ${PAROLA_MIN} caractere`):'schimbă parola, copie de rezervă, cheia de date',null,['parolaFoaie'])}
       ${rowS(SEC()?.alarme?.some(a=>a.nivel==='critic')?'--neg':'--pos','scut','Paza tranzacțiilor', SEC()?.garda?(alarmeActive().length?avert(`${alarmeActive().length} de verificat`):'activă · analiza doar citește'):'apare după prima analiză nouă',null,['pazaDetalii'])}
       ${rowS('--neg','alerta','Oprire de urgență', S.kill?'<span style="color:var(--neg)">activă</span>':'oprește analiza și îți arată pașii',null,[S.kill?'pasiOprire':'confirmaOprire'])}</div>
@@ -3246,7 +3365,7 @@ async function ruleaza(test, scurta){
   const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
-    await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:V.pub}:{mod:scurta?'intraday':'zi'}})});
+    await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:await encDate(V.pub)}:{mod:scurta?'intraday':'zi'}})});
     progres(test?'Testez conexiunile…':scurta?'Cer prețuri proaspete…':'Pornește analiza…');
     let run = null;
     for (let i=0;i<120;i++) {
@@ -3510,12 +3629,29 @@ function raspundeRecap(id, k){ const q = RECAP[id], ok = k === q[2], rp = {...(S
 function simulator(fila){
   fila = fila || S.simFila || 'lunar'; S.simFila = fila; save();
   const s = P().contributieTipica, T = Math.max(SNAP?.totalRON || 0, 1000), R = MSCIW();
-  const tab = `<div class="seg" style="margin-bottom:12px">${[['lunar','Lunar sau o dată'],['2020','Martie 2020'],['costuri','Costuri']].map(([k,t])=>`<button class="${fila===k?'on':''}" data-c="${A('simulator',k)}">${t}</button>`).join('')}</div>`;
+  const tab = `<div class="seg" style="margin-bottom:12px">${[['lunar','Lunar sau o dată'],['crize','Crize'],['2020','Martie 2020'],['costuri','Costuri']].map(([k,t])=>`<button class="${fila===k?'on':''}" data-c="${A('simulator',k)}">${t}</button>`).join('')}</div>`;
   let h = '';
   if (fila === 'lunar') {
     const rand = [2000,2007,2015,2020].map(a=>{ const x=simLunar(a,2024,s); return x?`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start"><span><b>Din ${a}</b><span class="sub" style="display:block">depus ${nf(x.dep,0)} lei · cea mai mare scădere a indicelui pe drum ${sg((x.min-1)*100,0)}%</span></span><span class="num" style="text-align:right;white-space:nowrap"><b>${nf(x.v,0)}</b> lunar<br><span class="sub">${nf(x.lump,0)} o dată</span></span></div>`:''; }).join('');
     h = `<div class="sub" style="line-height:1.55">Cu ${s} lei pe lună până la sfârșitul lui 2024, față de aceeași sumă totală pusă dintr-odată la început. Randamentele anuale reale ale MSCI World (net, în dolari).</div>${rand}
       <div class="sug">${ic('bec')}<span>Suma pusă dintr-odată câștigă de obicei, pentru că stă mai mult în piață. Dar cine primește salariu lunar nu are suma la început: investiția lunară e metoda naturală, iar în anii răi (2000, 2008) cumpără ieftin.</span></div>`;
+  } else if (fila === 'crize') {
+    // Trei investitori pun aceeași sumă lunar, de la începutul crizei până la sfârșitul lui 2024. După primul an prost, unul continuă,
+    // unul oprește depunerile (păstrează ce are și strânge banii deoparte) până după revenire, unul vinde tot și revine tot atunci.
+    const an0 = [2000, 2008, 2022].includes(+S.simCriza) ? +S.simCriza : 2008, R2 = MSCIW();
+    const ani = []; for (let a = an0; a <= 2024; a++) if (R2[a] != null) ani.push(a);
+    let jos = an0; while (R2[jos + 1] < 0) jos++; // ultimul an cu scădere
+    const sim = tip => { let v = 0, cash = 0, dep = 0; for (const a of ani) { const rl = Math.pow(1 + R2[a] / 100, 1 / 12), fereastra = a > an0 && a <= jos + 1, pauza = tip === 'pauza' && fereastra, afara = tip === 'panica' && fereastra;
+        if (tip !== 'continua' && a === jos + 2) { v += cash; cash = 0; }
+        for (let m = 0; m < 12; m++) { dep += s; if (pauza || afara) cash += s; else v += s; v *= (afara ? 1 : rl); }
+        if (tip === 'panica' && a === an0) { cash += v; v = 0; } }
+      return { v: v + cash, dep }; };
+    const A1 = sim('continua'), B1 = sim('pauza'), C1 = sim('panica'), L = x => `${nf(x, 0)} lei`;
+    const crize = `<div class="seg" style="margin:0 0 12px">${[[2000, 'Dot-com 2000'], [2008, 'Criza 2008'], [2022, 'Anul 2022']].map(([k, t]) => `<button class="${an0 === k ? 'on' : ''}" data-c="${A('simCriza', k)}">${t}</button>`).join('')}</div>`;
+    h = `${crize}<div class="sub" style="line-height:1.55">${s} lei pe lună, din ianuarie ${an0} până la sfârșitul lui 2024 (depus în total: ${L(A1.dep)}). Randamentele anuale reale ale MSCI World.</div>
+      <div class="kv num" style="margin-top:12px"><span>Ai continuat lunar, fără pauză</span><span class="pos">${L(A1.v)}</span><span>Ai oprit depunerile după ${an0} (fără să vinzi) și ai pus banii strânși abia în ${jos + 2}</span><span>${L(B1.v)}</span><span>Ai vândut tot după ${an0} și ai revenit abia în ${jos + 2}</span><span class="neg">${L(C1.v)}</span></div>
+      <div class="sug">${ic('bec')}<span>Diferența dintre răbdare și panică: <b>${L(A1.v - C1.v)}</b>. Cine continuă cumpără ieftin exact în anii răi, iar cine vinde ratează revenirea, care vine de obicei brusc.</span></div>
+      <div class="sub" style="margin-top:8px">Model simplificat: randamentul fiecărui an e împărțit egal pe luni, fără costuri și fără curs valutar.</div>`;
   } else if (fila === '2020') {
     const sta = T*cumul(2020,2024), jos = 0.68, vinde = T*jos, revine = T*jos*cumul(2021,2024);
     h = `<div class="sub" style="line-height:1.55">În martie 2020, pandemia a dus bursa mondială la aproximativ −32% față de începutul anului, în câteva săptămâni. Cu ${S.privat?'•••':nf(T,0)} lei (portofoliul tău) investiți la 1 ianuarie 2020:</div>
@@ -3533,6 +3669,56 @@ function simulator(fila){
   if ($('sheet').classList.contains('on') && $('sheet').querySelector('.simf')) { $('sheet').innerHTML = `<div class="simf">${html}</div>`; iconiteSectiuni($('sheet')); return; }
   openSheet(`<div class="simf">${html}</div>`);
 }
+// ===== v0.38: exerciții cu cifrele tale =====
+// Întrebări făcute din portofoliul de azi: ponderi, sectoare, un test de stres, semnale, impozitul, costul schimbului valutar.
+// Răspunsurile corecte se calculează din datele analizei; variantele greșite sunt apropiate, ca să te facă să gândești.
+let EX = null;
+const amesteca = a => a.map(x => [Math.random(), x]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+function variante(corect, fmt, factori){ const l = [corect], txt = new Set([fmt(corect)]);
+  for (const f of factori) { if (l.length >= 3) break; const v = corect * f; if (v > 0 && !txt.has(fmt(v))) { l.push(v); txt.add(fmt(v)); } }
+  const o = amesteca(l); return { o: o.map(fmt), ok: o.indexOf(corect) }; }
+function exercitiiLista(){
+  if (!SNAP?.pozitii?.length) return [];
+  const poz = SNAP.pozitii.filter(p => !p.virtual), pr = P(), q = [], lei = x => S.privat ? '•••' : nf(x, 0);
+  const mare = [...poz].filter(p => !p.etf).sort((a, b) => b.pondere - a.pondere)[0];
+  if (mare) q.push({ q: `Ce pondere are ${mare.symbol} în portofoliul tău?`, ...variante(mare.pondere, x => nf(x, 1) + '%', [0.5, 1.7, 0.7, 1.4]),
+    d: `${mare.symbol} are ${nf(mare.pondere, 1)}% din portofoliu. Plafonul tău pe acțiune e ${pr.maxActiune}%${mare.pondere > pr.maxActiune ? ', deci banii noi merg în altă parte' : ''}.` });
+  const top = Object.entries(SNAP.teme || {}).filter(([n]) => !n.startsWith('ETF') && n !== 'Altele').sort((a, b) => b[1] - a[1])[0];
+  if (top) {
+    const peste = top[1] > pr.maxTema;
+    q.push({ q: `Sectorul „${top[0]}” are ${nf(top[1], 1)}% din portofoliu. E peste plafonul tău pe sector?`, o: ['Da', 'Nu'], ok: peste ? 0 : 1,
+      d: `Plafonul tău pe sector e ${pr.maxTema}%. ${peste ? 'E peste: depunerile noi îl scad treptat, fără vânzări.' : 'E sub plafon.'}` });
+    const pierd = top[1] * 0.3;
+    q.push({ q: `Test de stres: dacă sectorul „${top[0]}” scade cu 30%, cu cât scade tot portofoliul?`, ...variante(pierd, x => nf(x, 1) + '%', [0.33, 2, 0.6, 1.5]),
+      d: `${nf(top[1], 1)}% × 30% = ${nf(pierd, 1)}% din portofoliu, adică aproximativ ${lei(SNAP.totalRON * pierd / 100)} lei. De aceea contează plafonul pe sector.` });
+  }
+  const cu = amesteca(poz.filter(p => !p.etf))[0];
+  if (cu) { const corect = SEM[sem(cu)], alte = amesteca(Object.values(SEM).filter(x => x !== corect)).slice(0, 2), o = amesteca([corect, ...alte]);
+    q.push({ q: `Ce spune analistul azi despre ${cu.symbol}?`, o, ok: o.indexOf(corect), d: verdict(cu) || `Semnalul de azi: ${corect}.` }); }
+  const cota = M?.IMPOZIT?.cota ?? 16;
+  q.push({ q: 'Vinzi o acțiune cu un câștig de 1.000 de lei. Cât e impozitul pe câștig?', ...variante(cota * 10, x => nf(x, 0) + ' lei', [0.625, 1.5, 0.3]),
+    d: `Cota folosită de aplicație e ${cota}%: 1.000 × ${cota}% = ${cota * 10} lei. De aceea reechilibrezi din depuneri, nu din vânzări.` });
+  const s = pr.contributieTipica, fx = s * 0.0015;
+  q.push({ q: `Pui ${s} lei pe lună într-un ETF în euro, cu 0,15% comision de schimb valutar. Cât plătești pe an doar pe schimb?`, ...variante(fx * 12, x => nf(x, 2) + ' lei', [0.1, 10, 0.5]),
+    d: `${s} × 0,15% = ${nf(fx, 2)} lei pe lună, adică ${nf(fx * 12, 2)} lei pe an. Mic, dar se adună: costurile mici contează pe 20 de ani.` });
+  return q;
+}
+function simCriza(a){ S.simCriza = +a; save(); simulator('crize'); }
+function exercitii(){ const l = exercitiiLista(); if (!l.length) { toast('Exercițiile apar după prima analiză.'); return; } EX = { l, i: 0, scor: 0, ales: null }; arataEx(); }
+function arataEx(){
+  const x = EX?.l[EX.i]; if (!EX) return;
+  const html = !x ? `${capFoaie('tinta', 'Rezultat', 'exerciții cu cifrele tale')}<div class="fd" style="font-size:var(--t6);font-weight:700;text-align:center;margin:12px 0">${EX.scor}/${EX.l.length}</div>
+      <div class="sub" style="text-align:center;margin-bottom:16px">${EX.scor === EX.l.length ? 'Perfect. Îți cunoști portofoliul.' : EX.scor >= EX.l.length / 2 ? 'Bine. Explicațiile de la fiecare întrebare merită recitite.' : 'Merită reluate: întrebările se schimbă după portofoliul de azi.'}</div>
+      <button class="btn" data-c="${A('exercitii')}">Încă o rundă</button><button class="btn ghost" data-c="${A('inchideSiRedeseneaza')}">Gata</button>`
+    : `${capFoaie('tinta', `Exercițiul ${EX.i + 1} din ${EX.l.length}`, 'cu cifrele tale de azi')}<div style="font-size:var(--t3);font-weight:700;margin:8px 0 12px">${esc(x.q)}</div>
+      ${x.o.map((o, k) => `<button class="qo ${EX.ales == null ? '' : k === x.ok ? 'ok' : k === EX.ales ? 'gr' : ''}" ${EX.ales != null ? 'disabled' : ''} data-c="${A('exAlege', k)}">${esc(o)}</button>`).join('')}
+      ${EX.ales != null ? `<div class="al ${EX.ales === x.ok ? 'good' : 'err'}" style="margin-top:12px">${EX.ales === x.ok ? 'Corect. ' : 'Nu chiar. '}${esc(x.d)}</div><button class="btn" style="margin-top:8px" data-c="${A('exUrm')}">Mai departe</button>` : ''}`;
+  if (!x) { const e = S.exercitii || {}; S.exercitii = { runde: (e.runde || 0) + 1, corecte: (e.corecte || 0) + EX.scor, ultima: aziISO(), ultimScor: `${EX.scor}/${EX.l.length}` }; save(); }
+  if (EX.i > 0 || EX.ales != null || !x) { const sh = $('sheet'); if (sh.classList.contains('on')) { sh.innerHTML = html; iconiteSectiuni(sh); return; } }
+  openSheet(html);
+}
+function exAlege(k){ const x = EX?.l[EX.i]; if (!x || EX.ales != null) return; EX.ales = +k; if (+k === x.ok) EX.scor++; vib(); arataEx(); }
+function exUrm(){ if (!EX) return; EX.i++; EX.ales = null; arataEx(); }
 // E4: lista de verificare înainte de cumpărare. Răspunsurile intră în jurnal.
 let VERIF = null;
 function verificaInainte(k, idee){
@@ -3599,7 +3785,7 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,
   exportSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
   deschideLectiePotrivita, arataRecap, raspundeRecap, simulator, verificaInainte, verifRasp, verifGata,
-  tokenFoaie, setTokenExp, setCronExp, calculatoareFoaie, rapSari, creeazaCalculator, descarcaCalculator, calculatorDetalii, stergeCalculatorIntreaba, stergeCalculator, conectCalcFoaie, calcMod, alegeFisCalc, deschideCalculator, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
+  tokenFoaie, setTokenExp, setCronExp, calculatoareFoaie, calcAcces, rapSari, exercitii, exAlege, exUrm, simCriza, creeazaCalculator, descarcaCalculator, calculatorDetalii, stergeCalculatorIntreaba, stergeCalculator, conectCalcFoaie, calcMod, alegeFisCalc, deschideCalculator, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
   activeazaPush, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie,
   setFiltruNout, deschideDinNout, ghidFundal, conexiuniFoaie, parolaFoaie, aspectFoaie, ajutorFoaie, automatFoaie
 }));

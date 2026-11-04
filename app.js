@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.40.0';
+const APP_VER = '0.40.1';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
@@ -1076,6 +1076,20 @@ const TIPURI_PUSH = [
   ['plan', 'Planul lunii', 'la începutul fiecărei luni'],
   ['rezultate', 'Rezultate trimestriale', 'cu două zile înainte, pentru pozițiile tale'] ];
 const pushCheie = () => STARE?.push?.cheie || SNAP?.push?.cheie || null;
+// Ce răspunde browserul despre notificări: ajută la depanare (fără date personale).
+async function diagNotificari(){
+  const el = () => $('pdiag'), r = [];
+  const t = async f => { try { return String(await f()); } catch(e) { return 'eroare: ' + (e.name || e.message); } };
+  r.push(['Notification.permission', await t(() => window.Notification ? Notification.permission : 'lipsește')]);
+  r.push(['permissions.query', await t(async () => (await navigator.permissions.query({ name: 'notifications' })).state)]);
+  r.push(['push permissionState', await t(async () => { const g = await navigator.serviceWorker?.getRegistration(); return g ? await g.pushManager.permissionState({ userVisibleOnly: true }) : 'fără service worker'; })]);
+  r.push(['abonament push', await t(async () => { const g = await navigator.serviceWorker?.getRegistration(); return (await g?.pushManager.getSubscription()) ? 'da' : 'nu'; })]);
+  r.push(['deschis din', document.referrer || '(gol)']);
+  r.push(['mod afișare', matchMedia('(display-mode: standalone)').matches ? 'standalone' : matchMedia('(display-mode: fullscreen)').matches ? 'fullscreen' : 'browser']);
+  r.push(['Chrome', (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '?']);
+  r.push(['service worker activ', navigator.serviceWorker?.controller ? 'da' : 'nu']);
+  if (el()) el().innerHTML = r.map(([k, v]) => `<span>${esc(k)}</span><span>${esc(v)}</span>`).join('');
+}
 const pushSuport = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const pushPerm = () => pushSuport() ? Notification.permission : 'nesuportat';
 const pushTipuri = () => Object.fromEntries(TIPURI_PUSH.map(([k]) => [k, S.pushTipuri?.[k] !== false]));
@@ -1169,7 +1183,9 @@ function notificariFoaie(){
       <div class="it" style="cursor:default"><span class="tx"><b>Alarmele de securitate</b><small>mereu, nu se pot opri</small></span><b style="color:var(--pos);font-size:var(--t3)">✓</b></div></div>
     <div class="card grp" style="margin-top:12px"><button class="it" data-c="${A('comutaDiscret')}"><span class="tx"><b>Discrete pe ecranul blocat</b><small>${S.pushDiscret ? 'doar „Analist: mișcare mare azi”, fără simbol sau sume' : 'cu simbolul și procentul, ca să știi imediat ce s-a întâmplat'}</small></span>${sw(!!S.pushDiscret)}</button></div>
     ${S.pushSalvat === false && pushActiv() ? `<button class="btn" style="margin-top:12px" data-c="${A('salveazaPreferintePush')}">Salvează preferințele</button>` : ''}
+    <details style="margin-top:16px"><summary class="sub" style="cursor:pointer">Diagnostic (pentru depanare)</summary><div class="kv num" id="pdiag" style="margin-top:8px;font-size:var(--t1)"></div></details>
     <button class="btn ghost" style="margin-top:12px" data-c="${A('closeSheet')}">Închide</button></div>`);
+  diagNotificari();
 }
 // Clic pe o notificare cu aplicația deja deschisă: service worker-ul trimite ancora (#plan, #s=VWCE, #raport…).
 navigator.serviceWorker?.addEventListener('message', e => { const h = e.data?.tip === 'ancora' ? String(e.data.h || '') : null;

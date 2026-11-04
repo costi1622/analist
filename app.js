@@ -2,7 +2,8 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.38.0';
+const APP_VER = '0.39.0';
+const DUPA_SPLASH = []; // vezi dupaSplash()
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -277,7 +278,7 @@ const navIc = n => NAVI[n] ? `<svg class="ico nvi ${n}" viewBox="0 0 24 24" aria
 const AMPRENTA = `<svg viewBox="0 0 24 24"><path d="M12 11v3a8 8 0 0 1-1.5 4.7"/><path d="M8.5 9.5A3.5 3.5 0 0 1 15.5 11v2a12 12 0 0 1-.6 3.8"/><path d="M5.6 7.6A7 7 0 0 1 19 11v1.5"/><path d="M5 12v1a11 11 0 0 0 1.3 5.2"/><path d="M8.5 13a14 14 0 0 1-.4 3.6"/><path d="M18.6 16.5a17 17 0 0 1-.9 3"/><path d="M8 4.2A9 9 0 0 1 20.5 7"/></svg>`;
 function vBlocat(){
   const e = S.esec || {n:0}, astept = Date.now() < (e.pana||0), bio = !!citesteSeif()?.bio;
-  if (bio && !vBlocat.incercat) { vBlocat.incercat = true; requestAnimationFrame(()=>deblocheazaAmprenta(true)); } // amprenta se cere imediat
+  if (bio && !vBlocat.incercat) { vBlocat.incercat = true; dupaSplash(()=>deblocheazaAmprenta(true)); } // amprenta se cere imediat ce pleacă ecranul de pornire (nu peste el)
   return `<div style="max-width:380px;margin:9vh auto 0;text-align:center">
     ${LOGO('logo-big')}
     <h3 style="font-size:var(--t5);margin:16px 0 4px;letter-spacing:-.3px">Analist</h3>
@@ -3477,10 +3478,12 @@ LOADED = !are_seif() ? true : LOADED;
 // Ecranul de pornire: rămâne cel puțin 1,7 secunde (cât să se vadă animația), apoi se deschide în aplicație.
 const T_START = performance.now();
 $('splash').querySelector('.spl').innerHTML = LOGO('spl-logo', true, false);
+// Ce trebuie să aștepte plecarea ecranului de pornire (cererea amprentei): rulează când începe să dispară.
+function dupaSplash(f){ const sp=document.getElementById('splash'); if (!sp || sp.classList.contains('iese')) requestAnimationFrame(f); else DUPA_SPLASH.push(f); }
 function ascundeSplash(){ const sp=$('splash'); if (!sp || sp.dataset.gata) return; sp.dataset.gata=1;
   // cu amprenta, nu mai așteptăm animația: deblocarea are prioritate
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches, rapid = are_seif() && !V && !!citesteSeif()?.bio;
-  setTimeout(()=>{ sp.classList.add('iese'); setTimeout(()=>sp.remove(), 600); }, calm ? 0 : Math.max(0, (rapid?700:1700)-(performance.now()-T_START))); }
+  setTimeout(()=>{ sp.classList.add('iese'); DUPA_SPLASH.splice(0).forEach(f=>requestAnimationFrame(f)); setTimeout(()=>sp.remove(), 600); }, calm ? 0 : Math.max(0, (rapid?700:1700)-(performance.now()-T_START))); }
 motor().catch(()=>{}); // motorul se încarcă din timp, cât aștepți amprenta
 render(); reincarca();
 setTimeout(ascundeSplash, 3500); // în orice caz, nu mai mult

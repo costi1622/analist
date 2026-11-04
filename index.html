@@ -384,6 +384,8 @@ html[data-vt] .sheet,html[data-vt] .veil{transition:none!important}
 @keyframes spText{from{opacity:0;transform:translateY(12px);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
 @keyframes spLuciu{0%,100%{background-position:100% 0}50%{background-position:0 0}}
 #splash.iese{opacity:0;transform:scale(1.08);pointer-events:none}
+/* cât e ecranul de pornire, antetul și bara de jos nu se văd (altfel ies peste el la prima desenare) */
+body:has(#splash:not(.iese)) :is(header,nav){visibility:hidden}
 @media (prefers-reduced-motion:reduce){#splash *,#splash::before,#splash::after{animation:none!important}}
 /* iconițe vii: satelitul tabului activ se rotește încet, titlurile secțiunilor își desenează iconița */
 nav button.on .ico:not(.nvi) .s{transform-box:view-box;transform-origin:12px 12px;animation:orbitaLenta 2.4s cubic-bezier(.4,0,.2,1) 1}

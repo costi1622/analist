@@ -1,6 +1,6 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență: vezi LICENSE.
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.38.0';
+export const VERSION = '0.40.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -146,6 +146,21 @@ export const ETF_CATALOG = {
   XDW0: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Energy 1C', isin: 'IE00BM67HM91', ter: 0.25, rol: 'sector', tema: 'Energie', indice: 'MSCI World Energy', companii: '~60', despre: 'Petrol, gaze și servicii pentru ele. Merge adesea invers față de tehnologie.' },
   XDWU: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Utilities 1C', isin: 'IE00BM67HQ30', ter: 0.25, rol: 'sector', tema: 'Utilități', indice: 'MSCI World Utilities', companii: '~90', despre: 'Electricitate, gaze și apă: venituri stabile, în mare parte reglementate.' },
   XDWI: { valute: { USD: 65 }, nume: 'Xtrackers MSCI World Industrials 1C', isin: 'IE00BM67HV82', ter: 0.25, rol: 'sector', tema: 'Industrie', indice: 'MSCI World Industrials', companii: '~250', despre: 'Utilaje, transport, construcții și echipamente electrice.' },
+  // v0.40: catalog lărgit (date verificate în noiembrie 2026: emitenți, justETF, Deutsche Börse; tickerele sunt cele de pe Xetra).
+  // valute: aproximativ, după ponderea SUA în indice (sectoarele și stilurile MSCI World au SUA între ~60% și ~85%).
+  XDWT: { valute: { USD: 85 }, nume: 'Xtrackers MSCI World Information Technology 1C', isin: 'IE00BM67HT60', ter: 0.25, rol: 'tematic', tema: 'AI și infrastructură', indice: 'MSCI World Information Technology', companii: '~190', detine: ['NVDA', 'AAPL', 'MSFT', 'AMD', 'ORCL', 'CRM', 'ADBE', 'NOW', 'INTU'], despre: 'Toată tehnologia din țările dezvoltate: cipuri, software, hardware. Aceeași idee ca acțiunile tale de tehnologie, împărțită pe multe companii.' },
+  XWTS: { valute: { USD: 80 }, nume: 'Xtrackers MSCI World Communication Services 1C', isin: 'IE00BM67HR47', ter: 0.25, rol: 'sector', tema: 'Telecom și media', indice: 'MSCI World Communication Services', companii: '~110', detine: ['GOOGL', 'META', 'NFLX', 'DIS', 'TMUS'], despre: 'Internet, telefonie, streaming și jocuri: Alphabet, Meta, Netflix, operatori de telefonie.' },
+  XDWC: { valute: { USD: 75 }, nume: 'Xtrackers MSCI World Consumer Discretionary 1C', isin: 'IE00BM67HP23', ter: 0.25, rol: 'sector', tema: 'Consum ciclic', indice: 'MSCI World Consumer Discretionary', companii: '~170', despre: 'Magazine, mașini, restaurante, călătorii și lux: ce cumpără oamenii când le merge bine.' },
+  XDWM: { valute: { USD: 50 }, nume: 'Xtrackers MSCI World Materials 1C', isin: 'IE00BM67HS53', ter: 0.25, rol: 'sector', tema: 'Materiale', indice: 'MSCI World Materials', companii: '~110', despre: 'Metale, minerit (inclusiv aur), chimicale și materiale de construcții.' },
+  EUNK: { nume: 'iShares Core MSCI Europe (Acc)', isin: 'IE00B4K48X80', ter: 0.12, rol: 'regional', tema: 'Europa', indice: 'MSCI Europe', companii: '~400', despre: 'Companiile mari și mijlocii din 15 țări europene: ASML, SAP, Nestlé, Novartis, bănci și asigurători. Cam jumătate în euro, restul în lire și franci elvețieni.' },
+  EUNN: { nume: 'iShares Core MSCI Japan IMI (Acc)', isin: 'IE00B4L5YX21', ter: 0.12, rol: 'regional', tema: 'Japonia', indice: 'MSCI Japan IMI', companii: '~950', despre: 'Companiile din Japonia, de la Toyota și Sony la firme mici. A treia bursă din lume, cu altă monedă (yenul) și alt ciclu economic decât SUA.' },
+  IUSN: { valute: { USD: 60 }, nume: 'iShares MSCI World Small Cap (Acc)', isin: 'IE00BF4RFH31', ter: 0.35, rol: 'stil', tema: 'Companii mici', indice: 'MSCI World Small Cap', companii: '~3.500', despre: 'Companiile mici din țările dezvoltate, pe care VWCE aproape nu le are. Istoric, mai agitate decât cele mari, cu perioade lungi în care merg altfel decât ele.' },
+  SXRV: { valute: { USD: 100 }, nume: 'iShares Nasdaq 100 (Acc)', isin: 'IE00B53SZB19', ter: 0.30, rol: 'tematic', tema: 'AI și infrastructură', indice: 'Nasdaq 100', companii: '~100', detine: ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMD', 'AMZN', 'META', 'NFLX'], despre: 'Cele 100 de companii mari de pe bursa Nasdaq, peste jumătate tehnologie. Mai concentrat și mai agitat decât S&P 500.' },
+  VGWE: { valute: { USD: 40 }, nume: 'Vanguard FTSE All-World High Dividend Yield (Acc)', isin: 'IE00BK5BR626', ter: 0.29, rol: 'stil', tema: 'Dividende', indice: 'FTSE All-World High Dividend Yield', companii: '~2.100', despre: 'Companii mature din toată lumea, care plătesc dividende mari: bănci, energie, consum de bază. Dividendele se reinvestesc automat. Se mișcă altfel decât tehnologia.' },
+  IS3Q: { valute: { USD: 75 }, nume: 'iShares Edge MSCI World Quality Factor (Acc)', isin: 'IE00BP3QZ601', ter: 0.25, rol: 'stil', tema: 'Calitate', indice: 'MSCI World Sector Neutral Quality', companii: '~300', despre: 'Companiile cu profit mare și stabil și datorii mici, din fiecare sector. Istoric, au scăzut ceva mai puțin în crize.' },
+  IQQ0: { valute: { USD: 60 }, nume: 'iShares Edge MSCI World Minimum Volatility (Acc)', isin: 'IE00B8FHGS14', ter: 0.30, rol: 'stil', tema: 'Volatilitate redusă', indice: 'MSCI World Minimum Volatility', companii: '~290', despre: 'Companiile ale căror prețuri se mișcă cel mai puțin: utilități, consum de bază, sănătate. Câștigă de obicei mai puțin când bursa urcă tare și pierd mai puțin când scade.' },
+  PPFB: { valute: { USD: 100 }, nume: 'iShares Physical Gold ETC', isin: 'IE00B4ND3602', ter: 0.12, rol: 'aur', tema: 'Aur', indice: 'LBMA Gold Price', companii: 'aur fizic, nu companii', despre: 'Aur fizic, păstrat în seifuri. Nu e un ETF de acțiuni, ci un ETC: urmărește prețul aurului, în dolari. Nu aduce dividende.' },
+  XEON: { nume: 'Xtrackers II EUR Overnight Rate Swap 1C', isin: 'LU0290358497', ter: 0.10, rol: 'obligatiuni', tema: 'Obligațiuni', indice: 'Solactive €STR +8.5 Daily', companii: 'dobânda zilnică în euro', despre: 'Aproape ca un depozit în euro: crește puțin în fiecare zi, cu dobânda pe o zi a băncilor din zona euro. Practic nu scade, dar nici nu crește ca acțiunile.' },
   EUNA: { nume: 'iShares Core Global Aggregate Bond EUR Hedged', isin: 'IE00BDBRDM35', ter: 0.10, rol: 'obligatiuni', tema: 'Obligațiuni', indice: 'Bloomberg Global Aggregate', companii: '~23.000 de obligațiuni', despre: 'Obligațiuni de stat și de companii din toată lumea, cu riscul valutar acoperit în euro. Se mișcă mult mai puțin decât acțiunile.' },
 };
 // ETF-uri tratate ca nucleu: fără semnale de vânzare sau de protecție; împart ținta ETF.
@@ -190,8 +205,9 @@ export const MSCI_WORLD = { 2000: -13.18, 2001: -16.82, 2002: -19.89, 2003: 33.1
 
 // Sufixe Trading 212 -> sufixe de bursă. "VWCEd_EQ" = VWCE pe Xetra.
 export const T212_SUFFIX = { d: '.DE', p: '.PA', l: '.L', a: '.AS', e: '.MC', m: '.MI', s: '.SW' };
-export const SYMBOL_OVERRIDES = Object.fromEntries(['VWCE', 'EUNL', 'SXR8', 'IS3N', 'VVSM', 'DFEN', 'EUNA', 'XDWD', 'XDWH', 'XDWF', 'XDWS', 'XDW0', 'XDWU', 'XDWI'].map(k => [k + 'd_EQ', k]));
-export const ETORO_SYMBOL = Object.fromEntries(['VWCE', 'EUNL', 'SXR8', 'IS3N', 'VVSM', 'DFEN', 'EUNA', 'XDWD', 'XDWH', 'XDWF', 'XDWS', 'XDW0', 'XDWU', 'XDWI'].map(k => [k, k + '.DE']));
+// toate ETF-urile din catalog sunt pe Xetra (sufixul „d” la Trading 212, „.DE” la eToro)
+export const SYMBOL_OVERRIDES = Object.fromEntries(Object.keys(ETF_CATALOG).map(k => [k + 'd_EQ', k]));
+export const ETORO_SYMBOL = Object.fromEntries(Object.keys(ETF_CATALOG).map(k => [k, k + '.DE']));
 
 // Moneda de listare după sufix (pentru expunerea valutară).
 export const MONEDA_SUFIX = { '.PA': 'EUR', '.DE': 'EUR', '.AS': 'EUR', '.MC': 'EUR', '.MI': 'EUR', '.L': 'GBP', '.SW': 'CHF' };

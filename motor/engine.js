@@ -515,10 +515,11 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
         etapa: ind.sma20 != null && ind.pret > ind.sma20 ? 'stabilizat' : 'scade', sectorPeste: tp > profil.maxTema && g.tema !== 'Altele', tema: g.tema, tp };
     }
   }
-  // Oportunitate: o acțiune sub țintă, în trend lung bun, care a scăzut temporar.
-  if (!g.etf && semnal === 'adauga' && ind && ind.sma200 != null && ind.pret > ind.sma200 && fundam >= 0 &&
-      ((ind.rsi != null && ind.rsi < RISK.rsiIeftin) || (ind.deLaMaxim3l != null && ind.deLaMaxim3l <= -10))) {
-    oportunitate = `A scăzut ${fmt(-ind.deLaMaxim3l)}% față de maximul pe 3 luni. Trendul lung și fundamentalele sunt în regulă.`;
+  // Oportunitate: o acțiune sub țintă, în trend lung bun, care a scăzut repede (RSI mic).
+  // v0.41: doar după RSI. „10% sub maximul pe 3 luni” a fost urmat, pe istoric, mai des de încă o cădere de 20% (34% din cazuri,
+  // față de 22% în mod obișnuit): nu era o oportunitate. RSI mic într-un trend bun a fost urmat mai des de revenire.
+  if (!g.etf && semnal === 'adauga' && ind && ind.sma200 != null && ind.pret > ind.sma200 && fundam >= 0 && ind.rsi != null && ind.rsi < RISK.rsiIeftin) {
+    oportunitate = `RSI ${Math.round(ind.rsi)}: a scăzut repede în ultimele săptămâni${ind.deLaMaxim3l != null && ind.deLaMaxim3l < -1 ? ` (${fmt(-ind.deLaMaxim3l)}% sub maximul pe 3 luni)` : ''}. Trendul lung și fundamentalele sunt în regulă.`;
   }
   if (abatere !== 0 && !g.etf) motive.push(`· Pondere ${fmt(g.pondere)}%, ținta ta e ${fmt(tinta)}%`);
   return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate, reducere };
@@ -534,10 +535,8 @@ export function oportunitateIntraday(p, pret) {
   if (!c?.length || !ind?.sma200 || pret <= ind.sma200 || (p.fundam ?? 0) < 0) return null;
   const max3l = Math.max(...c.slice(-63)), scadere = (pret / max3l - 1) * 100;
   const r = rsi([...c.slice(-120), pret]);
-  if (!(scadere <= -10 || (r != null && r < RISK.rsiIeftin))) return null;
-  return { scadere, rsi: r, text: scadere <= -10
-    ? `A scăzut ${fmt(-scadere)}% față de maximul pe 3 luni. Trendul lung și fundamentalele sunt în regulă.`
-    : `RSI ${Math.round(r)}: a scăzut foarte repede. Trendul lung și fundamentalele sunt în regulă.` };
+  if (!(r != null && r < RISK.rsiIeftin)) return null; // v0.41: doar după RSI (vezi evalueaza)
+  return { scadere, rsi: r, text: `RSI ${Math.round(r)}: a scăzut foarte repede${scadere < -1 ? ` (${fmt(-scadere)}% sub maximul pe 3 luni)` : ''}. Trendul lung și fundamentalele sunt în regulă.` };
 }
 
 // ---------- Planul lunar ----------
@@ -872,6 +871,20 @@ const ETF_LARG = k => ['nucleu', 'regional', 'stil', 'obligatiuni'].includes(ETF
 // Sentimentul pieței (0 = frică mare, 100 = euforie), din 5 măsurători, fiecare 0–100:
 //  trendul global (VWCE față de media de 200 de zile), lățimea (câte companii sunt peste media lor de 200 de zile),
 //  impulsul (câte au urcat în ultima lună), distanța VWCE față de maximul pe un an și cât de agitată e piața (VWCE, ATR).
+// v0.41: trendul, distanța de la maxim și agitația se notează după cât de des s-au văzut în istorie (S&P 500 zilnic, 1962–2019):
+// 50 = o zi obișnuită, 90 = mai sus decât în 9 zile din 10. Înainte, o piață pe creștere obișnuită ieșea „euforie” jumătate din timp.
+const ISTORIC_PIATA = { // percentilele 5, 10, 20, …, 90, 95
+  trend: [-10.4, -6.92, -2.93, 0.14, 2.33, 3.93, 5.3, 6.77, 8.74, 11.78, 14.18],
+  maxim: [-23.76, -18.32, -11.86, -7.52, -5.27, -3.73, -2.54, -1.7, -1, -0.47, -0.2],
+  agitatie: [0.68, 0.76, 0.88, 1.01, 1.15, 1.3, 1.47, 1.63, 1.83, 2.13, 2.51] };
+const PCT = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95];
+export function percentila(v, b) {
+  const n = b.length - 1;
+  if (v <= b[0]) return Math.max(0, PCT[0] - PCT[0] * (b[0] - v) / (2 * (b[1] - b[0]) || 1));
+  if (v >= b[n]) return Math.min(100, PCT[n] + (100 - PCT[n]) * (v - b[n]) / (2 * (b[n] - b[n - 1]) || 1));
+  for (let i = 1; i <= n; i++) if (v <= b[i]) return PCT[i - 1] + (PCT[i] - PCT[i - 1]) * (v - b[i - 1]) / ((b[i] - b[i - 1]) || 1);
+  return 50;
+}
 export function sentimentPiata(pozitii = [], candidati = []) {
   const toate = [...pozitii.filter(p => !p.virtual), ...candidati].filter(x => x?.ind?.pret != null);
   const glob = ['VWCE', 'EUNL', 'XDWD', 'SXR8'].map(k => toate.find(x => x.symbol === k)?.ind).find(i => i?.sma200 != null) || null;
@@ -879,76 +892,91 @@ export function sentimentPiata(pozitii = [], candidati = []) {
   const C = [];
   if (glob) {
     const d = (glob.pret / glob.sma200 - 1) * 100;
-    C.push({ k: 'trend', nume: 'Trendul pieței globale', scor: Math.round(lim(50 + d * 5, 0, 100)),
+    C.push({ k: 'trend', nume: 'Trendul pieței globale', scor: Math.round(percentila(d, ISTORIC_PIATA.trend)),
       text: `VWCE e cu ${fmt(Math.abs(d))}% ${d >= 0 ? 'peste' : 'sub'} media lui de 200 de zile.` });
-    if (glob.deLaMaxim != null) C.push({ k: 'maxim', nume: 'Distanța de la maxim', scor: Math.round(lim(100 + glob.deLaMaxim * 5, 0, 100)),
+    if (glob.deLaMaxim != null) C.push({ k: 'maxim', nume: 'Distanța de la maxim', scor: Math.round(percentila(glob.deLaMaxim, ISTORIC_PIATA.maxim)),
       text: glob.deLaMaxim > -1 ? 'VWCE e aproape de maximul pe un an.' : `VWCE e cu ${fmt(Math.abs(glob.deLaMaxim))}% sub maximul pe un an.` });
-    if (glob.atrPct != null) C.push({ k: 'agitatie', nume: 'Cât de agitată e piața', scor: Math.round(lim((2 - glob.atrPct) / 1.3 * 100, 0, 100)),
-      text: `VWCE se mișcă în medie ${fmt(glob.atrPct)}% pe zi${glob.atrPct > 1.3 ? ', mai mult decât de obicei (~1%)' : ', cam cât de obicei'}.` });
+    if (glob.atrPct != null) C.push({ k: 'agitatie', nume: 'Cât de agitată e piața', scor: Math.round(100 - percentila(glob.atrPct, ISTORIC_PIATA.agitatie)),
+      text: `VWCE se mișcă în medie ${fmt(glob.atrPct)}% pe zi${glob.atrPct > 1.6 ? ', mai mult decât de obicei' : glob.atrPct < 0.9 ? ', mai puțin decât de obicei' : ', cam cât de obicei'}.` });
   }
   const cu200 = act.filter(x => x.ind.sma200 != null);
   if (cu200.length >= 15) { const p = cu200.filter(x => x.ind.pret > x.ind.sma200).length / cu200.length * 100;
-    C.push({ k: 'latime', nume: 'Câte companii sunt pe creștere', scor: Math.round(p), text: `${Math.round(p)}% din ${cu200.length} companii mari sunt peste media lor de 200 de zile.` }); }
+    C.push({ k: 'latime', nume: 'Câte companii sunt pe creștere', scor: Math.round(lim(50 + (p - 60) * 1.25, 0, 100)), text: `${Math.round(p)}% din ${cu200.length} companii mari sunt peste media lor de 200 de zile (de obicei, cam 60%).` }); }
   const cu1l = act.filter(x => x.ind.r1l != null);
   if (cu1l.length >= 15) { const p = cu1l.filter(x => x.ind.r1l > 0).length / cu1l.length * 100;
-    C.push({ k: 'impuls', nume: 'Impulsul ultimei luni', scor: Math.round(p), text: `${Math.round(p)}% dintre ele au urcat în ultima lună.` }); }
+    C.push({ k: 'impuls', nume: 'Impulsul ultimei luni', scor: Math.round(lim(50 + (p - 55) * 1.1, 0, 100)), text: `${Math.round(p)}% dintre ele au urcat în ultima lună (de obicei, cam 55%).` }); }
   if (C.length < 2) return null;
   const scor = Math.round(C.reduce((a, c) => a + c.scor, 0) / C.length);
-  const [stare, eticheta] = scor < 25 ? ['frica_mare', 'Frică mare'] : scor < 45 ? ['frica', 'Frică'] : scor < 56 ? ['neutru', 'Neutru'] : scor < 76 ? ['optimism', 'Optimism'] : ['euforie', 'Euforie'];
+  const [stare, eticheta] = scor < 20 ? ['frica_mare', 'Frică mare'] : scor < 40 ? ['frica', 'Frică'] : scor < 60 ? ['neutru', 'Neutru'] : scor < 80 ? ['optimism', 'Optimism'] : ['euforie', 'Euforie'];
   const ce = {
     frica_mare: 'Piața e speriată: prețurile au scăzut mult și se mișcă tare. Istoric, astfel de momente au fost bune pentru cumpărări pe termen lung, în tranșe, dar fundul nu se poate ghici.',
     frica: 'Piața e prudentă: mai multe companii scad decât urcă. Pentru cine are ani înainte, cumpărările regulate continuă; ocaziile apar la companiile bune care scad odată cu piața.',
     neutru: 'Piața nu e nici speriată, nici euforică. Planul obișnuit, fără grabă.',
     optimism: 'Piața e optimistă: majoritatea companiilor urcă. Cumpărările regulate continuă; nu e momentul pentru sume mari dintr-odată.',
-    euforie: 'Piața e euforică: aproape totul a urcat mult. Istoric, după astfel de perioade riscul unei corecții e mai mare. Ține-te de plan și de plafoane, fără sume în plus.',
+    euforie: 'Piața e foarte optimistă: aproape totul a urcat mult. Istoric, asta singură nu a anunțat o scădere apropiată, dar nici nu e momentul pentru sume mari puse dintr-odată. Ține-te de plan și de plafoane.',
   }[stare];
   return { scor, stare, eticheta, ce, componente: C, n: act.length };
 }
 
 // Merită să cumperi acum (inclusiv după o scădere)? Pentru o poziție, o idee nouă sau un ETF din catalog.
 // x: { symbol, ind, fund, rec, rezultate?, etf? }; piata: sentimentPiata(); ref: { r3l } (VWCE). Decizia rămâne a ta.
+// v0.41, verificat pe istoric (15 acțiuni mari 1996–2019, S&P 500 1950–2019, lunar, cu ce s-a întâmplat în 6 și 12 luni după):
+//  - ETF-urile largi nu au moment bun sau rău: verdictul după preț nu a deosebit lunile bune de cele rele, iar pe 3 ani
+//    S&P 500 a fost pe plus în 84% din cazuri, oricând ai fi cumpărat. Pentru ele verdictul e mereu „cumpără regulat”.
+//  - La acțiuni, ce a prezis bine riscul unei căderi mari în continuare: trendul lung (în jos: 22% din cazuri au mai căzut 25% în
+//    6 luni; în sus: 14%), distanța de la maxim (aproape de maxim: 10%; 15–25% sub maxim: 28%), piața în frică (34% față de 10%)
+//    și o scădere mult mai mare decât a pieței. Înainte, scăderile și frica primeau puncte în plus: de aici veneau „Merită”-urile
+//    urmate de căderi (Merită: 19% căderi mari, față de 17% media; acum, vezi testul test-v41.mjs).
+//  - Fără efect măsurabil: RSI peste 70 și euforia pieței. Nu mai scad verdictul.
+//  - Fiecare informație contează o singură dată (înainte, trendul și analiștii intrau de două ori, o dată prin scorul ideii).
 export function verdictCumparare(x, piata = null, ref = {}, azi = new Date().toISOString().slice(0, 10), ctx = null) {
   const i = x?.ind || {}, k = x?.symbol, etfC = !!ETF_CATALOG[k], larg = ETF_LARG(k), plus = [], minus = [];
   if (i.pret == null) return null;
   let p = 0;
   const dd = i.deLaMaxim ?? null, aScazut = dd != null && dd <= -8;
+  const sus = i.sma200 != null && i.pret > i.sma200, confirmat = sus && i.sma50 != null && i.sma50 >= i.sma200,
+    jos = i.sma200 != null && i.pret < i.sma200 && i.sma50 != null && i.sma50 < i.sma200;
   // 1) trendul lung
   if (i.sma200 != null) {
-    if (i.pret > i.sma200) { p += 2; plus.push('Trendul lung e încă în sus (peste media de 200 de zile).'); }
-    else if (i.sma50 != null && i.sma50 < i.sma200) { p -= larg ? 1 : 2; minus.push(`Trendul lung s-a întors în jos (sub media de 200 de zile, iar media de 50 e sub ea)${larg ? ': piața întreagă e în scădere, iar fundul nu se poate ghici' : ''}.`); }
+    if (confirmat) { p += 2; plus.push('Trendul lung e în sus (peste media de 200 de zile, iar media de 50 e peste ea).'); }
+    else if (sus) { p += 1; plus.push('A trecut peste media de 200 de zile, dar trendul nu e încă confirmat (media de 50 e sub ea).'); }
+    else if (jos) { p -= 2; minus.push(`Trendul lung e în jos (sub media de 200 de zile, iar media de 50 e sub ea)${larg ? ': piața întreagă e în scădere' : ': istoric, acțiunile în trend descendent au căzut mai des încă 25% în următoarele 6 luni'}.`); }
     else minus.push('E sub media de 200 de zile: trendul lung e la limită.');
   }
-  // 2) de unde vine scăderea: din piață sau din companie
+  // 2) distanța de la maximul pe un an și de unde vine scăderea
+  if (dd != null && !larg) {
+    if (dd > -8 && sus) { p += 1; plus.push('E aproape de maximul pe un an: istoric, căderile mari au fost cele mai rare de aici.'); }
+    else if (dd <= -15) { p -= 1; minus.push(`E cu ${fmt(Math.abs(dd))}% sub maximul pe un an: istoric, după scăderi atât de mari a urmat mai des încă o cădere decât o revenire rapidă.`); }
+  }
   if (aScazut && i.r3l != null && ref?.r3l != null && !larg) {
     const rel = i.r3l - ref.r3l;
-    if (rel > -5) { p += 1; plus.push(`A scăzut ${fmt(Math.abs(dd))}% de la maxim, dar pe 3 luni a mers cam ca piața (${fmt(i.r3l)}% față de ${fmt(ref.r3l)}% VWCE): scăderea vine mai ales din piață.`); }
-    else if (rel <= -10) { p -= 2; minus.push(`Pe 3 luni a mers mult mai slab decât piața (${fmt(i.r3l)}% față de ${fmt(ref.r3l)}% VWCE): problema pare la companie, nu la piață.`); }
-  } else if (aScazut && larg) { p += 1; plus.push(`A scăzut ${fmt(Math.abs(dd))}% de la maxim. E un ETF larg: scade odată cu piața și, istoric, și-a revenit odată cu ea.`); }
-  // 3) vândut în exces sau încă scump pe termen scurt
-  if (i.rsi != null) {
-    if (i.rsi < RISK.rsiIeftin) { p += 1; plus.push(`Vândut în exces pe termen scurt (RSI ${Math.round(i.rsi)}): de obicei urmează o revenire, măcar parțială.`); }
-    else if (i.rsi > RISK.rsiScump) { p -= 1; minus.push(`Încă scump pe termen scurt (RSI ${Math.round(i.rsi)}): după urcări atât de rapide, prețul se mai răcește de obicei.`); }
+    if (rel <= -10) { p -= 2; minus.push(`Pe 3 luni a mers mult mai slab decât piața (${fmt(i.r3l)}% față de ${fmt(ref.r3l)}% VWCE): problema pare la companie, nu la piață.`); }
+    else if (rel > -5) plus.push(`Pe 3 luni a mers cam ca piața (${fmt(i.r3l)}% față de ${fmt(ref.r3l)}% VWCE): scăderea vine mai ales din piață.`);
   }
-  // 4) calitatea: compania (scorul din cifre și analiști) sau ETF-ul (sute de companii)
+  // 3) o scădere rapidă într-un trend bun (RSI mic) a fost urmată mai des de revenire
+  if (i.rsi != null && i.rsi < RISK.rsiIeftin && confirmat) { p += 1; plus.push(`A scăzut repede în ultimele săptămâni (RSI ${Math.round(i.rsi)}), într-un trend lung bun: de obicei urmează o revenire, măcar parțială.`); }
+  // 4) calitatea: compania (doar cifrele ei, plus analiștii) sau ETF-ul
   if (larg) { const cc = ETF_CATALOG[k].companii || '', ce = /obligațiuni/.test(cc) ? `ETF cu ${cc}` : /^~?[\d.]+$/.test(cc) ? `ETF cu ${cc} de companii` : `ETF (${cc})`;
-    p += 2; plus.push(`${ce}: nu poate da faliment ca o singură firmă.`); }
+    plus.push(`${ce}: nu poate da faliment ca o singură firmă.`); }
   else if (!etfC) {
-    const s = scorIdee(x);
-    if (s.scor != null) {
-      if (s.scor >= 70) { p += 2; plus.push(`Cifrele companiei sunt bune (scor ${s.scor}/100: profit, venituri, evaluare, analiști).`); }
-      else if (s.scor >= 50) { p += 1; plus.push(`Cifrele companiei sunt decente (scor ${s.scor}/100).`); }
-      else if (s.scor < 40) { p -= 2; minus.push(`Cifrele companiei sunt slabe (scor ${s.scor}/100).`); }
+    const f = x.fund || {}, crit = [];
+    if (f.marja != null) crit.push(f.marja >= 15 ? 1 : f.marja >= 8 ? 0.6 : f.marja > 0 ? 0.3 : 0);
+    if (f.roe != null) crit.push(f.roe >= 15 ? 1 : f.roe >= 8 ? 0.6 : f.roe > 0 ? 0.3 : 0);
+    if (f.crestereVenit != null) crit.push(f.crestereVenit >= 10 ? 1 : f.crestereVenit >= 3 ? 0.67 : f.crestereVenit >= 0 ? 0.33 : 0);
+    if (crit.length >= 2) { const sc = Math.round(crit.reduce((a, b) => a + b, 0) / crit.length * 100);
+      if (sc >= 70) { p += 1; plus.push(`Cifrele companiei sunt bune (${sc}/100: profit, rentabilitate, creșterea veniturilor).`); }
+      else if (sc < 40) { p -= 2; minus.push(`Cifrele companiei sunt slabe (${sc}/100: profit, rentabilitate, creșterea veniturilor).`); } }
+    if (f.pe != null) {
+      if (f.pe <= 0) { p -= 1; minus.push('Compania n-a avut profit în ultimul an (P/E negativ).'); }
+      else if (f.pe > 60) { p -= 1; minus.push(`Evaluare foarte mare (P/E ${Math.round(f.pe)}): prețul presupune ani de creștere puternică; orice dezamăgire costă mult.`); }
     }
     const r = x.rec; if (r) { const pos = (r.strongBuy || 0) + (r.buy || 0), neg = (r.sell || 0) + (r.strongSell || 0), tot = pos + neg + (r.hold || 0);
       if (tot >= 3) { const net = (pos - neg) / tot; if (net >= 0.5) { p += 1; plus.push(`Analiștii sunt în majoritate pozitivi (${pos} din ${tot} recomandă cumpărarea).`); } else if (net < 0) { p -= 1; minus.push(`Mai mulți analiști recomandă vânzarea decât cumpărarea.`); } } }
     if (x.rezultate && x.rezultate >= azi && (new Date(x.rezultate) - new Date(azi)) / 864e5 <= RISK.zileRezultate) { p -= 1; minus.push(`Rezultatele trimestriale vin pe ${x.rezultate}: prețul poate sări în orice direcție. De obicei merită așteptate.`); }
   }
   if (i.volAn != null && i.volAn > 45 && !larg) { p -= 1; minus.push(`Prețul e foarte agitat (${Math.round(i.volAn)}% pe an): doar sume mici.`); }
-  // 5) sentimentul pieței: frica ajută cumpărătorul răbdător, euforia cere prudență
-  if (piata) {
-    if (piata.scor < 45 && i.sma200 != null && (larg || !(i.pret < i.sma200 && i.sma50 < i.sma200))) { p += 1; plus.push(`Piața e în „${piata.eticheta.toLowerCase()}” (${piata.scor}/100): istoric, cumpărările făcute în frică, în tranșe, au dat rezultate bune pe termen lung.`); }
-    else if (piata.scor >= 76) { p -= 1; minus.push(`Piața e în euforie (${piata.scor}/100): riscul unei corecții e mai mare decât de obicei.`); }
-  }
+  // 5) piața: în frică, acțiunile individuale au căzut mai des încă mult; euforia nu a schimbat nimic măsurabil
+  if (piata && !larg && piata.scor < 40) { p -= 1; minus.push(`Piața e în „${piata.eticheta.toLowerCase()}” (${piata.scor}/100): istoric, în astfel de perioade acțiunile individuale au mai căzut des. Un ETF larg e varianta mai sigură acum.`); }
   // 6) se potrivește în portofoliul tău? (ctx: { teme, profil }): un sector sau o poziție peste plafon nu mai primește bani noi
   let plin = null;
   if (ctx?.profil && !ETFS.includes(k)) {
@@ -957,10 +985,12 @@ export function verdictCumparare(x, piata = null, ref = {}, azi = new Date().toI
     else if (t && t !== 'Altele' && tp >= pr.maxTema) plin = `Sectorul „${t}” are deja ${fmt(tp)}% din portofoliul tău, peste plafonul de ${pr.maxTema}%.`;
     if (plin) minus.push(plin);
   }
-  let [nivel, titlu, sfat] = p >= 4 ? ['merita', 'Merită', 'Dacă se potrivește în planul tău, cumpără în 2–3 tranșe, la câteva săptămâni distanță, nu tot dintr-odată.']
+  let [nivel, titlu, sfat] = p >= 4 ? ['merita', 'Merită', 'Semnalele care au contat în istorie sunt de partea ei. Dacă se potrivește în planul tău, cumpără în 2–3 tranșe, la câteva săptămâni distanță.']
     : p >= 2 ? ['poate', 'Poate, cu o sumă mică', 'Semnalele sunt mai mult bune decât rele. O primă tranșă mică; restul doar dacă se confirmă.']
     : p >= 0 ? ['asteapta', 'Mai așteaptă', 'Semnalele sunt amestecate. Nu e o grabă: urmărește-o încă 2–4 săptămâni.']
     : ['nu', 'Nu acum', 'Mai multe semnale sunt contra. Banii merg mai bine în ETF-ul de bază sau în altă idee din plan.'];
+  // un ETF larg: nu se caută momentul (vezi mai sus); doar un trend descendent e spus, ca să știi la ce să te aștepți
+  if (larg) [nivel, titlu, sfat] = ['merita', 'Merită, regulat', `Pentru un ETF larg, momentul contează puțin: pe 3 ani, piața a fost pe plus în peste 8 cazuri din 10, oricând ai fi cumpărat. Cumpără regulat, în fiecare lună${jos ? '; în scădere cumperi mai ieftin, dar nu ghici fundul cu sume mari' : ''}.`];
   if (plin && (nivel === 'merita' || nivel === 'poate')) [nivel, titlu, sfat] = ['asteapta', 'Arată bine, dar nu pentru tine acum', 'Ca investiție, semnalele sunt bune. În portofoliul tău însă locul ei e deja plin: banii noi merg mai bine în ETF sau într-un sector care îți lipsește.'];
   return { nivel, titlu, sfat, puncte: p, plus, minus, aScazut, dd, plin: !!plin };
 }

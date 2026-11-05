@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.40.1';
+const APP_VER = '0.40.2';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
@@ -1350,7 +1350,7 @@ async function automatFoaie(){
     <div class="lbl" style="margin:16px 0 8px">De ce cron-job.org</div>
     <div class="sub" style="line-height:1.55">GitHub sare des rulările programate (în unele zile, aproape toate). cron-job.org e gratuit și pornește analiza exact la oră, prin GitHub. Primește un token care poate doar porni analiza: nu vede date, chei sau cod.</div>
     <div class="lbl" style="margin:16px 0 8px">Configurarea, o singură dată (~5 minute)</div>
-    ${pas(1, 'Tokenul pentru cron-job.org', `Deschide direct <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a> (Fine-grained token). Nume: „cron-job Analist”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${repo.split('/')[1]}. La Permissions → Repository permissions: <b>Actions: Read and write</b>. Nimic altceva. Copiază tokenul.`)}
+    ${pas(1, 'Tokenul pentru cron-job.org', `Deschide direct <a class="ext" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a> (Fine-grained token). Nume: „cron-job Analist”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${repo.split('/')[1]}. La Permissions → Repository permissions: <b>Actions: Read and write</b>. Nimic altceva. Copiază tokenul.`)}
     ${pas(2, 'Contul', 'Pe <a href="https://cron-job.org" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">cron-job.org</a>, cont gratuit. La Settings, alege fusul orar <b>Europe/Bucharest</b>.')}
     ${pas(3, 'O singură sarcină: „Analist”', `Create cronjob. Titlu: Analist. URL:${cp('URL', url)}Execution schedule: <b>Custom</b>. Days of week: luni–vineri. Hours: <b>9–23</b>. Minutes: <b>15 și 45</b>. Pornește la 9:15 și ultima la 23:45. Rularea de la 23:15, după închiderea bursei US, devine singură analiza completă a zilei (semnale, planul lunii, istoric, rezumatul zilei).<br>În <b>Advanced</b>: Request method <b>POST</b>. Headers (Add header, de trei ori):${cp('Authorization', 'Bearer TOKENUL_TĂU')}${cp('Accept', 'application/vnd.github+json')}${cp('X-GitHub-Api-Version', '2022-11-28')}Request body:${cp('Body', zi)}Salvează.`)}
     ${pas(4, 'Verifică', 'În cron-job.org, apasă <b>Test run</b> la prima sarcină: răspunsul trebuie să fie <b>204</b>. Apoi redeschide această fereastră: în cel mult un minut apare rularea nouă. Bifează și „Notify me when the cronjob fails”: dacă tokenul expiră, primești un e-mail.')}
@@ -1817,7 +1817,7 @@ function pregatesteCulori(){ let rest=0, gasit=false;
     const gata=()=>{ if (--rest===0 && gasit && V && !$('sheet').classList.contains('on') && !VT_ACUM) render(); }; // o singură redesenare, când sunt gata toate
     im.onload=()=>{ try { CUL[p.symbol]=culoareDin(im); gasit = gasit || !!CUL[p.symbol]; } catch(e) { CUL[p.symbol]=null; } gata(); }; im.onerror=gata; im.src=l; } }
 function avErr(im){ const a=im.parentNode; a.classList.remove('img'); a.textContent=im.dataset.t||''; }
-const avatar = (p, m) => { const l=sigla(p), t=esc(p.symbol.replace(/\..*$/,'').slice(0,4)), cl=l&&culoriActiune(p.symbol); return l ? `<span class="av img${m?' '+m:''}" style="--c:${cl?cl.c:`var(${culoareTema(p.tema)})`}"><img src="${l}" alt="" loading="lazy" decoding="async" data-t="${t}" data-er="${A('avErr','$el')}"></span>` : `<span class="av${m?' '+m:''}${p.virtual?' vt':''}" style="--c:var(${culoareTema(p.tema)})">${t}</span>`; };
+const avatar = (p, m) => { const l=sigla(p), t=esc(p.symbol.replace(/\..*$/,'').slice(0,4)), cl=l&&culoriActiune(p.symbol); const l4 = t.length>=4 ? ' l4' : ''; return l ? `<span class="av img${l4}${m?' '+m:''}" style="--c:${cl?cl.c:`var(${culoareTema(p.tema)})`}"><img src="${l}" alt="" loading="lazy" decoding="async" data-t="${t}" data-er="${A('avErr','$el')}"></span>` : `<span class="av${l4}${m?' '+m:''}${p.virtual?' vt':''}" style="--c:var(${culoareTema(p.tema)})">${t}</span>`; };
 function inelLuna(mic){
   const tinta = sumaPlan(), inv = investitLuna(), facut = lunaFacuta(), k = facut ? 1 : Math.min(inv/tinta,1), n = serieLuni();
   const R=mic?13:18, W=mic?34:46, C=2*Math.PI*R, c=W/2;
@@ -1909,7 +1909,7 @@ function rg({t, v, k='--acc', min=0, max=100, x, zone=[], tinta, cent, gl, nota}
   const bar = cent!=null
     ? `<i class="fill" style="background:var(${k});${x>=cent?`left:${pz(cent)}%;width:${pz(x)-pz(cent)}%`:`left:${pz(x)}%;width:${pz(cent)-pz(x)}%`}"></i><b class="mid" style="left:${pz(cent)}%"></b>`
     : `<i class="fill" style="background:var(${k});width:${pz(x)}%"></i>`;
-  return `<div class="rg" ${gl?`data-c="${A('termen',gl)}"`:''}><div class="row"><span>${t}${gl?' <span class="q" style="pointer-events:none">?</span>':''}</span><b class="num" style="color:var(${k})">${v}</b></div>
+  return `<div class="rg" ${gl?`data-c="${A('termen',gl)}"`:''}><div class="row"><span>${(()=>{ const i=t.lastIndexOf(' '); return t.slice(0,i+1)+`<span style="white-space:nowrap">${t.slice(i+1)}${gl?'<span class="q" style="pointer-events:none">?</span>':''}</span>`; })()}</span><b class="num" style="color:var(${k})">${v}</b></div>
     <div class="trk">${zone.map(([a,b,c])=>`<i class="zn" style="left:${pz(a)}%;width:${pz(b)-pz(a)}%;background:var(${c})"></i>`).join('')}${bar}${tinta!=null?`<b class="tg" style="left:${pz(tinta)}%"></b>`:''}<i class="dotm" style="left:${pz(x)}%;background:var(${k})"></i></div>
 </div>`;
 }
@@ -2701,7 +2701,7 @@ function alerteHTML(p){
     ${al.length?al.map(a=>{ const k=`${a.s}:${a.d}:${a.p}`, dist=pr?(a.p/pr-1)*100:null;
       return `<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><span><b class="${a.d==='sub'?'down':'up'}">${a.d==='sub'?'▼ sub':'▲ peste'} ${nf(a.p)}</b> <span class="sub">${at[k]?`atinsă pe ${ziRo(at[k],false)}`:dist!=null?`mai e ${sg(dist,1)}%`:''}</span></span><button class="link" style="color:var(--mut)" data-c="${A('stergeAlerta',a.s,a.d,a.p)}">Șterge</button></div>`; }).join('')
       :'<div class="sub" style="margin-bottom:8px">Primești o notificare când prețul trece pragul. Verificarea se face din oră în oră, în timpul ședinței.</div>'}
-    <div class="seg" style="margin-top:12px">${[['sub','Când scade sub'],['peste','Când urcă peste']].map(([k,t])=>`<button class="${d===k?'on':''}" data-c="${A('detAd',k,p.symbol)}">${t}</button>`).join('')}</div>
+    <div class="seg lat" style="margin-top:12px">${[['sub','Când scade sub'],['peste','Când urcă peste']].map(([k,t])=>`<button class="${d===k?'on':''}" data-c="${A('detAd',k,p.symbol)}">${t}</button>`).join('')}</div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><input id="apret" type="number" inputmode="decimal" step="0.01" style="flex:1 1 auto;min-width:0;margin:0" value="${pr?(+(pr*(d==='sub'?0.9:1.1)).toPrecision(4)):''}" aria-label="Prețul alertei, în ${esc(p.moneda||'')}">
       <button class="btn sm" style="flex:none;margin:0;padding:0 20px" data-c="${A('adaugaAlerta',p.symbol)}">Adaugă</button></div>
     <div class="sub" style="margin-top:8px">Preț în ${esc(p.moneda||'moneda acțiunii')}${pr?`, acum ${nf(pr)}`:''}.</div></div>`;
@@ -2795,7 +2795,7 @@ function galaxie(){
     let zi = null; if (st.rel && D.istoric.zile.length) { const f = Math.max(0, Math.min((now-st.rel.t0)/9000, 1)); zi = Math.min(D.istoric.zile.length-1, Math.max(0, Math.round(f*(D.istoric.zile.length-1)))); if (f>=1) { st.rel=null; $('gxp')?.classList.remove('on'); setTimeout(()=>{ if($('gxd')) $('gxd').textContent=''; }, 1600); } }
     const pond = p => zi==null ? p.pondere : D.istoric.w[SNAP.pozitii.indexOf(p)][zi];
     if (zi!=null && $('gxd')) { const tz=D.istoric.tot, ch=(tz[zi]/tz[0]-1)*100; $('gxd').innerHTML = `${ziRo(D.istoric.zile[zi])} <b class="${ch>=0?'pos':'neg'}">${sg(ch,1)}%</b>`; }
-    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(fond,0,0);
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); if (fond.width && fond.height) ctx.drawImage(fond,0,0); // fundalul poate avea 0 px cât timp ecranul își schimbă mărimea
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
     // doar o parte din stele clipesc (cele sărite la fundal), restul stau pe fundalul gata desenat
     ctx.fillStyle=D.ink; for (let i=0;i<stele.length;i+=6) { const s=stele[i], a=0.2+0.7*(0.5+0.5*Math.sin(t*1.6*s.d+s.f)); ctx.globalAlpha=a; ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r+0.3,0,6.283); ctx.fill(); }
@@ -2807,6 +2807,7 @@ function galaxie(){
     const P_ = D.pl.map(x=>{ const a=x.a0+t*x.w, q=proj(x.R,a); return {...x, a, q, r:rPl(pond(x.p))*q.k}; }).sort((a,b)=>a.q.z-b.q.z);
     D.orb.forEach(o=>orbita(o,false));
     const planeta = x => { const {q,r}=x, behind=q.z<0, dim=behind?0.72:1;
+      if (!(isFinite(r) && r>0 && isFinite(q.x) && isFinite(q.y))) return; // ponderi lipsă într-o zi din reluare: planeta nu se desenează în cadrul acesta
       // urma pe orbită
       ctx.beginPath(); for (let i=0;i<=14;i++) { const qq=proj(x.R, x.a - i*0.035); i?ctx.lineTo(qq.x,qq.y):ctx.moveTo(qq.x,qq.y); } ctx.strokeStyle=x.c; ctx.globalAlpha=0.32*dim; ctx.lineWidth=Math.max(r*0.5,1.2); ctx.lineCap='round'; ctx.stroke(); ctx.globalAlpha=1;
       // strălucirea zilei: verde dacă a urcat azi, roșu dacă a scăzut
@@ -2822,11 +2823,12 @@ function galaxie(){
       ctx.beginPath(); ctx.arc(q.x,q.y,r+2.2,0,6.283); ctx.strokeStyle=x.s; ctx.lineWidth=1.6; ctx.stroke();
       if (st.sel===x.p.symbol) { ctx.beginPath(); ctx.arc(q.x,q.y,r+7+Math.sin(t*4)*1.5,0,6.283); ctx.strokeStyle=D.ink; ctx.globalAlpha=0.8; ctx.lineWidth=1.2; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]);
         ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(W/2,H/2); ctx.strokeStyle=x.c; ctx.globalAlpha=0.35; ctx.stroke(); }
-      ctx.globalAlpha=behind?0.55:0.9; ctx.fillStyle=D.ink; ctx.font=`600 ${Math.max(9,10*q.k)}px system-ui,sans-serif`; ctx.textAlign='center'; ctx.fillText(x.p.symbol.replace(/\..*$/,''), q.x, q.y+r+14*q.k); ctx.globalAlpha=1; };
+      ET.push({ t:x.p.symbol.replace(/\..*$/,''), x:q.x, y:q.y+r+14*q.k, k:q.k, behind, z:q.z, sym:x.p.symbol }); };
+    const ET = [];
     P_.filter(x=>x.q.z<0).forEach(planeta);
     // steaua: portofoliul, cu coroană care pulsează; culoarea spune cum a mers azi (în reluare: față de începutul anului arătat)
     const tz = D.istoric.tot, ch = zi==null ? D.ziP : (tz[zi]/tz[0]-1)*100;
-    const rs = rStar()*(zi==null?1:Math.sqrt(Math.max(tz[zi],1)/Math.max(tz.at(-1),1))), cx=W/2, cy=H/2;
+    const rs0 = rStar()*(zi==null?1:Math.sqrt(Math.max(tz[zi],1)/Math.max(tz.at(-1),1))), rs = isFinite(rs0) && rs0>0 ? rs0 : rStar(), cx=W/2, cy=H/2;
     for (let i=0;i<3;i++) { const g=ctx.createRadialGradient(cx,cy,rs*0.6,cx,cy,rs*(2.2+i*0.9+0.15*Math.sin(t*1.3+i))); g.addColorStop(0,D.star+(i?'30':'55')); g.addColorStop(1,D.star+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,rs*3.6,0,6.283); ctx.fill(); }
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.15); for (let i=0;i<12;i++) { ctx.rotate(Math.PI/6); const L=rs*(1.5+0.35*Math.sin(t*2+i*1.7)); const g=ctx.createLinearGradient(0,0,L,0); g.addColorStop(0,D.star2+'aa'); g.addColorStop(1,D.star2+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-rs*0.12); ctx.lineTo(L,0); ctx.lineTo(0,rs*0.12); ctx.fill(); } ctx.restore();
     const gs=ctx.createRadialGradient(cx-rs*0.3,cy-rs*0.35,rs*0.1,cx,cy,rs); gs.addColorStop(0,'#ffffff'); gs.addColorStop(0.35,D.star); gs.addColorStop(1,D.star2); ctx.fillStyle=gs; ctx.beginPath(); ctx.arc(cx,cy,rs,0,6.283); ctx.fill();
@@ -2834,6 +2836,20 @@ function galaxie(){
     ctx.fillStyle='#04101d'; ctx.font=`700 ${Math.max(10,rs*0.36)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(sg(ch,1)+'%', cx, cy+1); ctx.textBaseline='alphabetic';
     D.orb.forEach(o=>orbita(o,true));
     P_.filter(x=>x.q.z>=0).forEach(planeta);
+    // numele planetelor: deasupra tuturor, fără să se calce între ele sau peste alte planete și peste stea.
+    // Cele din față au prioritate; un nume care s-ar suprapune nu se scrie în cadrul acesta (reapare când planeta se mută).
+    const puse = [], vazut = GX.etV || new Set(), acum = new Set(), stea = rStar()*1.15;
+    for (const e of ET.sort((a,b)=>b.z-a.z)) {
+      const fs = Math.max(9,10*e.k); ctx.font=`600 ${fs}px system-ui,sans-serif`;
+      const m = vazut.has(e.sym) ? 0 : 2, w = ctx.measureText(e.t).width/2 + 2 + m, h = fs*0.62 + m, cy0 = e.y - fs*0.35;
+      const peste = puse.some(b => Math.abs(b.x-e.x) < w+b.w && Math.abs(b.y-cy0) < h+b.h)
+        || P_.some(p => p.p.symbol!==e.sym && Math.abs(p.q.x-e.x) < w+p.r && Math.abs(p.q.y-cy0) < h+p.r)
+        || (Math.abs(W/2-e.x) < w+stea && Math.abs(H/2-cy0) < h+stea);
+      if (peste) continue;
+      puse.push({ x:e.x, y:cy0, w:w-m, h:h-m }); acum.add(e.sym);
+      ctx.globalAlpha=e.behind?0.55:0.9; ctx.fillStyle=D.ink; ctx.textAlign='center'; ctx.fillText(e.t, e.x, e.y);
+    }
+    ctx.globalAlpha=1; GX.etV = acum;
     GX.cadru = P_;
     if (!calm && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
   }
@@ -3182,7 +3198,7 @@ function calculatoareFoaie(){
     <div class="lbl" style="margin:16px 0 8px">Conectează un calculator nou</div>
     <div class="seg" style="margin-bottom:8px"><button class="${cplt?'on':''}" data-c="${A('calcAcces','complet')}">Calculatorul meu</button><button class="${cplt?'':'on'}" data-c="${A('calcAcces','citire')}">De la muncă</button></div>
     <div class="sub" style="line-height:1.55;margin-bottom:8px">${cplt ? '<b>Toate funcțiile</b>, ca pe telefon: analiza la cerere, planul, alertele, notificările pe calculator.' : '<b>Doar citire</b>: vezi totul, dar calculatorul nu pornește analize și nu schimbă nimic. Potrivit pentru un calculator pe care nu-l controlezi tu.'}</div>
-    ${pasG(1, 'Un token nou, doar pentru calculator', `Deschide <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a>. Nume: „Analist PC”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${esc(S.repo.split('/')[1]||'')}. La Permissions → Repository permissions: <b>Contents: Read-only</b>${cplt ? ' și <b>Actions: Read and write</b>' : ', fără Actions'}. Nimic altceva. Copiază tokenul.`)}
+    ${pasG(1, 'Un token nou, doar pentru calculator', `Deschide <a class="ext" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">pagina de token nou din GitHub</a>. Nume: „Analist PC”, expirare 1 an, Repository access: <b>Only select repositories</b> → ${esc(S.repo.split('/')[1]||'')}. La Permissions → Repository permissions: <b>Contents: Read-only</b>${cplt ? ' și <b>Actions: Read and write</b>' : ', fără Actions'}. Nimic altceva. Copiază tokenul.`)}
     <input id="ctok" type="password" autocomplete="off" spellcheck="false" placeholder="Lipește tokenul calculatorului (github_pat_…)">
     ${pasG(2, 'Nume', 'Numele tău apare pe calculator, ca să știi mereu în ce cont ești. Numele calculatorului te ajută să-l recunoști în listă.')}
     <input id="cnume" autocomplete="off" maxlength="24" placeholder="Numele tău (ex. Costi)" value="${esc(S.nume||'')}">
@@ -3380,7 +3396,7 @@ function vSetari(){
   ${pasH(2,'chei','Pune cheile în GitHub',`<div class="sub" style="margin-bottom:8px">Pentru fiecare cheie: New repository secret, apoi numele exact și valoarea. Atinge numele ca să-l copiezi.</div>
     ${R!=='costi1622/analist-date'?`<a class="btn ghost sm" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="https://github.com/${esc(R)}/settings/secrets/actions/new" target="_blank" rel="noopener noreferrer">Deschide pagina de secrete ↗</a>`:'<div class="sub" style="margin-bottom:8px">În repo-ul tău <b class="ink2">analist-date</b>: Settings → Secrets and variables → Actions → New repository secret.</div>'}
     ${SECRETE.map(([n,b,tip,cum,url])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="row"><button class="chip" style="color:var(--acc)" data-c="${A('copiaza',n)}">${n} ⧉</button><span class="sub" style="color:var(${tip==='obligatoriu'?'--neg':tip==='recomandat'?'--warn':'--mut'})">${tip}</span></div>
-      <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
+      <div class="sub" style="margin-top:4px">${esc(cum)} ${url?`<a class="ext" href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">Deschide ↗</a>`:''}</div>
       ${n==='DATA_KEY'?(PORN().dataKey?`<button class="btn ghost sm num" style="margin-top:8px;width:100%;word-break:break-all;font-size:var(--t1)" data-c="${A('copiaza',PORN().dataKey)}">${PORN().dataKey} ⧉</button>${PORN().existenta?'<div class="sub pos" style="margin-top:4px">Cheie existentă, preluată. Nu o pune din nou în GitHub dacă e deja acolo.</div>':''}`
         :`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost sm" style="flex:1" data-c="${A('cheieNoua')}">Generează cheia de date</button></div>
           <details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Am deja o cheie de date (telefon nou)</summary><input id="fdk" autocomplete="off" placeholder="Cheia de date (43 de caractere)"><button class="btn ghost sm" data-c="${A('cheieExistenta')}">Folosește cheia</button></details>`):''}</div>`).join('')}`)}
@@ -3708,7 +3724,7 @@ function raspundeRecap(id, k){ const q = RECAP[id], ok = k === q[2], rp = {...(S
 function simulator(fila){
   fila = fila || S.simFila || 'lunar'; S.simFila = fila; save();
   const s = P().contributieTipica, T = Math.max(SNAP?.totalRON || 0, 1000), R = MSCIW();
-  const tab = `<div class="seg" style="margin-bottom:12px">${[['lunar','Lunar sau o dată'],['crize','Crize'],['2020','Martie 2020'],['costuri','Costuri']].map(([k,t])=>`<button class="${fila===k?'on':''}" data-c="${A('simulator',k)}">${t}</button>`).join('')}</div>`;
+  const tab = `<div class="seg lat" style="margin-bottom:12px">${[['lunar','Lunar sau o dată'],['crize','Crize'],['2020','Martie 2020'],['costuri','Costuri']].map(([k,t])=>`<button class="${fila===k?'on':''}" data-c="${A('simulator',k)}">${t}</button>`).join('')}</div>`;
   let h = '';
   if (fila === 'lunar') {
     const rand = [2000,2007,2015,2020].map(a=>{ const x=simLunar(a,2024,s); return x?`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start"><span><b>Din ${a}</b><span class="sub" style="display:block">depus ${nf(x.dep,0)} lei · cea mai mare scădere a indicelui pe drum ${sg((x.min-1)*100,0)}%</span></span><span class="num" style="text-align:right;white-space:nowrap"><b>${nf(x.v,0)}</b> lunar<br><span class="sub">${nf(x.lump,0)} o dată</span></span></div>`:''; }).join('');
@@ -3726,7 +3742,7 @@ function simulator(fila){
         if (tip === 'panica' && a === an0) { cash += v; v = 0; } }
       return { v: v + cash, dep }; };
     const A1 = sim('continua'), B1 = sim('pauza'), C1 = sim('panica'), L = x => `${nf(x, 0)} lei`;
-    const crize = `<div class="seg" style="margin:0 0 12px">${[[2000, 'Dot-com 2000'], [2008, 'Criza 2008'], [2022, 'Anul 2022']].map(([k, t]) => `<button class="${an0 === k ? 'on' : ''}" data-c="${A('simCriza', k)}">${t}</button>`).join('')}</div>`;
+    const crize = `<div class="seg lat" style="margin:0 0 12px">${[[2000, 'Dot-com 2000'], [2008, 'Criza 2008'], [2022, 'Anul 2022']].map(([k, t]) => `<button class="${an0 === k ? 'on' : ''}" data-c="${A('simCriza', k)}">${t}</button>`).join('')}</div>`;
     h = `${crize}<div class="sub" style="line-height:1.55">${s} lei pe lună, din ianuarie ${an0} până la sfârșitul lui 2024 (depus în total: ${L(A1.dep)}). Randamentele anuale reale ale MSCI World.</div>
       <div class="kv num" style="margin-top:12px"><span>Ai continuat lunar, fără pauză</span><span class="pos">${L(A1.v)}</span><span>Ai oprit depunerile după ${an0} (fără să vinzi) și ai pus banii strânși abia în ${jos + 2}</span><span>${L(B1.v)}</span><span>Ai vândut tot după ${an0} și ai revenit abia în ${jos + 2}</span><span class="neg">${L(C1.v)}</span></div>
       <div class="sug">${ic('bec')}<span>Diferența dintre răbdare și panică: <b>${L(A1.v - C1.v)}</b>. Cine continuă cumpără ieftin exact în anii răi, iar cine vinde ratează revenirea, care vine de obicei brusc.</span></div>

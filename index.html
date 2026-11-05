@@ -4,7 +4,7 @@
 <head>
 <meta name="author" content="Constantin Enache"><meta name="copyright" content="© 2026 Constantin Enache. Toate drepturile rezervate.">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'none'; frame-src 'none'; child-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <script src="garda.js"></script>
 <meta name="robots" content="noindex, nofollow">
@@ -48,6 +48,10 @@ html{font-size:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--sh1:0 1px 3px rgba(20,30,50,.12);--sh2:0 6px 16px -4px rgba(20,30,50,.14);--sh3:0 16px 40px -8px rgba(20,30,50,.18)}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg) radial-gradient(120% 60% at 50% -10%,var(--glow),transparent 60%) no-repeat;background-attachment:fixed;color:var(--ink);font:var(--t3)/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
+/* Pe telefon se poartă ca o aplicație, nu ca o pagină web: fără selectare de text și bara de căutare Chrome, fără meniul de apăsare lungă,
+   fără „trage în jos ca să reîncarci”, fără zoom la dublă atingere, fără bare de derulare. Câmpurile și codurile de copiat rămân selectabile. */
+@media (pointer:coarse){html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}input,textarea,select,.sel,.codc{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}img,a{-webkit-user-drag:none;-webkit-touch-callout:none}html{touch-action:manipulation;scrollbar-width:none}*::-webkit-scrollbar{display:none}*{scrollbar-width:none}}
+:focus:not(:focus-visible){outline:none}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:var(--r1)}

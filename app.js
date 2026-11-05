@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.40.2';
+const APP_VER = '0.40.3';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
@@ -1768,6 +1768,13 @@ function cartonasActiv(car){ const r = car.getBoundingClientRect(), mij = r.left
 document.addEventListener('scroll', e => { const car = e.target; if (car?.id !== 'car') return; const i = cartonasActiv(car);
   document.querySelectorAll('#dots i').forEach((d,k)=>d.classList.toggle('on', k===i)); }, { capture:true, passive:true });
 // atingi rândul de puncte: merge la cel mai apropiat punct (tot rândul e țintă, punctele sunt prea mici pentru deget)
+// Pe telefon, ca o aplicație: apăsarea lungă nu deschide meniul browserului și nu selectează text (în afară de câmpuri și coduri de copiat).
+if (matchMedia('(pointer:coarse)').matches) {
+  const liber = e => { const el = e.target?.nodeType === 3 ? e.target.parentElement : e.target; return !!el?.closest?.('input,textarea,select,.sel,.codc'); };
+  document.addEventListener('contextmenu', e => { if (!liber(e)) e.preventDefault(); });
+  document.addEventListener('selectstart', e => { if (!liber(e)) e.preventDefault(); });
+  document.addEventListener('dragstart', e => { if (!liber(e)) e.preventDefault(); });
+}
 document.addEventListener('click', e => { const r = e.target.closest?.('#dots'); if (!r) return; let best = 0, dist = Infinity;
   [...r.children].forEach((d,k)=>{ const b = d.getBoundingClientRect(), x = Math.abs(b.left + b.width/2 - e.clientX); if (x < dist) { dist = x; best = k; } }); mergiCartonas(best); });
 // Pe calculator, cu mouse-ul: tragi de cartonașe și de rândurile de filtre, ca pe telefon. Un clic scurt rămâne clic,
@@ -2278,13 +2285,34 @@ function recomandari(){ if (!M || !SNAP?.pozitii) return []; const d={...decizii
 // ===== v0.40: sentimentul pieței, verdictul „merită acum?” și perspectiva portofoliului (calculate în motor, din datele analizei) =====
 const PIATA = () => { if (!M?.sentimentPiata || !SNAP) return null; if (PIATA.s !== SNAP) { PIATA.s = SNAP; try { PIATA.v = M.sentimentPiata(SNAP.pozitii||[], SNAP.candidati||[]); } catch(e) { PIATA.v = null; } } return PIATA.v; };
 const PERSP = () => { if (!M?.perspectivaPortofoliu || !SNAP) return null; try { return M.perspectivaPortofoliu(SNAP.pozitii||[], PIATA(), P()); } catch(e) { return null; } };
-const VD_COL = { merita:'--pos', poate:'--acc', asteapta:'--warn', nu:'--neg' };
+const VD_COL = { merita:'--pos', poate:'--acc', bun:'--pastreaza', asteapta:'--warn', nu:'--neg' };
 const PIATA_COL = sc => sc < 25 ? '--neg' : sc < 45 ? '--warn' : sc < 56 ? '--mut' : sc < 76 ? '--pos' : '--warn';
 // Datele unui simbol, oriunde ar fi: poziție, idee din universul de idei sau ETF din catalog.
 function dateSimbol(k){ const p = SNAP?.pozitii?.find(x=>x.symbol===k && !x.virtual); if (p) return p;
   const c = (SNAP?.candidati||[]).find(x=>x.symbol===k); return c || null; }
 function verdictPentru(k){ const x = dateSimbol(k); if (!x?.ind || !M?.verdictCumparare) return null;
-  try { return M.verdictCumparare(x, PIATA(), SNAP.etfRef||{}, undefined, { teme: SNAP.teme||{}, profil: P() }); } catch(e) { return null; } }
+  let v; try { v = M.verdictCumparare(x, PIATA(), SNAP.etfRef||{}, undefined, { teme: SNAP.teme||{}, profil: P() }); } catch(e) { return null; }
+  return v && potrivestePlan(v, k); }
+// „Merită acum?” spune cum arată prețul azi; semnalul din listă (Cumpără luna asta / Las-o / Uită-te la ea) spune ce faci luna asta,
+// după planul tău. Pentru o poziție pe care o ai, verdictul ține cont de plan, ca cele două să nu se contrazică niciodată.
+function potrivestePlan(v, k){
+  const p = SNAP?.pozitii?.find(x => x.symbol === k); if (!p || p.virtual || v.plin) return v;
+  const s = sem(p), l = inPlan(k), bun = v.nivel === 'merita' || v.nivel === 'poate', o = { ...v };
+  if (s === 'cumpara' && l) {
+    if (p.etf) Object.assign(o, { nivel:'merita', titlu:'Cumpără, ca în plan', sfat:`E depunerea ta lunară (${l.suma} lei) într-un ETF. Depunerile lunare nu se amână după starea pieței: pe termen lung contează regularitatea, nu momentul.${bun ? '' : ' Semnalele de mai jos contează doar dacă ai pune o sumă mare dintr-odată.'}` });
+    else if (bun) Object.assign(o, { nivel:'merita', titlu:'Cumpără, ca în plan', sfat:`E în planul lunii (${l.suma} lei), iar semnalele de azi sunt de acord. Dacă suma e mare, o poți împărți în 2–3 tranșe.` });
+    else Object.assign(o, { nivel:'asteapta', titlu:'În plan, dar poți aștepta', sfat:`Planul îi dă ${l.suma} lei luna asta, pentru că e sub ținta ei. Semnalele de preț de azi sunt însă ${v.nivel === 'nu' ? 'mai mult contra' : 'amestecate'}: poți cumpăra mai târziu în lună sau poți pune suma în VWCE. Decizia e a ta.` });
+  } else if (s === 'las' && bun) {
+    Object.assign(o, { nivel:'bun', titlu:'Bună, dar nu luna asta', sfat:({
+      adauga:'Semnalele de preț sunt bune, dar banii de luna asta merg la pozițiile mai departe de țintă (vezi Plan). Rămâne candidată pentru lunile următoare. Acum nu e nimic de făcut.',
+      pastreaza:'Semnalele de preț sunt bune, dar e deja la ținta ei: banii noi merg acolo unde lipsește ceva. Acum nu e nimic de făcut.',
+      nu_adauga:'Semnalele de preț sunt bune, dar are deja destul loc în portofoliu: banii noi merg în altă parte. Acum nu e nimic de făcut.' })[p.semnal]
+      || 'Semnalele de preț sunt bune, dar planul nu-i dă bani luna asta. Acum nu e nimic de făcut.' });
+  } else if (s === 'uita' && bun) {
+    Object.assign(o, { nivel:'asteapta', titlu:'Verifică întâi', sfat:(p.atentie?.[0] || 'Are un semnal de atenție.') + ' Prețul arată bine, dar întâi lămurește semnalul de atenție.' });
+  }
+  return o;
+}
 function verdictRand(k){ const v = verdictPentru(k); if (!v) return '';
   return `<button class="vdr" data-c="${A('arataVerdict',k)}"><span class="pill2" style="--k:var(${VD_COL[v.nivel]})">Acum: ${esc(v.titlu)}</span><span class="sub">${v.plus.length} pentru, ${v.minus.length} contra ›</span></button>`; }
 function verdictHTML(k, compact){
@@ -2307,7 +2335,7 @@ function cardRec(r){
     ${verdictRand(r.ticker)}
     <p style="margin:12px 0 0;font-size:var(--t2);line-height:1.55;color:var(--ink2)">${esc(r.motiv)}</p>
     ${r.despre?`<div class="sub" style="margin-top:8px">${esc(r.despre)}</div>`:''}
-    <div class="meta num"><span><b>${esc(String(r.companii||''))}</b> companii</span><span>indice <b>${esc(r.indice||'')}</b></span><span>ISIN <b>${esc(r.isin)}</b> ${q('isin')}</span></div>
+    <div class="meta num"><span><b>${esc(String(r.companii||''))}</b> companii</span><span>indice <b>${esc(r.indice||'')}</b></span><span>ISIN <b class="sel">${esc(r.isin)}</b> ${q('isin')}</span></div>
     ${r.nota?`<div class="al" style="margin:12px 0 0">${esc(r.nota)}</div>`:''}
     ${r.acum!==false?`<div class="sug">${ic('portofel')}<span>${sugestie(r).text}</span></div>`:''}
     <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-c="${A('verificaInainte',r.ticker,true)}">Da, investesc</button><button class="btn ghost" style="flex:1" data-c="${A('decideETF',r.ticker,'nu')}">Nu, arată alta</button></div>

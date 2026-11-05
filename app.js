@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.45.1';
+const APP_VER = '0.45.2';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -1327,14 +1327,22 @@ const ziNout = iso => { const d = new Date(iso), k = d.toDateString(), azi = new
 const oraNout = iso => new Date(iso).toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
 // Livrarea pe telefon: service worker-ul notează ce a primit (doar id și ora). O notificare trimisă acum peste 20 de minute,
 // dar neprimită, înseamnă de obicei că telefonul a oprit Chrome în fundal.
-const neprimita = x => x.trimisa === 'push' && pushActiv() && CHIT_START && x.cand > CHIT_START && !PRIMITE.has(x.id) && Date.now() - Date.parse(x.cand) > 20 * 60e3 && Date.now() - Date.parse(x.cand) < 7 * 864e5;
+// v0.45.2: cu notificările din aplicație (Firebase), cele trimise prin Chrome ÎNAINTE de activare nu mai contează (rămâneau
+// „n-au ajuns” 7 zile, deși acum totul merge). Prin Chrome DUPĂ activare înseamnă că Firebase n-a mers și s-a folosit rezerva.
+const nativDin = () => { if (!nativ()) return null; if (!S.nativDin) { S.nativDin = new Date().toISOString(); save(); } return S.nativDin; };
+const neprimita = x => x.trimisa === 'push' && pushActiv() && CHIT_START && x.cand > CHIT_START && !PRIMITE.has(x.id) && Date.now() - Date.parse(x.cand) > 20 * 60e3 && Date.now() - Date.parse(x.cand) < 7 * 864e5
+  && !(nativDin() && x.cand < nativDin());
+// prin Chrome, deși aplicația are notificările ei: Firebase a refuzat (vezi Setări → Verificarea pornirii → Erori ocolite)
+const prinRezerva = x => x.trimisa === 'push' && !!nativDin() && x.cand >= nativDin() && Date.now() - Date.parse(x.cand) < 7 * 864e5;
 function vNoutati(){
   const l = listaNout(), f = S.notifFiltru || 'toate', vaz = NOUT_ANT ?? (S.notifVazut || '');
   const fil = l.filter(x => f === 'toate' || (f === 'alte' ? !['ocazii','miscari','semnale'].includes(x.tip) : x.tip === f));
-  const nep = l.filter(neprimita).length;
+  const nep = l.filter(neprimita).length, rez = l.filter(prinRezerva).length;
   let h = `<div class="sec" style="margin-top:8px"><h2>Noutăți</h2><span class="sub">${l.length ? `${l.length} în ultimele 60 de zile` : 'ce a văzut analistul'}</span></div>`;
   if (NOTIF === null) return h + `<div class="card sub" style="line-height:1.55">Noutățile apar după prima analiză cu versiunea ${MIN_ANALIZA} a analizei din GitHub. De atunci, tot ce găsește analistul rămâne aici, chiar dacă notificarea pe telefon a fost ștearsă.</div>`;
-  if (nep) h += `<div class="card pz galben"><div class="pzt">${ic('bec')}<b>${nep === 1 ? 'O notificare n-a ajuns' : nep + ' notificări n-au ajuns'} pe telefon</b></div>
+  if (rez) h += `<div class="card pz galben"><div class="pzt">${ic('bec')}<b>${rez === 1 ? 'O notificare a plecat' : rez + ' notificări au plecat'} prin Chrome, nu prin aplicație</b></div>
+    <div class="sub">Trimiterea directă în aplicație (Firebase) n-a mers, așa că s-a folosit rezerva prin Chrome, care poate să nu ajungă. Motivul exact e în Setări → Verificarea pornirii → Erori ocolite. Dacă se repetă, activează din nou notificările din Setări → Notificări.</div></div>`;
+  else if (nep) h += `<div class="card pz galben"><div class="pzt">${ic('bec')}<b>${nep === 1 ? 'O notificare n-a ajuns' : nep + ' notificări n-au ajuns'} pe telefon</b></div>
     <div class="sub">De obicei, telefonul oprește Chrome în fundal ca să economisească bateria. Le găsești oricum aici.</div>
     <div class="pzb"><button class="btn sm" data-c="${A('ghidFundal')}">Cum repari</button></div></div>`;
   h += `<div class="chips nout-ch" data-noswipe style="margin:0 0 12px">${FILTRE_NOUT.map(([k,t]) => `<button class="${f===k?'on':''}" data-c="${A('setFiltruNout',k)}">${t}</button>`).join('')}</div>`;
@@ -1343,7 +1351,7 @@ function vNoutati(){
   for (const x of fil) {
     const z = ziNout(x.cand); if (z !== zi) { zi = z; h += `<div class="lbl nout-zi">${esc(z)}</div>`; }
     const [et, col, ico] = TIP_NOUT[x.tip] || TIP_NOUT.sistem, act = actiuneNout(x), nou = x.cand > vaz;
-    const liv = x.trimisa === 'oprit' ? 'fără notificare (oprită din setări)' : neprimita(x) ? '<span style="color:var(--warn)">n-a ajuns pe telefon</span>' : x.trimisa ? (PRIMITE.has(x.id) ? 'primită pe telefon' : x.trimisa === 'aplicatie' ? 'trimisă în aplicație' : 'trimisă pe telefon') : 'fără notificare pe telefon';
+    const liv = x.trimisa === 'oprit' ? 'fără notificare (oprită din setări)' : neprimita(x) ? '<span style="color:var(--warn)">n-a ajuns pe telefon</span>' : prinRezerva(x) ? '<span style="color:var(--warn)">trimisă prin Chrome (Firebase n-a mers)</span>' : x.trimisa ? (PRIMITE.has(x.id) ? 'primită pe telefon' : x.trimisa === 'aplicatie' ? 'trimisă în aplicație' : 'trimisă pe telefon') : 'fără notificare pe telefon';
     h += `<div class="card nout ${nou?'nou':''} ${NOUT_SEL===x.id?'sel':''}" id="n-${esc(x.id)}" style="--k:var(${col})">
       <div class="nh"><span class="tic">${ic(ico)}</span><div style="flex:1;min-width:0"><div class="nt"><span class="lbl">${et}</span><span class="sub num">${oraNout(x.cand)}</span></div>
       <b>${esc(String(x.titlu||'').slice(0,160))}</b></div></div>

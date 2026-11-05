@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.45.0';
+const APP_VER = '0.45.1';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -30,16 +30,21 @@ const inPlan = sym => (SNAP?.planuri?.[sumaPlan()]||[]).find(l=>l.symbol===sym);
 // v0.45: „Uită-te la ea” avea trei motive diferite sub aceeași etichetă roșie. Acum eticheta spune motivul:
 // „Prea mare” (ocupă mult peste plafon: nu mai cumperi), „Scade cu sectorul” (sub nivelul de alertă, dar cât sectorul),
 // „Uită-te la ea” (problema pare a companiei). Logica rămâne aceeași (sem = 'uita' pentru toate trei).
-const semFel = p => sem(p)!=='uita' ? sem(p) : p.semnal==='reechilibreaza' ? 'mare' : p.cauza==='sector' ? 'sector' : 'uita';
-const SEM2 = {mare:'Prea mare', sector:'Scade cu sectorul'}, SEMC2 = {mare:'--reechilibreaza', sector:'--asteapta'};
+const semFel = p => sem(p)!=='uita' ? sem(p) : p.semnal==='reechilibreaza' ? 'mare' : p.cauza==='sector' ? 'sector' : p.cauza==='piata' ? 'piata' : 'uita';
+const SEM2 = {mare:'Prea mare', sector:'Scade cu sectorul', piata:'Scade cu piața'}, SEMC2 = {mare:'--reechilibreaza', sector:'--asteapta', piata:'--asteapta'};
+const chipP = p => { const f = semFel(p); return `<button class="chip" style="color:var(${semCol(p)})" data-c="${A('termen',f)}">${semTxt(p)}</button>`; };
 const semTxt = p => { const f = semFel(p); return SEM2[f] || SEM[f]; }, semCol = p => { const f = semFel(p); return SEMC2[f] || SEMC[f]; };
 // motivul pe scurt, pe card, doar pentru pozițiile care cer atenție
 function motivScurt(p){
-  const f = semFel(p); if (!['mare','sector','uita'].includes(f)) return '';
+  const f = semFel(p); if (!['mare','sector','piata','uita'].includes(f)) return '';
   const g = SNAP?.pozitii?.find(x=>x.symbol===p.symbol) || p;
   if (f==='mare') return `${nf(g.pondere,1)}% din tot portofoliul, plafonul e ${P().maxActiune}%: nu mai cumpăra`;
   if (f==='sector') return 'sub nivelul de alertă, cam cât sectorul ei';
-  return p.ind?.subProtectie ? 'sub nivelul de alertă, mai slab decât sectorul' : 'trendul și cifrele companiei s-au stricat';
+  if (f==='piata') return 'sub nivelul de alertă, cam cât piața (VWCE)';
+  if (!p.ind?.subProtectie) return 'trendul și cifrele companiei s-au stricat';
+  // v0.45.1: cu ce s-a comparat: sectorul (dacă are cel puțin 2 companii în portofoliu sau în idei) sau VWCE
+  const fata = /^sectorul/.test(p.refNume||'') ? 'sectorul ei' : 'piața (VWCE)';
+  return p.refRel!=null ? `sub nivelul de alertă, pe 3 luni cu ${nf(Math.abs(p.refRel),0)} puncte sub ${fata}` : 'sub nivelul de alertă';
 }
 const sem = p => p.reducere ? 'reducere' : ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
 // Verdictul într-o propoziție, pentru fișa acțiunii.
@@ -396,6 +401,7 @@ const GLOS = {
   scoridee:['Scorul unei idei','Din 100, cu aceleași criterii pentru orice companie: trendul (25), cum a mers față de VWCE pe un an (15), profitabilitatea (20), creșterea veniturilor (15), evaluarea P/E (10), analiștii (15). Se raportează la criteriile pentru care există date; steluța înseamnă date incomplete (de obicei la companiile europene, fără fundamentale gratuite). Scorul decide ordinea ideilor și cât pui la prima cumpărare: 20%, 35% sau 50% din suma lunară, mai puțin dacă prețul e agitat.'],
   las:['Las-o','Nu e nimic de făcut acum. Poate fi în regulă, poate are deja destul loc în portofoliu sau poate e momentul prost pentru cumpărat. Motivul exact e în fișa acțiunii.'],
   mare:['Prea mare','Acțiunea ocupă mult mai mult din portofoliu decât plafonul tău pe o singură poziție (de peste 2 ori). Nu e o problemă a companiei: doar nu mai cumpăra din ea. Varianta fără impozit e să lași depunerile noi să-i scadă ponderea.'],
+  piata:['Scade cu piața','A coborât sub nivelul de alertă, dar pe 3 luni a mers cam ca piața (VWCE): nu are în portofoliu destui „vecini” de sector cu care să fie comparată, iar scăderea vine din piață, nu din companie. Nu e un ordin de vânzare.'],
   sector:['Scade cu sectorul','A coborât sub nivelul de alertă, dar pe 3 luni a mers cam ca sectorul ei: scade tot sectorul, nu doar compania. Nu e un ordin de vânzare. Întrebarea e dacă vrei atâția bani într-un singur sector.'],
   uita:['Uită-te la ea','Ceva s-a schimbat și merită 5 minute: prețul a coborât sub nivelul de alertă, trendul și fundamentalele s-au stricat, sau acțiunea a crescut mult peste locul pe care i l-ai dat. Nu e un ordin de vânzare: citește motivul din fișă.'],
   opor:['Oportunitate ★','O acțiune pe care oricum o adaugi a scăzut temporar (RSI sub 35 sau minus 10% față de maximul pe 3 luni), dar trendul lung și fundamentalele sunt în regulă. Un preț mai bun pentru o cumpărare planificată.'],
@@ -457,7 +463,7 @@ function aplicaProfil(u){
   const list = M.cuAlese(SNAP.pozitii, pr.alese);
   for (const v of list.filter(p=>p.virtual)) { const c=(SNAP.candidati||[]).find(x=>x.symbol===v.symbol); if (c) Object.assign(v, {ind:c.ind, fund:c.fund, rec:c.rec, ...(c.logo?{logo:c.logo}:{})}); }
   const t = M.tinte(list, pr); list.forEach(p => p.tinta = t[p.symbol]);
-  for (const p of list) { try { Object.assign(p, M.evalueaza(p, {ind:p.ind, rec:p.rec, fund:p.fund, rezultate:p.rezultate}, SNAP.teme, azi, pr)); } catch(e) { if (!p.virtual) throw e; p.semnal = 'adauga'; } }
+  for (const p of list) { try { Object.assign(p, M.evalueaza(p, {ind:p.ind, rec:p.rec, fund:p.fund, rezultate:p.rezultate, ref3l:p.ref3l, refNume:p.refNume}, SNAP.teme, azi, pr)); } catch(e) { if (!p.virtual) throw e; p.semnal = 'adauga'; } }
   SNAP.virtuale = list.filter(p => p.virtual);
   SNAP.planuri = { [pr.contributieTipica]: M.planLunar(list, SNAP.totalRON, pr.contributieTipica, pr).map(l => M.planExact(l, list, SNAP.fx)) };
   SNAP.avertizari = M.avertizariPortofoliu({list: SNAP.pozitii, teme:SNAP.teme, total:SNAP.totalRON}, pr);
@@ -857,7 +863,7 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.45.0';
+const MIN_ANALIZA = '0.45.1';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
@@ -869,7 +875,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.42.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.43.0': ['runner/analiza.js', 'runner/sources.js', 'runner/config.js'],
   '0.44.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/notificari.js', 'runner/paza.js', 'runner/tacute.js', 'runner/config.js'],
-  '0.45.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/config.js'] };
+  '0.45.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/config.js'],
+  '0.45.1': ['runner/engine.js', 'runner/config.js'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -2093,7 +2100,7 @@ function detaliu(sym, zile){
   const VIC = {uita:'alerta', cumpara:'portofel', reducere:'stea', las:'scut'};
   const cl = culoriActiune(p.symbol), stil = cl ? `--c:${cl.c};--acc:${cl.c};--acc2:${cl.c2};--accInk:${cl.ink}` : `--c:var(${col})`;
   const html = `<div class="fisa" style="${stil}"><div class="dh"><div class="grab"></div>
-    <div style="display:flex;gap:16px;align-items:center">${avatar(p,'lg')}<div style="flex:1;min-width:0"><div class="row"><div class="fd" style="font-size:var(--t5);font-weight:700">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>${chip(u)}</div>
+    <div style="display:flex;gap:16px;align-items:center">${avatar(p,'lg')}<div style="flex:1;min-width:0"><div class="row"><div class="fd" style="font-size:var(--t5);font-weight:700">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>${chipP(p)}</div>
       <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'')}</div>${laBroker(p)?`<div class="sub">${esc(laBroker(p))}</div>`:''}<div class="sub" style="color:var(${col})">● ${esc(p.tema)}</div></div></div>
     <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(miscare(p)?.pret ?? i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">${({ acum: 'preț acum', azi: `preț la ${oraRo(SNAP.generat)} (bursa e deschisă)` })[miscare(p)?.cand] || 'preț de închidere'}</div></div>
       <div style="text-align:right">${mv(MISC(p),1)}<div class="sub" style="margin-top:4px">${momentPoz(p)}</div></div></div></div>
@@ -3054,7 +3061,7 @@ function gxInfo(){
   if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Portofoliul tău</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
-  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${SEMC[u]})">${SEM[u]}</span><div class="sub">${esc(p.tema)} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div></div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
+  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div></div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
 }
 function gxReluare(){ if (!GX.st) return; vib(); GX.st.rel = { t0: performance.now() }; GX.atins = performance.now(); $('gxp')?.classList.add('on'); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(GX.cadruF); } }
 addEventListener('resize', ()=>{ if (GX.on && $('gxc')) GX.marime?.(); });

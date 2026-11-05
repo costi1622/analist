@@ -482,7 +482,7 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
   const rezAproape = zileRez != null && zileRez >= 0 && zileRez <= RISK.zileRezultate;
   if (rezAproape) atentie.push(`Rezultate trimestriale pe ${dataRo(m.rezultate)}. Sunt posibile mișcări mari, în ambele sensuri.`);
 
-  let semnal, oportunitate = null, cauza = null;
+  let semnal, oportunitate = null, cauza = null, refRel = null;
   if (g.etf) {
     motive.unshift('· ETF-ul global e nucleul portofoliului: se cumpără constant și nu se vinde pe semnale');
     semnal = abatere < -1 ? 'adauga' : abatere > 5 ? 'nu_adauga' : 'pastreaza';
@@ -492,9 +492,12 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
   } else if (ind?.subProtectie) {
     semnal = 'verifica';
     // v0.45: dacă pe 3 luni a mers cam ca sectorul ei (sau ca piața), scăderea vine din sector, nu din companie
-    const rel = ind.r3l != null && m?.ref3l != null ? ind.r3l - m.ref3l : null;
-    if (rel != null && rel > -5) { cauza = 'sector';
-      atentie.push(`A coborât sub nivelul de alertă (${fmt(ind.protectie)}), dar pe 3 luni a mers cam ca ${m?.refNume || 'piața'} (${fmt(ind.r3l)}% față de ${fmt(m.ref3l)}%): scade tot sectorul, nu doar compania. Nu e un ordin de vânzare; uită-te dacă vrei atâția bani într-un singur sector.`); }
+    const rel = ind.r3l != null && m?.ref3l != null ? ind.r3l - m.ref3l : null; refRel = rel;
+    if (rel != null && rel > -5) { cauza = /^sectorul/.test(m?.refNume || '') ? 'sector' : 'piata';
+      atentie.push(cauza === 'sector'
+        ? `A coborât sub nivelul de alertă (${fmt(ind.protectie)}), dar pe 3 luni a mers cam ca ${m.refNume} (${fmt(ind.r3l)}% față de ${fmt(m.ref3l)}%): scade tot sectorul, nu doar compania. Nu e un ordin de vânzare; uită-te dacă vrei atâția bani într-un singur sector.`
+        : `A coborât sub nivelul de alertă (${fmt(ind.protectie)}), dar pe 3 luni a mers cam ca piața (${fmt(ind.r3l)}% față de ${fmt(m.ref3l)}% VWCE): scăderea vine din piață, nu din companie. Nu e un ordin de vânzare.`); }
+    else if (rel != null) atentie.push(`A coborât sub nivelul de alertă (${fmt(ind.protectie)}), iar pe 3 luni a mers cu ${fmt(Math.abs(rel))} puncte mai slab decât ${/^sectorul/.test(m?.refNume || '') ? m.refNume : 'piața (VWCE)'} (${fmt(ind.r3l)}% față de ${fmt(m.ref3l)}%): problema pare la companie. Nu e un ordin de vânzare. Verifică dacă motivul pentru care o ții mai e valabil: rezultate, prognoze, știri.`);
     else atentie.push(`A coborât sub nivelul de alertă (${fmt(ind.protectie)}). Nu e un ordin de vânzare. Verifică dacă motivul pentru care o ții mai e valabil: rezultate, prognoze, știri.`);
   } else if (tehnic + fundam <= -2.5) {
     semnal = 'verifica';
@@ -534,7 +537,7 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
     oportunitate = `RSI ${Math.round(ind.rsi)}: a scăzut repede în ultimele săptămâni${ind.deLaMaxim3l != null && ind.deLaMaxim3l < -1 ? ` (${fmt(-ind.deLaMaxim3l)}% sub maximul pe 3 luni)` : ''}. Trendul lung și fundamentalele sunt în regulă.`;
   }
   if (abatere !== 0 && !g.etf) motive.push(`· Pondere ${fmt(g.pondere)}%, ținta ta e ${fmt(tinta)}%`);
-  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate, reducere, ...(cauza ? { cauza } : {}) };
+  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate, reducere, cauza, refRel, refNume: m?.refNume || null };
 }
 
 // ---------- Oportunitate în timpul zilei ----------
@@ -648,7 +651,7 @@ export function construiesteSnapshot({ positions, market, azi, surse, fx, profil
   const pozitii = comb.list.map(g => {
     const m = market[g.symbol];
     const ev = evalueaza(g, m, comb.teme, azi, profil);
-    return { ...g, ind: m?.ind || null, serie: m?.serie || null, fund: m?.fund || null, rec: m?.rec || null, rezultate: m?.rezultate || null, ...(m?.logo ? { logo: m.logo } : {}), ...ev };
+    return { ...g, ind: m?.ind || null, serie: m?.serie || null, ...(m?.ref3l != null ? { ref3l: m.ref3l } : {}), fund: m?.fund || null, rec: m?.rec || null, rezultate: m?.rezultate || null, ...(m?.logo ? { logo: m.logo } : {}), ...ev };
   });
   const planuri = { [profil.contributieTipica]: planLunar(pozitii, comb.total, profil.contributieTipica, profil).map(l => planExact(l, pozitii, fx)) };
   const vw = pozitii.find(p => p.etf)?.ind;

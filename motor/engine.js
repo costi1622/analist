@@ -424,7 +424,10 @@ export const fmt = x => (x == null ? '–' : (Math.round(x * 10) / 10).toString(
 const LUNI = ['ian.', 'feb.', 'mar.', 'apr.', 'mai', 'iun.', 'iul.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.'];
 export const dataRo = iso => { const [, m, d] = iso.split('-').map(Number); return `${d} ${LUNI[m - 1]}`; };
 
-export function contextScor(m) {
+// v0.45: datoriile (datorie totală / capital propriu, Finnhub). Băncile și asigurătorii lucrează normal cu datorii mari: nu se aplică.
+export const DATORII_MARI = 2.5;
+const FINANCIARE = sym => ACTIUNI_CATALOG[sym]?.sector === 'Financiar';
+export function contextScor(m, sym = '') {
   const motive = []; let tehnic = 0, fundam = 0;
   const ind = m?.ind;
   if (ind) {
@@ -459,8 +462,9 @@ export function contextScor(m) {
       if (f.crestereVenit > 15) { fundam += 0.5; motive.push(`+ Venituri în creștere cu ${fmt(f.crestereVenit)}% pe an`); }
       else if (f.crestereVenit < 0) { fundam -= 0.5; motive.push(`− Venituri în scădere (${fmt(f.crestereVenit)}% pe an)`); }
     }
+    if (f.datorii != null && f.datorii > DATORII_MARI && !FINANCIARE(sym)) { fundam -= 0.5; motive.push(`− Datorii mari: ${fmt(f.datorii)} lei datorie la 1 leu capital propriu`); }
     if (f.pe != null) {
-      if (f.pe > 60) { fundam -= 0.5; motive.push(`− Evaluare scumpă: P/E ${fmt(f.pe)}`); }
+      if (f.pe > Math.max(60, 1.8 * (f.peSector || 0))) { fundam -= 0.5; motive.push(`− Evaluare scumpă: P/E ${fmt(f.pe)}${f.peSector ? `, față de ${fmt(f.peSector)} median în sector` : ''}`); }
       else if (f.pe > 0 && f.pe < 15) { fundam += 0.5; motive.push(`+ Evaluare ieftină: P/E ${fmt(f.pe)}`); }
     }
   }
@@ -468,7 +472,7 @@ export function contextScor(m) {
 }
 
 export function evalueaza(g, m, teme, azi, profil = PROFIL) {
-  const { tehnic, fundam, motive } = contextScor(m);
+  const { tehnic, fundam, motive } = contextScor(m, g.symbol);
   const atentie = []; const ind = m?.ind;
   const scor = Math.round((tehnic + fundam) * 10) / 10;
   const tinta = g.tinta ?? 0, abatere = g.pondere - tinta;
@@ -478,7 +482,7 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
   const rezAproape = zileRez != null && zileRez >= 0 && zileRez <= RISK.zileRezultate;
   if (rezAproape) atentie.push(`Rezultate trimestriale pe ${dataRo(m.rezultate)}. Sunt posibile mișcări mari, în ambele sensuri.`);
 
-  let semnal, oportunitate = null;
+  let semnal, oportunitate = null, cauza = null;
   if (g.etf) {
     motive.unshift('· ETF-ul global e nucleul portofoliului: se cumpără constant și nu se vinde pe semnale');
     semnal = abatere < -1 ? 'adauga' : abatere > 5 ? 'nu_adauga' : 'pastreaza';
@@ -487,7 +491,11 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
     atentie.push(`Ocupă ${fmt(g.pondere)}% din portofoliu, ${tinta > 0 ? `de ${fmt(g.pondere / tinta)} ori mai mult decât ținta ta de ${fmt(tinta)}%` : 'iar ținta ta pentru acțiuni e 0%'}. Fără impozit: nu mai cumpăra și lasă depunerile noi să-i scadă ponderea. Mai repede: vinzi o parte, dar câștigul din vânzare se impozitează cu 16%.`);
   } else if (ind?.subProtectie) {
     semnal = 'verifica';
-    atentie.push(`A coborât sub nivelul de alertă (${fmt(ind.protectie)}). Nu e un ordin de vânzare. Verifică dacă motivul pentru care o ții mai e valabil: rezultate, prognoze, știri.`);
+    // v0.45: dacă pe 3 luni a mers cam ca sectorul ei (sau ca piața), scăderea vine din sector, nu din companie
+    const rel = ind.r3l != null && m?.ref3l != null ? ind.r3l - m.ref3l : null;
+    if (rel != null && rel > -5) { cauza = 'sector';
+      atentie.push(`A coborât sub nivelul de alertă (${fmt(ind.protectie)}), dar pe 3 luni a mers cam ca ${m?.refNume || 'piața'} (${fmt(ind.r3l)}% față de ${fmt(m.ref3l)}%): scade tot sectorul, nu doar compania. Nu e un ordin de vânzare; uită-te dacă vrei atâția bani într-un singur sector.`); }
+    else atentie.push(`A coborât sub nivelul de alertă (${fmt(ind.protectie)}). Nu e un ordin de vânzare. Verifică dacă motivul pentru care o ții mai e valabil: rezultate, prognoze, știri.`);
   } else if (tehnic + fundam <= -2.5) {
     semnal = 'verifica';
     atentie.push('S-au deteriorat și trendul, și fundamentalele. Verifică dacă motivul pentru care o ții mai e valabil.');
@@ -526,7 +534,7 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
     oportunitate = `RSI ${Math.round(ind.rsi)}: a scăzut repede în ultimele săptămâni${ind.deLaMaxim3l != null && ind.deLaMaxim3l < -1 ? ` (${fmt(-ind.deLaMaxim3l)}% sub maximul pe 3 luni)` : ''}. Trendul lung și fundamentalele sunt în regulă.`;
   }
   if (abatere !== 0 && !g.etf) motive.push(`· Pondere ${fmt(g.pondere)}%, ținta ta e ${fmt(tinta)}%`);
-  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate, reducere };
+  return { semnal, eticheta: ETICHETE[semnal], scor, tehnic, fundam, motive, atentie, oportunitate, reducere, ...(cauza ? { cauza } : {}) };
 }
 
 // ---------- Oportunitate în timpul zilei ----------
@@ -971,8 +979,17 @@ export function verdictCumparare(x, piata = null, ref = {}, azi = new Date().toI
       if (sc >= 70) { p += 1; plus.push(`Cifrele companiei sunt bune (${sc}/100: profit, rentabilitate, creșterea veniturilor).`); }
       else if (sc < 40) { p -= 2; minus.push(`Cifrele companiei sunt slabe (${sc}/100: profit, rentabilitate, creșterea veniturilor).`); } }
     if (f.pe != null) {
+      // v0.45: P/E comparat și cu sectorul (mediana companiilor din același sector, din universul analizat): un P/E de 45 e mult
+      // pentru o bancă, dar obișnuit pentru software. Penalizarea rămâne doar pentru extreme (peste 60 și peste 1,8 × sectorul).
+      const ps = f.peSector > 0 ? f.peSector : null;
       if (f.pe <= 0) { p -= 1; minus.push('Compania n-a avut profit în ultimul an (P/E negativ).'); }
-      else if (f.pe > 60) { p -= 1; minus.push(`Evaluare foarte mare (P/E ${Math.round(f.pe)}): prețul presupune ani de creștere puternică; orice dezamăgire costă mult.`); }
+      else if (f.pe > Math.max(60, 1.8 * (ps || 0))) { p -= 1; minus.push(`Evaluare foarte mare (P/E ${Math.round(f.pe)}${ps ? `, față de ${Math.round(ps)} median în sector` : ''}): prețul presupune ani de creștere puternică; orice dezamăgire costă mult.`); }
+      else if (ps && f.pe > 1.4 * ps) minus.push(`Mai scumpă decât sectorul: P/E ${Math.round(f.pe)}, față de ${Math.round(ps)} median.`);
+      else if (ps && f.pe < 0.7 * ps) plus.push(`Mai ieftină decât sectorul: P/E ${Math.round(f.pe)}, față de ${Math.round(ps)} median.`);
+    }
+    if (f.datorii != null && !FINANCIARE(k)) {
+      if (f.datorii > DATORII_MARI) { p -= 1; minus.push(`Datorii mari: ${fmt(f.datorii)} lei datorie la fiecare leu de capital propriu. Când dobânzile cresc sau vânzările scad, astfel de companii suferă primele.`); }
+      else if (f.datorii < 0.5) plus.push(`Datorii mici (${fmt(f.datorii)} la 1 leu capital propriu).`);
     }
     const r = x.rec; if (r) { const pos = (r.strongBuy || 0) + (r.buy || 0), neg = (r.sell || 0) + (r.strongSell || 0), tot = pos + neg + (r.hold || 0);
       if (tot >= 3) { const net = (pos - neg) / tot; if (net >= 0.5) { p += 1; plus.push(`Analiștii sunt în majoritate pozitivi (${pos} din ${tot} recomandă cumpărarea).`); } else if (net < 0) { p -= 1; minus.push(`Mai mulți analiști recomandă vânzarea decât cumpărarea.`); } } }
@@ -1089,4 +1106,50 @@ export function verificariBunSimt(snap, { fx = {}, valoriEtoro = [], vechi = nul
     if (Math.abs(dt) > prag.total) v.push({ id: 'total', text: `Valoarea totală s-a schimbat cu ${dt > 0 ? '+' : '−'}${f(Math.abs(dt))}% față de analiza precedentă, fără cumpărări sau vânzări văzute în conturi.` });
   }
   return v;
+}
+
+// ---------- Jurnalul semnalelor (v0.45) ----------
+// Fiecare verdict „Merită acum?” se notează cu prețul zilei (o dată pe lună pe simbol, sau când verdictul se schimbă).
+// După ~3 și ~6 luni se măsoară ce a urmat: randamentul acțiunii, al VWCE pe aceleași zile, și dacă a mai căzut 10%+.
+// Așa se vede, pe acțiunile tale și pe ideile reale, dacă „Merită” chiar a mers mai bine decât „Nu acum”.
+// Randamentele sunt în moneda fiecărei acțiuni (fără curs), ca să măsoare semnalul, nu dolarul.
+export const JURNAL = { maxIntrari: 1500, termene: [{ k: 3, zile: 91, pana: 120 }, { k: 6, zile: 182, pana: 215 }], cadere: -10 };
+// lista: intrările existente; noi: [{ s, v, p, vw }] (simbol, nivel, preț, prețul VWCE în aceeași zi)
+export function noteazaJurnal(lista = [], noi = [], azi) {
+  const luna = azi.slice(0, 7), out = [...lista];
+  for (const n of noi) {
+    if (!n?.s || !n.v || !(n.p > 0)) continue;
+    const ult = [...out].reverse().find(x => x.s === n.s);
+    if (ult && ult.d.slice(0, 7) === luna && ult.v === n.v) continue; // deja notat luna asta, cu același verdict
+    out.push({ d: azi, s: n.s, v: n.v, p: +n.p.toPrecision(8), ...(n.vw > 0 ? { vw: +n.vw.toPrecision(8) } : {}) });
+  }
+  return out.slice(-JURNAL.maxIntrari);
+}
+// pret(s) → { p, d } (prețul de acum al simbolului și data lui); vwLa(d) → prețul VWCE în ziua d (sau înainte)
+export function evalueazaJurnal(lista = [], pret, vwLa) {
+  for (const e of lista) for (const t of JURNAL.termene) {
+    if (e['r' + t.k] != null) continue;
+    const x = pret(e.s); if (!(x?.p > 0) || !x.d) continue;
+    const zile = (Date.parse(x.d) - Date.parse(e.d)) / 864e5;
+    if (!Number.isFinite(zile) || zile < t.zile) continue; // dată necunoscută sau prea devreme
+    if (zile > t.pana) { e['r' + t.k] = null; e['x' + t.k] = 'ratat'; continue; } // prețul n-a fost văzut la timp (simbol ieșit din listă)
+    e['r' + t.k] = +((x.p / e.p - 1) * 100).toFixed(2);
+    const v1 = vwLa(x.d); if (e.vw > 0 && v1 > 0) e['b' + t.k] = +((v1 / e.vw - 1) * 100).toFixed(2);
+  }
+  return lista;
+}
+export function rezumatJurnal(lista = []) {
+  const niv = ['merita', 'poate', 'asteapta', 'nu'], out = { intrari: lista.length, prima: lista[0]?.d || null, nivele: {} };
+  for (const v of niv) {
+    const L = lista.filter(e => e.v === v), o = { notate: L.length };
+    for (const t of JURNAL.termene) {
+      const M = L.filter(e => e['r' + t.k] != null); if (!M.length) continue;
+      const B = M.filter(e => e['b' + t.k] != null), med = a => a.reduce((x, y) => x + y, 0) / a.length;
+      o['t' + t.k] = { n: M.length, medie: +med(M.map(e => e['r' + t.k])).toFixed(2), ...(B.length ? { fataDeVWCE: +med(B.map(e => e['r' + t.k] - e['b' + t.k])).toFixed(2) } : {}),
+        caderi: Math.round(M.filter(e => e['r' + t.k] <= JURNAL.cadere).length / M.length * 100), pePlus: Math.round(M.filter(e => e['r' + t.k] > 0).length / M.length * 100) };
+    }
+    out.nivele[v] = o;
+  }
+  const urm = lista.find(e => e.r3 === undefined); if (urm) out.primeleRezultate = new Date(Date.parse(urm.d) + JURNAL.termene[0].zile * 864e5).toISOString().slice(0, 10);
+  return out;
 }

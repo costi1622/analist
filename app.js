@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.44.0';
+const APP_VER = '0.45.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -27,6 +27,20 @@ const SEM = {cumpara:'Cumpără luna asta', reducere:'La reducere', las:'Las-o',
 const SEMC = {cumpara:'--adauga', reducere:'--opor', las:'--pastreaza', uita:'--verifica'};
 const sumaPlan = () => P().contributieTipica;
 const inPlan = sym => (SNAP?.planuri?.[sumaPlan()]||[]).find(l=>l.symbol===sym);
+// v0.45: „Uită-te la ea” avea trei motive diferite sub aceeași etichetă roșie. Acum eticheta spune motivul:
+// „Prea mare” (ocupă mult peste plafon: nu mai cumperi), „Scade cu sectorul” (sub nivelul de alertă, dar cât sectorul),
+// „Uită-te la ea” (problema pare a companiei). Logica rămâne aceeași (sem = 'uita' pentru toate trei).
+const semFel = p => sem(p)!=='uita' ? sem(p) : p.semnal==='reechilibreaza' ? 'mare' : p.cauza==='sector' ? 'sector' : 'uita';
+const SEM2 = {mare:'Prea mare', sector:'Scade cu sectorul'}, SEMC2 = {mare:'--reechilibreaza', sector:'--asteapta'};
+const semTxt = p => { const f = semFel(p); return SEM2[f] || SEM[f]; }, semCol = p => { const f = semFel(p); return SEMC2[f] || SEMC[f]; };
+// motivul pe scurt, pe card, doar pentru pozițiile care cer atenție
+function motivScurt(p){
+  const f = semFel(p); if (!['mare','sector','uita'].includes(f)) return '';
+  const g = SNAP?.pozitii?.find(x=>x.symbol===p.symbol) || p;
+  if (f==='mare') return `${nf(g.pondere,1)}% din tot portofoliul, plafonul e ${P().maxActiune}%: nu mai cumpăra`;
+  if (f==='sector') return 'sub nivelul de alertă, cam cât sectorul ei';
+  return p.ind?.subProtectie ? 'sub nivelul de alertă, mai slab decât sectorul' : 'trendul și cifrele companiei s-au stricat';
+}
 const sem = p => p.reducere ? 'reducere' : ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
 // Verdictul într-o propoziție, pentru fișa acțiunii.
 // „La reducere” (v0.22): a scăzut mult, dar ca sectorul sau piața, iar firma arată bine. Se cumpără în trei tranșe.
@@ -381,6 +395,8 @@ const GLOS = {
   reducere:['La reducere','Acțiunea a scăzut mult față de maximul pe un an (cel puțin 15%, sau mai mult la acțiunile agitate), dar cam cât sectorul ei sau piața, iar veniturile și analiștii arată tot bine. Asta o deosebește de o capcană: când scade doar compania, de obicei are un motiv. Se cumpără în trei tranșe: una acum, una când prețul nu mai scade (trece de media de 20 de zile), una când trendul s-a întors (trece de media de 200). Dacă sectorul e peste plafon, e doar informativ.'],
   scoridee:['Scorul unei idei','Din 100, cu aceleași criterii pentru orice companie: trendul (25), cum a mers față de VWCE pe un an (15), profitabilitatea (20), creșterea veniturilor (15), evaluarea P/E (10), analiștii (15). Se raportează la criteriile pentru care există date; steluța înseamnă date incomplete (de obicei la companiile europene, fără fundamentale gratuite). Scorul decide ordinea ideilor și cât pui la prima cumpărare: 20%, 35% sau 50% din suma lunară, mai puțin dacă prețul e agitat.'],
   las:['Las-o','Nu e nimic de făcut acum. Poate fi în regulă, poate are deja destul loc în portofoliu sau poate e momentul prost pentru cumpărat. Motivul exact e în fișa acțiunii.'],
+  mare:['Prea mare','Acțiunea ocupă mult mai mult din portofoliu decât plafonul tău pe o singură poziție (de peste 2 ori). Nu e o problemă a companiei: doar nu mai cumpăra din ea. Varianta fără impozit e să lași depunerile noi să-i scadă ponderea.'],
+  sector:['Scade cu sectorul','A coborât sub nivelul de alertă, dar pe 3 luni a mers cam ca sectorul ei: scade tot sectorul, nu doar compania. Nu e un ordin de vânzare. Întrebarea e dacă vrei atâția bani într-un singur sector.'],
   uita:['Uită-te la ea','Ceva s-a schimbat și merită 5 minute: prețul a coborât sub nivelul de alertă, trendul și fundamentalele s-au stricat, sau acțiunea a crescut mult peste locul pe care i l-ai dat. Nu e un ordin de vânzare: citește motivul din fișă.'],
   opor:['Oportunitate ★','O acțiune pe care oricum o adaugi a scăzut temporar (RSI sub 35 sau minus 10% față de maximul pe 3 luni), dar trendul lung și fundamentalele sunt în regulă. Un preț mai bun pentru o cumpărare planificată.'],
 };
@@ -841,7 +857,7 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.44.0';
+const MIN_ANALIZA = '0.45.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
@@ -852,7 +868,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.41.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js', 'runner/notificari.js', 'runner/fcm.js', 'runner/paza.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.42.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.43.0': ['runner/analiza.js', 'runner/sources.js', 'runner/config.js'],
-  '0.44.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/notificari.js', 'runner/paza.js', 'runner/tacute.js', 'runner/config.js'] };
+  '0.44.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/notificari.js', 'runner/paza.js', 'runner/tacute.js', 'runner/config.js'],
+  '0.45.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/config.js'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -1749,12 +1766,12 @@ function pozitieRand(p, k, iv){
   let fund=''; if (ser?.length>2) { const lo=Math.min(...ser), hi=Math.max(...ser), X=i=>i/(ser.length-1)*100, Y=v=>38-30*((v-lo)/((hi-lo)||1)), d=ser.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('');
     fund=`<svg class="pfund" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path class="a" d="${d}L100 40L0 40Z"/><path class="l" d="${d}"/></svg>`; }
   const opor = p.oportunitate||iv?.[p.symbol]?.oportunitate;
-  return `<div class="pr p2" data-t="${t}" data-s="${esc(p.symbol)}" style="animation-delay:${Math.min(k,12)*30}ms;--t:var(${TCOL[t]});--k:var(${SEMC[s]})" data-c="${A('deschideDetaliu',p.symbol,'$av')}">${fund}
+  return `<div class="pr p2" data-t="${t}" data-s="${esc(p.symbol)}" style="animation-delay:${Math.min(k,12)*30}ms;--t:var(${TCOL[t]});--k:var(${semCol(p)})" data-c="${A('deschideDetaliu',p.symbol,'$av')}">${fund}
     ${avatar(p)}
-    <div class="pm"><div class="s">${opor?'<span class="star">★</span>':''}${esc(p.symbol)}<span class="sig">${SEM[s]}</span></div><div class="n">${esc(p.name||'')}${laBroker(p)?` · ${esc(laBroker(p))}`:''}</div></div>
+    <div class="pm"><div class="s">${opor?'<span class="star">★</span>':''}${esc(p.symbol)}<span class="sig">${semTxt(p)}</span></div><div class="n">${esc(p.name||'')}${laBroker(p)?` · ${esc(laBroker(p))}`:''}</div></div>
     <div class="r"><b class="num fd">${lei(p.valueRON,0)}</b>${mv(m)}</div>
     <div class="pw">${p.peCont?`<span class="sub num">${nf(p.pondere,1)}% din cont${p.valueUSD!=null&&!S.privat?` · $${nf(p.valueUSD)}`:''}</span>`:`${wbar(p)}<span class="sub num">${nf(p.pondere,1)}% <span class="pt">· țintă ${nf(p.tinta,0)}%</span></span>`}<span class="num ptot ${cls(p.pnlPct)}">${sg(p.pnlPct,1)}% total</span></div>
-    ${p.deVerificat?'<div class="pv sub">⚠ date de verificat</div>':''}
+    ${p.deVerificat?'<div class="pv sub">⚠ date de verificat</div>':motivScurt(p)?`<div class="pv sub" style="color:var(${semFel(p)==='uita'?'--warn':'--mut'})">${esc(motivScurt(p))}</div>`:''}
   </div>`;
 }
 // Text cu mai multe variante („Fără impozit: …. Mai repede: …”): prima parte rămâne frază, variantele devin o listă ordonată.
@@ -2749,7 +2766,7 @@ function sectiuniAnaliza(){
   h += `<div class="sec"><h2>Conturi și curs</h2></div><div class="card">${['Trading 212','eToro'].map(b=>{const v=SNAP.pozitii.flatMap(p=>p.brokers).filter(x=>x.broker===b).reduce((a,x)=>a+x.valueRON,0);return `<div class="row num" style="padding:4px 0"><span class="ink2">${b}</span><b>${lei(v)}</b></div>`}).join('')}
     ${SNAP.fx?`<div class="sub num" style="margin-top:8px">1 USD = ${nf(SNAP.fx.USD,4)} lei · 1 EUR = ${nf(SNAP.fx.EUR,4)} lei · ${esc(SNAP.fx.sursa||'')}${SNAP.fx.data?', '+ziRo(SNAP.fx.data):''}</div>`:''}</div>`;
   O.conturi=h;
-  O.randament=randamentHTML(); O.costuri=costuriHTML(); O.dividende=dividendeHTML(); O.corelatii=corelatiiHTML(corelatiiPortofoliu());
+  O.nimerit=nimeritHTML(); O.randament=randamentHTML(); O.costuri=costuriHTML(); O.dividende=dividendeHTML(); O.corelatii=corelatiiHTML(corelatiiPortofoliu());
   // v0.40: sentimentul pieței și perspectiva portofoliului
   { const pi = PIATA();
     O.piata = pi ? `<div class="sec" style="margin-top:8px"><h2>Sentimentul pieței</h2></div><div class="card">
@@ -3094,9 +3111,25 @@ function vAnaliza(){
   h += `<div class="sec gsec"><h2>Calendar și decizii</h2><span class="sub">ce urmează, ce ai făcut</span></div><div class="bento">
     ${tile('calendar','calendar','Următorul eveniment', urm?esc(urm.symbol):'–', urm?`rezultate, ${ziRo(urm.rezultate,false)}`:'nicio dată cunoscută')}
     ${tile('jurnal','lista','Deciziile tale', String(nJ), nJ===1?'notă sau tranzacție':'note și tranzacții')}
+    ${(()=>{ const j=SNAP.jurnalSemnale, m=j?.nivele?.merita?.t3, n=j?.nivele?.nu?.t3;
+      return tile('nimerit','trofeu','Cât a nimerit analistul', m&&n?`${sg(m.medie-n.medie,1)} <small>pp</small>`:j?`${j.intrari} <small>verdicte</small>`:'–',
+        m&&n?'„Merită” față de „Nu acum”, după 3 luni':j?.primeleRezultate?`primele rezultate: ${ziRo(j.primeleRezultate,false)}`:'apare după prima analiză nouă','','lat'); })()}
   </div>`;
   if (!incepator()) setTimeout(galaxie, 30);
   return h;
+}
+// v0.45: jurnalul semnalelor. Fiecare verdict „Merită acum?” e notat cu prețul zilei; după 3 și 6 luni se vede ce a urmat.
+function nimeritHTML(){
+  const j = SNAP?.jurnalSemnale, h = `<div class="sec" style="margin-top:8px"><h2>Cât a nimerit analistul</h2></div>`;
+  if (!j) return h + `<div class="card sub" style="line-height:1.55">Apare după prima analiză cu versiunea 0.45. De atunci, fiecare verdict „Merită acum?” e notat cu prețul zilei, iar după 3 și 6 luni vezi ce a urmat.</div>`;
+  const N = [['merita','Merită'],['poate','Poate, cu o sumă mică'],['asteapta','Mai așteaptă'],['nu','Nu acum']];
+  const are = t => N.some(([k])=>j.nivele?.[k]?.['t'+t]);
+  const tabel = t => `<div class="lbl" style="margin-top:16px">După ${t} luni</div><div class="kv num" style="margin-top:8px">${N.map(([k,et])=>{ const x=j.nivele?.[k]?.['t'+t];
+    return x?`<span>${et} <small class="sub">(${x.n})</small></span><span><b class="${cls(x.medie)}">${sg(x.medie,1)}%</b>${x.fataDeVWCE!=null?` · <span class="${cls(x.fataDeVWCE)}">${sg(x.fataDeVWCE,1)} pp</span> față de VWCE`:''} · căderi de 10%+: ${x.caderi}%</span>`:`<span>${et}</span><span class="sub">încă nimic</span>`; }).join('')}</div>`;
+  return h + `<div class="card"><div class="sub" style="line-height:1.55">${j.intrari} verdicte notate din ${ziRo(j.prima,false)}, pe acțiunile tale și pe ideile analizate. Dacă „Merită” a mers în medie mai bine decât „Nu acum” și a avut mai puține căderi, semnalele ajută. Sub ~30 de cazuri pe rând, diferențele pot fi întâmplătoare.</div>
+    ${are(3)?tabel(3):`<div class="sub" style="margin-top:12px">Primele rezultate după 3 luni: ${j.primeleRezultate?`<b class="ink2">${esc(ziLunga(j.primeleRezultate))}</b>`:'în curând'}.</div>`}
+    ${are(6)?tabel(6):''}
+    <div class="sub" style="margin-top:12px;line-height:1.55">Randamentele sunt în moneda fiecărei acțiuni, fără curs, ca să măsoare semnalul, nu dolarul.</div></div>`;
 }
 // ===== Jurnal =====
 function intrareJ(j, etfNow){

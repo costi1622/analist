@@ -1048,3 +1048,45 @@ export function perspectivaPortofoliu(pozitii = [], piata = null, profil = PROFI
   return { dir, eticheta, comb, trend, susPct: cuDate ? sus / cuDate * 100 : null, josPct: cuDate ? jos / cuDate * 100 : null, slabe,
     randAn: m * 100, volAn: s * 100, muAct: SCENARII.mediu, an: interval(1), orizont: interval(ani) };
 }
+
+// v0.44: valoarea pozițiilor eToro = unitățile × prețul de acum (din aceeași serie ca restul analizei), nu valoarea raportată
+// de API-ul de portofoliu, care se actualizează mai rar (GEV, AMD ieșeau cu ~1,5% sub eToro). Prețul în moneda acțiunii se
+// trece în lei cu cursul BNR. Dacă rezultatul se abate cu peste `prag`% de la valoarea API (simbol greșit, preț vechi), rămâne
+// valoarea API și abaterea apare în verificare.
+export function valoareEtoro(positions, market, fx, prag = 8) {
+  const out = [];
+  for (const p of positions) {
+    if (p.broker !== 'eToro' || !(p.qty > 0) || !(fx?.USD > 0)) continue;
+    const s = canon(p.symbol), pret = market?.[s]?.ind?.pret, m = monedaOf(s), c = m === 'RON' ? 1 : fx[m];
+    const api = p.valueUSD ?? (p.valueRON / fx.USD);
+    if (!(pret > 0) || !(c > 0) || !(api > 0)) { out.push({ symbol: s, api, calc: null, aplicat: false }); continue; }
+    const ron = p.qty * pret * c, usd = ron / fx.USD, dif = (usd / api - 1) * 100;
+    const aplicat = Math.abs(dif) <= prag;
+    if (aplicat) { p.valueUSDapi = api; p.valueRON = ron; p.valueUSD = usd; }
+    out.push({ symbol: s, api: +api.toFixed(2), calc: +usd.toFixed(2), difPct: +dif.toFixed(2), aplicat });
+  }
+  return out;
+}
+// v0.44: verificări de bun-simț după fiecare analiză. Fiecare problemă: { id, text }. Lista goală = totul se leagă.
+export function verificariBunSimt(snap, { fx = {}, valoriEtoro = [], vechi = null, operatiuniAzi = 0, prag = { miscare: 25, total: 15, curs: 1.5 } } = {}) {
+  const v = [], poz = (snap?.pozitii || []).filter(p => !p.virtual), f = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toString().replace('.', ',');
+  for (const p of poz) {
+    if (!(p.valueRON > 0)) v.push({ id: `val0:${p.symbol}`, text: `${p.symbol}: valoarea e zero sau lipsește.` });
+    if (!(p.costRON > 0)) v.push({ id: `cost0:${p.symbol}`, text: `${p.symbol}: costul e zero sau lipsește, deci câștigul ei nu se poate calcula.` });
+    const r = p.ind?.r1z; if (r != null && Math.abs(r) > prag.miscare) v.push({ id: `miscare:${p.symbol}`, text: `${p.symbol}: ${r > 0 ? '+' : '−'}${f(Math.abs(r))}% față de ieri. Poate fi o știre mare, dar și o eroare de preț sau o divizare a acțiunii.` });
+    for (const b of p.brokers || []) {
+      if (b.broker !== 'eToro' || !(b.costUSD > 0) || !(b.valueUSD > 0) || !(fx.USD > 0)) continue;
+      const cv = b.valueRON / b.valueUSD, cc = b.costRON / b.costUSD;
+      if (Math.abs(cv / fx.USD - 1) * 100 > prag.curs) v.push({ id: `cursval:${p.symbol}`, text: `${p.symbol} la eToro: valoarea în lei folosește ${f(cv, 3)} lei/$, iar cursul BNR e ${f(fx.USD, 3)}.` });
+      if (!(cc > 3 && cc < 7)) v.push({ id: `curscost:${p.symbol}`, text: `${p.symbol} la eToro: costul în lei iese la ${f(cc, 3)} lei/$, un curs imposibil.` });
+    }
+  }
+  for (const e of valoriEtoro) if (e.calc != null && !e.aplicat) v.push({ id: `etoroval:${e.symbol}`, text: `${e.symbol} la eToro: unități × preț dă $${f(e.calc, 2)}, eToro raportează $${f(e.api, 2)} (${e.difPct > 0 ? '+' : '−'}${f(Math.abs(e.difPct))}%). Am păstrat cifra eToro.` });
+  const sp = poz.reduce((a, p) => a + (p.pondere || 0), 0);
+  if (poz.length && Math.abs(sp - 100) > 0.5) v.push({ id: 'ponderi', text: `Ponderile pozițiilor adună ${f(sp)}%, nu 100%.` });
+  if (vechi?.totalRON > 0 && snap?.totalRON > 0 && !operatiuniAzi) {
+    const dt = (snap.totalRON / vechi.totalRON - 1) * 100;
+    if (Math.abs(dt) > prag.total) v.push({ id: 'total', text: `Valoarea totală s-a schimbat cu ${dt > 0 ? '+' : '−'}${f(Math.abs(dt))}% față de analiza precedentă, fără cumpărări sau vânzări văzute în conturi.` });
+  }
+  return v;
+}

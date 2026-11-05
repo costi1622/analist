@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.43.0';
+const APP_VER = '0.44.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -195,7 +195,7 @@ async function deblocheazaAmprenta(auto){
   catch(e) { if (!auto) toast(e.name==='NotAllowedError' ? 'Amprenta nu a fost confirmată. Folosește parola.' : 'Nu s-a putut debloca cu amprenta. Folosește parola.'); }
   finally { BIO_BUSY = false; }
 }
-async function dupaDeblocare(){ S.esec={n:0,pana:0}; save(); await dinCache(); LOADED=true; stare(); VIEW='azi'; render(); reincarca(); }
+async function dupaDeblocare(){ S.esec={n:0,pana:0}; save(); await dinCache(); LOADED=true; stare(); VIEW='azi'; render(); reincarca().then(()=>pretProaspat()); }
 async function encDate(text){ const iv=rnd(12); return JSON.stringify({v:1, alg:'A256GCM', iv:b64e(iv), ct:b64e(await crypto.subtle.encrypt({name:'AES-GCM', iv}, DK, new TextEncoder().encode(text)))}); }
 async function decDate(t){ if(!t) return null; const o=JSON.parse(t); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(o.iv)}, DK, b64d(o.ct))); }
 async function decRaport(t){
@@ -507,7 +507,14 @@ async function reincarca(manual) {
 addEventListener('offline',()=>{ if (!live()) return; OFFLINE=true; stare(); render(); });
 addEventListener('online',()=>{ if (live()) reincarca(); });
 // La revenirea în aplicație: verifică dacă au apărut date noi (cererile neschimbate costă doar un 304).
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden && live() && Date.now()-ULTIM > 5*60e3) reincarca(); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && live() && Date.now()-ULTIM > 5*60e3) reincarca().then(()=>pretProaspat()); });
+// v0.44: la deschiderea aplicației, cu bursa deschisă și prețurile mai vechi de 15 minute, cere singură prețurile de acum
+// (cel mult o dată la 15 minute, ca să nu consume minute GitHub degeaba). Se poate opri din Setări → Analiza automată.
+function pretProaspat(){
+  if (S.faraAuto || RULEAZA || OFFLINE || !live() || S.kill || ePCcitire() || !SNAP || !bursaDeschisa()) return;
+  if (varstaDate() < 15*60e3 || Date.now()-(S.autoPret||0) < 15*60e3) return;
+  S.autoPret = Date.now(); save(); ruleaza(false, true);
+}
 function cand(iso){
   if(!iso) return ''; const m=(Date.now()-Date.parse(iso))/60e3;
   if (m<1) return 'acum'; if (m<60) return `acum ${Math.round(m)} min`; if (m<24*60 && new Date(iso).getDate()===new Date().getDate()) return `azi ${new Date(iso).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'})}`;
@@ -746,6 +753,35 @@ async function pornesteDinNou(){
 }
 function activitateConfirmata(){ S.actConf=[...(S.actConf||[]), ...activitateNeconf().map(x=>x.id)].slice(-300); save(); vib(); render(); toast('Confirmat. Mulțumesc!'); }
 function codConfirmat(){ const c=S.cod||{}; for (const [k,v] of codNou()) c[k]={sha:v.head, cand:new Date().toISOString()}; S.cod=c; S.codNou={}; save(); vib(); render(); }
+// v0.44: amprenta codului analizei. Fiecare fișier din analist-date (runner/*.js, package.json, workflow-urile) e comparat,
+// după text, cu cel livrat odată cu aplicația (amprente.json, generat din aceeași versiune). Spațiile de la capăt de rând și
+// liniile goale de la final nu contează (copy/paste pe telefon). Un fișier diferit sau unul în plus în runner/ se vede imediat.
+const normText = t => t.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').split('\n').map(l=>l.replace(/[ \t]+$/,'')).join('\n').replace(/\n+$/,'');
+const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+async function verificaAmprente(fortat){
+  if (!live()) return null;
+  if (!fortat && S.ampr && Date.now()-(S.ampr.t||0) < 12*3600e3) return S.ampr;
+  const m = await fetch('amprente.json', {cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+  if (!m?.fisiere) return null;
+  const difera = [], lipsa = [];
+  await Promise.all(Object.entries(m.fisiere).map(async ([f, h]) => {
+    const t = await gh('/contents/'+f.split('/').map(encodeURIComponent).join('/'), {raw:true, optional:true});
+    if (t == null) lipsa.push(f); else if (await sha256(normText(String(t))) !== h) difera.push(f);
+  }));
+  const lista = await gh('/contents/runner', {optional:true}).catch(()=>null);
+  const inPlus = Array.isArray(lista) ? lista.filter(x=>x.type==='file' && /\.(m?js|cjs|json)$/.test(x.name) && !m.fisiere['runner/'+x.name]).map(x=>'runner/'+x.name) : [];
+  const wf = await gh('/contents/.github/workflows', {optional:true}).catch(()=>null);
+  if (Array.isArray(wf)) inPlus.push(...wf.filter(x=>x.type==='file' && !m.fisiere['.github/workflows/'+x.name]).map(x=>'.github/workflows/'+x.name));
+  S.ampr = { t: Date.now(), versiune: m.versiune, n: Object.keys(m.fisiere).length, difera: difera.sort(), lipsa: lipsa.sort(), inPlus: inPlus.sort() }; save();
+  return S.ampr;
+}
+function randAmprente(a, rand){
+  if (!a) return rand('atentie','Codul analizei','Nu s-a putut verifica acum.');
+  if (a.eroare) return rand('atentie','Codul analizei',`Nu s-a putut verifica: ${esc(a.eroare)}.`);
+  const p = [a.difera.length&&`diferă: ${a.difera.join(', ')}`, a.lipsa.length&&`lipsesc: ${a.lipsa.join(', ')}`, a.inPlus.length&&`în plus: ${a.inPlus.join(', ')}`].filter(Boolean);
+  if (!p.length) return rand('ok','Codul analizei',`Identic cu versiunea ${esc(a.versiune)} (${a.n} fișiere).`);
+  return rand(a.inPlus.length?'nu':'atentie','Codul analizei', `Nu e identic cu versiunea ${esc(a.versiune)}: ${esc(p.join('; '))}. Dacă nu le-ai urcat încă, urcă-le din arhivă. Dacă le-ai urcat și tot apar, sau dacă apare un fișier în plus pe care nu l-ai pus tu, folosește Oprirea de urgență și scrie-mi.`);
+}
 // Codul din GitHub: telefonul ține minte ultima versiune pe care ai confirmat-o. O versiune nouă pe care n-ai urcat-o tu
 // (cod strecurat de altcineva) apare aici, independent de ce raportează analiza.
 async function verificaCod(fortat){
@@ -805,7 +841,7 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.43.0';
+const MIN_ANALIZA = '0.44.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
@@ -815,7 +851,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.40.0': ['runner/config.js', 'runner/engine.js'],
   '0.41.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js', 'runner/notificari.js', 'runner/fcm.js', 'runner/paza.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.42.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
-  '0.43.0': ['runner/analiza.js', 'runner/sources.js', 'runner/config.js'] };
+  '0.43.0': ['runner/analiza.js', 'runner/sources.js', 'runner/config.js'],
+  '0.44.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/notificari.js', 'runner/paza.js', 'runner/tacute.js', 'runner/config.js'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -1031,6 +1068,9 @@ async function verificaPornire(){
   { const [st, txt] = starePush(); R.push(rand(st==='ok'?'ok':'atentie', 'Notificări pe telefon', st==='ok' ? `${txt}.` : `${txt}. Le pornești din Setări → Notificări.`)); }
   R.push(analizaVeche() ? rand('atentie','Versiunea analizei', `Repo-ul are ${esc(SNAP.versiune)}, aplicația are nevoie de ${MIN_ANALIZA}. Urcă: ${esc(fisiereDeUrcat().join(', '))}.`) : SNAP?.versiune ? rand('ok','Versiunea analizei', esc(SNAP.versiune)) : rand('atentie','Versiunea analizei','Apare după prima analiză.'));
   { const d = SNAP?.costEtoroDiag; if (d?.pozitii) R.push(d.laCumparare===d.pozitii ? rand('ok','Cost eToro în lei', `La cursul BNR din ziua cumpărării, ${d.pozitii} din ${d.pozitii} poziții.`) : rand('atentie','Cost eToro în lei', `${d.pozitii-d.laCumparare} din ${d.pozitii} poziții au costul la cursul de azi.${d.faraData?.length?` Fără data cumpărării: ${esc(d.faraData.join(', '))}.`:''}${d.faraCurs?.length?` Fără curs BNR: ${esc(d.faraCurs.join(', '))}.`:''}${d.aniLipsa?.length?` Arhiva BNR ${esc(d.aniLipsa.map(x=>x.an+': '+x.motiv).join('; '))}.`:''}`)); }
+  if (SNAP?.bunSimt) R.push(SNAP.bunSimt.length ? rand('atentie','Verificările cifrelor', `${SNAP.bunSimt.length} de verificat: ${esc(SNAP.bunSimt.map(x=>x.text).join(' '))}`) : rand('ok','Verificările cifrelor','Valorile, costurile, cursurile și ponderile se leagă.'));
+  if (SNAP?.tacute) R.push(SNAP.tacute.length ? rand('atentie','Erori ocolite', esc(SNAP.tacute.map(x=>`${x.loc}${x.n>1?` (×${x.n})`:''}: ${x.motiv}${x.mod?` · ${x.mod}`:''}`).join('; ')) + '. Analiza a mers mai departe fără ele.') : rand('ok','Erori ocolite','Niciuna la ultima analiză.'));
+  if (live()) { const a = await verificaAmprente(true).catch(e=>({eroare:e.message||String(e)})); R.push(randAmprente(a, rand)); }
   R.push(SNAP ? rand('ok','Cheia de date','Datele din GitHub se decriptează corect.') : rand('atentie','Cheia de date','Încă nu există date de decriptat.'));
   const cx = STARE?.conexiuni || SNAP?.conexiuni || {};
   for (const [k,t] of Object.entries(NUMEC)) { const c = cx[k]; if (!c || k==='seif' || k==='push' || c.stare==='optional') continue; R.push(rand(c.stare==='ok'?'ok':c.stare==='eroare'?'nu':'atentie', t, esc(c.mesaj||''))); }
@@ -1380,6 +1420,7 @@ function ajutorFoaie(){
     <div class="sub" style="text-align:center;margin-top:16px">Aplicație ${APP_VER}${SNAP?.versiune?` · Analiză ${esc(SNAP.versiune)}`:''}</div>
     <button class="btn ghost" style="margin-top:8px" data-c="${A('closeSheet')}">Închide</button>`);
 }
+function comutaAuto(){ S.faraAuto=!S.faraAuto; save(); vib(); automatFoaie(); }
 // Analiza automată: GitHub sare des rulările programate, așa că le poate porni cron-job.org (gratuit), la ora exactă.
 async function automatFoaie(){
   const repo = esc(S.repo), url = `https://api.github.com/repos/${S.repo}/actions/workflows/analiza.yml/dispatches`;
@@ -1395,6 +1436,9 @@ async function automatFoaie(){
     ${pas(2, 'Contul', 'Pe <a href="https://cron-job.org" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">cron-job.org</a>, cont gratuit. La Settings, alege fusul orar <b>Europe/Bucharest</b>.')}
     ${pas(3, 'O singură sarcină: „Analist”', `Create cronjob. Titlu: Analist. URL:${cp('URL', url)}Execution schedule: <b>Custom</b>. Days of week: luni–vineri. Hours: <b>9–23</b>. Minutes: <b>15 și 45</b>. Pornește la 9:15 și ultima la 23:45. Rularea de la 23:15, după închiderea bursei US, devine singură analiza completă a zilei (semnale, planul lunii, istoric, rezumatul zilei).<br>În <b>Advanced</b>: Request method <b>POST</b>. Headers (Add header, de trei ori):${cp('Authorization', 'Bearer TOKENUL_TĂU')}${cp('Accept', 'application/vnd.github+json')}${cp('X-GitHub-Api-Version', '2022-11-28')}Request body:${cp('Body', zi)}Salvează.`)}
     ${pas(4, 'Verifică', 'În cron-job.org, apasă <b>Test run</b> la prima sarcină: răspunsul trebuie să fie <b>204</b>. Apoi redeschide această fereastră: în cel mult un minut apare rularea nouă. Bifează și „Notify me when the cronjob fails”: dacă tokenul expiră, primești un e-mail.')}
+    <div class="lbl" style="margin:16px 0 8px">Prețuri proaspete la deschidere</div>
+    <div class="sub" style="line-height:1.55;margin-bottom:8px">Când deschizi aplicația cu bursa deschisă și prețurile au peste 15 minute, cere singură prețurile de acum (~40 de secunde, cel mult o dată la 15 minute; ~1 minut GitHub de fiecare dată).</div>
+    <button class="btn ${S.faraAuto?'':'ghost'} sm" data-c="${A('comutaAuto')}">${S.faraAuto?'Oprit · atinge ca să pornești':'Pornit · atinge ca să oprești'}</button>
     <div class="lbl" style="margin:16px 0 8px">Când expiră tokenul din cron-job.org</div>
     <div class="sub" style="line-height:1.55;margin-bottom:8px">${S.cronExp ? `Expiră pe <b>${esc(ziLunga(S.cronExp))}</b>. Cu o lună înainte, Setări îți arată un avertisment.` : 'Scrie data din GitHub (o vezi și în răspunsul de la Test run, la „token-expiration”). Cu o lună înainte, Setări îți arată un avertisment.'}</div>
     <div style="display:flex;gap:8px;align-items:center"><input id="cexp" type="date" value="${esc(S.cronExp||'')}" style="flex:1;margin:0"><button class="btn sm" style="flex:none;margin:0;padding:0 20px" data-c="${A('setCronExp')}">Salvează</button></div>
@@ -1525,6 +1569,7 @@ function ancora(direct){
   if (h.startsWith('s=')) { const sym=h.slice(2); if (/^[A-Z0-9.]{1,12}$/.test(sym) && SNAP.pozitii.some(p=>p.symbol===sym)) { go('azi'); setTimeout(()=>detaliu(sym),60); } else go('azi'); }
   else if (h==='raport') { go('azi'); if (RAP) setTimeout(()=>raport(),60); }
   else if (h==='securitate') { go('setari'); setTimeout(()=>pazaDetalii(),60); }
+  else if (h==='verificare') { go('azi'); setTimeout(()=>verificare(),60); }
   else if (['plan','analiza','setari','azi','noutati','invata'].includes(h)) go(h);
 }
 addEventListener('hashchange', ancora);
@@ -1564,7 +1609,7 @@ function surseLinie(){
   const o = SNAP.ora || {}, v = SNAP.verificare, ora = iso => iso ? new Date(iso).toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'}) : null;
   const parti = [o.t212&&`Trading 212 ${ora(o.t212)}`, o.etoro&&`eToro ${ora(o.etoro)}`, o.bnr&&`BNR ${ziRo(o.bnr,false)}`, o.preturi&&`prețuri ${ziRo(o.preturi,false)}`].filter(Boolean);
   if (!parti.length && !v) return '';
-  const badge = !v ? '' : v.ok ? `<button class="link" style="color:var(--pos);font-size:var(--t1)" data-c="${A('verificare')}">✓ verificat cu brokerii</button>` : `<button class="link" style="color:var(--warn);font-size:var(--t1)" data-c="${A('verificare')}">⚠ diferență față de broker</button>`;
+  const badge = !v ? '' : v.ok && !SNAP.bunSimt?.length ? `<button class="link" style="color:var(--pos);font-size:var(--t1)" data-c="${A('verificare')}">✓ verificat cu brokerii</button>` : `<button class="link" style="color:var(--warn);font-size:var(--t1)" data-c="${A('verificare')}">⚠ diferență față de broker</button>`;
   return `<div class="surse num">${parti.map(x=>`<span class="sch">${esc(x)}</span>`).join('')}${badge}</div>`;
 }
 function verificare(){
@@ -1573,7 +1618,10 @@ function verificare(){
   <div class="sub" style="margin-bottom:12px">La fiecare analiză, suma calculată de aplicație e comparată cu cea raportată de broker. Așa se vede imediat o poziție lipsă sau numărată greșit.</div>
   ${t?`<div class="kv num"><span>Trading 212, calculat</span><span>${lei(t.calculat)}</span><span>Trading 212, raportat de broker</span><span>${lei(t.raportat)}</span>
     <span>Diferență</span><span class="${t.ok?'pos':'neg'}">${sg(t.difPct,2)}% ${t.ok?'✓':'⚠'}</span></div>`:'<div class="sub">Trading 212: soldul nu a putut fi citit la ultima analiză.</div>'}
-  ${e?`<div class="kv num" style="margin-top:12px"><span>eToro, poziții citite</span><span>${e.pozitii}</span><span>Nerecunoscute</span><span class="${e.ok?'pos':'neg'}">${e.nerecunoscute.length?esc(e.nerecunoscute.join(', ')):'niciuna ✓'}</span></div>`:''}
+  ${e?`<div class="kv num" style="margin-top:12px"><span>eToro, poziții citite</span><span>${e.pozitii}</span><span>Nerecunoscute</span><span class="${e.nerecunoscute.length?'neg':'pos'}">${e.nerecunoscute.length?esc(e.nerecunoscute.join(', ')):'niciuna ✓'}</span>
+    ${e.raportatUSD!=null?`<span>eToro, unități × preț</span><span>$${nf(e.calculatUSD)}</span><span>eToro, raportat de API</span><span>$${nf(e.raportatUSD)}</span><span>Diferență</span><span class="${Math.abs(e.difPct)<=3?'pos':'neg'}">${sg(e.difPct,2)}%</span>`:''}</div>
+    ${e.raportatUSD!=null?'<div class="sub" style="margin-top:4px">La eToro, valoarea e unitățile × prețul de acum: API-ul de portofoliu se actualizează mai rar, deci o diferență mică e normală.</div>':''}`:''}
+  ${SNAP.bunSimt?`<div class="lbl" style="margin-top:16px">Verificări de bun-simț</div>${SNAP.bunSimt.length?SNAP.bunSimt.map(x=>`<div class="al warn" style="margin-top:8px">${esc(x.text)}</div>`).join(''):'<div class="sub" style="margin-top:4px;color:var(--pos)">✓ Totul se leagă: valori, costuri, cursuri, ponderi, mișcarea față de ieri.</div>'}`:''}
   ${v.ok===false?`<div class="al err" style="margin-top:12px">Dacă diferența persistă două zile, trimite-mi o captură: probabil o acțiune nouă trebuie adăugată în maparea simbolurilor.</div>`:''}
   <button class="btn ghost" style="margin-top:16px" data-c="${A('closeSheet')}">Închide</button>`);
 }
@@ -1703,7 +1751,7 @@ function pozitieRand(p, k, iv){
   const opor = p.oportunitate||iv?.[p.symbol]?.oportunitate;
   return `<div class="pr p2" data-t="${t}" data-s="${esc(p.symbol)}" style="animation-delay:${Math.min(k,12)*30}ms;--t:var(${TCOL[t]});--k:var(${SEMC[s]})" data-c="${A('deschideDetaliu',p.symbol,'$av')}">${fund}
     ${avatar(p)}
-    <div class="pm"><div class="s">${opor?'<span class="star">★</span>':''}${esc(p.symbol)}<span class="sig">${SEM[s]}</span></div><div class="n">${esc(p.name||'')}</div></div>
+    <div class="pm"><div class="s">${opor?'<span class="star">★</span>':''}${esc(p.symbol)}<span class="sig">${SEM[s]}</span></div><div class="n">${esc(p.name||'')}${laBroker(p)?` · ${esc(laBroker(p))}`:''}</div></div>
     <div class="r"><b class="num fd">${lei(p.valueRON,0)}</b>${mv(m)}</div>
     <div class="pw">${p.peCont?`<span class="sub num">${nf(p.pondere,1)}% din cont${p.valueUSD!=null&&!S.privat?` · $${nf(p.valueUSD)}`:''}</span>`:`${wbar(p)}<span class="sub num">${nf(p.pondere,1)}% <span class="pt">· țintă ${nf(p.tinta,0)}%</span></span>`}<span class="num ptot ${cls(p.pnlPct)}">${sg(p.pnlPct,1)}% total</span></div>
     ${p.deVerificat?'<div class="pv sub">⚠ date de verificat</div>':''}
@@ -1742,7 +1790,10 @@ const MISC = p => miscare(p)?.x ?? null;
 const tr = (x, prag=0.3) => x==null||isNaN(x) ? 'flat' : x > prag ? 'up' : x < -prag ? 'down' : 'flat';
 const TCOL = {up:'--pos', down:'--neg', flat:'--flat'};
 const mv = (x, lg, prag) => { const t=tr(x,prag); return `<span class="mv ${lg?'lg':''} ${t}">${x==null||isNaN(x)?'–':t==='flat'?'● '+sg(x,2)+'%':(x>0?'▲ ':'▼ ')+nf(Math.abs(x),2)+'%'}</span>`; };
-const momentPoz = p => { const m = miscare(p); return !m ? '' : m.cand === 'acum' ? 'azi, acum' : m.cand === 'azi' ? `azi, până la ${oraRo(m.ora)}` : 'la ultima închidere'; };
+// v0.44: simbolul de la broker, când diferă de cel din aplicație (eToro: GOOG; aplicația le adună sub GOOGL)
+const faraBursa = x => String(x||'').replace(/\.[A-Z]{1,3}$/,'');
+const laBroker = p => (p.brokers||[]).filter(b=>b.symbol && faraBursa(b.symbol)!==faraBursa(p.symbol)).map(b=>`la ${b.broker}: ${b.symbol}`).join(' · ');
+const momentPoz = p => { const m = miscare(p); return !m ? '' : ['acum','azi'].includes(m.cand) ? `azi, preț de la ${oraRo(m.ora)}` : 'la ultima închidere'; };
 // Pentru totaluri: „Azi” dacă măcar o poziție are mișcarea de azi, altfel „Ultima zi”.
 const momentZi = () => SNAP?.pozitii?.some(p => !p.virtual && ['acum','azi'].includes(miscare(p)?.cand)) ? 'azi' : 'la ultima închidere';
 // Câștigul zilei în lei: valoarea de acum a fiecărei poziții × mișcarea ei în lei față de închiderea de ieri.
@@ -2026,7 +2077,7 @@ function detaliu(sym, zile){
   const cl = culoriActiune(p.symbol), stil = cl ? `--c:${cl.c};--acc:${cl.c};--acc2:${cl.c2};--accInk:${cl.ink}` : `--c:var(${col})`;
   const html = `<div class="fisa" style="${stil}"><div class="dh"><div class="grab"></div>
     <div style="display:flex;gap:16px;align-items:center">${avatar(p,'lg')}<div style="flex:1;min-width:0"><div class="row"><div class="fd" style="font-size:var(--t5);font-weight:700">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>${chip(u)}</div>
-      <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'')}</div><div class="sub" style="color:var(${col})">● ${esc(p.tema)}</div></div></div>
+      <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'')}</div>${laBroker(p)?`<div class="sub">${esc(laBroker(p))}</div>`:''}<div class="sub" style="color:var(${col})">● ${esc(p.tema)}</div></div></div>
     <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(miscare(p)?.pret ?? i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">${({ acum: 'preț acum', azi: `preț la ${oraRo(SNAP.generat)} (bursa e deschisă)` })[miscare(p)?.cand] || 'preț de închidere'}</div></div>
       <div style="text-align:right">${mv(MISC(p),1)}<div class="sub" style="margin-top:4px">${momentPoz(p)}</div></div></div></div>
   <div class="vd" style="--k:var(${SEMC[u]})">${ic(VIC[u])}<div>${link(verdict(p))}</div></div>
@@ -2563,8 +2614,11 @@ function riscPortofoliu(){
 // Piața globală are ~62% în dolari (FTSE All-World). Abia peste 70% e un pariu în plus pe dolar.
 const DOLAR_MAX = 70;
 // Inflația anuală din România (INS), pentru randamentul după inflație. Se actualizează când INS publică o lună nouă.
-const INFLATIE_RO = { an: 6.61, luna: 'septembrie 2026' };
-const dupaInflatie = (v, ani = 1) => ((1 + v / 100) / Math.pow(1 + INFLATIE_RO.an / 100, Math.min(ani, 1)) - 1) * 100;
+const INFLATIE_INS = { an: 6.61, luna: '2026-09', sursa: 'INS' };
+// v0.44: analiza citește zilnic inflația de la Eurostat; o folosim când e dintr-o lună mai nouă decât cea scrisă în aplicație
+const inflatie = () => { const e = SNAP?.inflatie; return e?.an != null && /^\d{4}-\d{2}$/.test(e.luna||'') && e.luna > INFLATIE_INS.luna ? e : INFLATIE_INS; };
+const lunaInfl = x => { const [a,l] = String(x.luna).split('-'); return `${LUNI_RO[+l-1]||''} ${a}`; };
+const dupaInflatie = (v, ani = 1) => ((1 + v / 100) / Math.pow(1 + inflatie().an / 100, Math.min(ani, 1)) - 1) * 100;
 // cât din piața globală (FTSE All-World, VWCE) e în dolari: companiile americane, cam 64%
 const DOLAR_PIATA = 64;
 function sanatate(){
@@ -2770,7 +2824,7 @@ function randamentHTML(){
     ${(()=>{ const a=randPerioada(r.anual, r.dela), b=r.vwce?.anual!=null?randPerioada(r.vwce.anual, r.dela):null, pe=a.an?' pe an':'';
     return `<div class="row"><div><div class="lbl">${a.an?'Pe an, pe banii tăi':`Pe banii tăi, ${a.et}`}</div><div class="hero fd ${cls(a.v)}" style="font-size:var(--t6)">${sg(a.v,1)}<small>%</small></div></div>
       ${b?`<div style="text-align:right"><div class="lbl">VWCE, aceleași depuneri</div><div class="fd ${cls(b.v)}" style="font-size:var(--t4);font-weight:700">${sg(b.v,1)}%</div></div>`:''}</div>
-    ${a.an?`<div class="sub" style="margin-top:4px">După inflație: <b class="${cls(dupaInflatie(a.v))}">${sg(dupaInflatie(a.v),1)}%</b> pe an (inflația din România: ${nf(INFLATIE_RO.an,1)}%, ${INFLATIE_RO.luna}, INS).</div>`:''}
+    ${a.an?`<div class="sub" style="margin-top:4px">După inflație: <b class="${cls(dupaInflatie(a.v))}">${sg(dupaInflatie(a.v),1)}%</b> pe an (inflația din România: ${nf(inflatie().an,1)}%, ${lunaInfl(inflatie())}, ${esc(inflatie().sursa||'')}).</div>`:''}
     ${a.an?'':`<div class="sub" style="margin-top:4px">Investești de ${Math.round(a.zile/30.4)} ${Math.round(a.zile/30.4)===1?'lună':'luni'}: sub un an, randamentul nu se anualizează, pentru că ar ieși umflat. Ca procent anual: ${sg(r.anual,1)}%, dar doar orientativ.</div>`}
     ${b?`<div class="al ${a.v>=b.v?'good':''}" style="margin:12px 0 0">${a.v>=b.v?`Alegerile tale au adus <b>${nf(a.v-b.v,1)} puncte procentuale</b>${pe} peste varianta „totul în VWCE”.`:`Varianta „totul în VWCE”, cu exact aceleași sume și date, ar fi adus <b>${nf(b.v-a.v,1)} puncte procentuale</b>${pe} mai mult.`}`:''}`; })()}${r.vwce?.anual!=null?`${r.vwce.valoare&&!S.privat?` Ar valora azi ${nf(r.vwce.valoare,0)} lei.`:''}</div>`:`<div class="sub" style="margin-top:8px">Comparația cu VWCE pe aceleași depuneri apare când există prețul VWCE pentru toate datele depunerilor.</div>`}
     <div class="sub" style="margin-top:8px">${r.dela?`Din ${ziRo(r.dela)}. `:''}${r.complet?'':'Istoricul Trading 212 încă se adună: cifra se va corecta.'}</div></div>`;
@@ -3681,7 +3735,7 @@ function ascundeSplash(){ const sp=$('splash'); if (!sp || sp.dataset.gata) retu
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches, rapid = are_seif() && !V && !!citesteSeif()?.bio;
   setTimeout(()=>{ sp.classList.add('iese'); DUPA_SPLASH.splice(0).forEach(f=>requestAnimationFrame(f)); setTimeout(()=>sp.remove(), 600); }, calm ? 0 : Math.max(0, (rapid?700:1700)-(performance.now()-T_START))); }
 motor().catch(()=>{}); // motorul se încarcă din timp, cât aștepți amprenta
-render(); reincarca();
+render(); reincarca().then(()=>pretProaspat());
 setTimeout(ascundeSplash, 3500); // în orice caz, nu mai mult
 setInterval(()=>{ if(!document.hidden) stare(); }, 60e3);
 
@@ -3975,7 +4029,7 @@ function quizUrm(){ QZ.i++; QZ.ales=null; arataQuiz(); }
 function alegeFisier(){ $('fimp').click(); }
 function stergeJConfirmat(id){ J=J.filter(x=>x.id!==id); saveJ(); closeSheet(); if($('sheet').classList.contains('on')) closeSheet(); render(); }
 const CMD = Object.freeze(Object.assign(Object.create(null), {
-  go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
+  comutaAuto, go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
   deblocheaza, deblocheazaAmprenta, uitatParola, stergeSeif, schimbaParola, aratăCheia, cheieNoua, cheieExistenta,
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan, comutaEtfToate, arataVerdict,

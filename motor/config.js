@@ -1,6 +1,6 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență: vezi LICENSE.
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.42.0';
+export const VERSION = '0.44.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.
@@ -222,5 +222,5 @@ export const ORAR = {
 export const TER = Object.fromEntries(Object.entries(ETF_CATALOG).map(([k, v]) => [k, v.ter])); // VWCE: 0,14% din 28 iulie 2026
 
 // Paza la date ciudate: peste aceste praguri, datele sunt marcate „de verificat” și nu trimitem notificări pe ele.
-export const PAZA = { miscareZi: 40, totalZi: 15, dif_broker: 0.5 };
+export const PAZA = { miscareZi: 40, totalZi: 15, dif_broker: 0.5, dif_etoro: 3 }; // dif_etoro: % între unități × preț și valoarea API (prețul API e mai vechi)
 

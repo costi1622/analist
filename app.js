@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.41.0';
+const APP_VER = '0.42.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -339,10 +339,11 @@ const GLOS = {
   orbita:['Galaxia ta','Portofoliul tău ca un sistem solar. În centru e steaua portofoliului: arată cum a mers totul azi (o atingi și vezi valoarea). Pe orbita cea mai apropiată stau ETF-urile, apoi câte o orbită pentru fiecare sector. Fiecare planetă e o poziție: mărimea e ponderea, inelul colorat e semnalul (verde: cumpără, gri: las-o, roșu: uită-te la ea), iar strălucirea arată cum a mers azi. Orbitele pline au trecut de plafonul pe sector. Trage cu degetul ca să rotești și să înclini sistemul, atinge o planetă ca s-o vezi și încă o dată ca să-i deschizi fișa. „Ultimul an” arată, în câteva secunde, cum s-au schimbat mărimile în ultimele 12 luni, după prețurile zilnice (cu cantitățile de azi).'],
   proiectie:['Unde poți ajunge','Trei scenarii pentru valoarea portofoliului la orizontul tău: 3%, 6% și 9% pe an, în lei, înainte de inflație. Linia punctată e doar ce depui. Diferența până la scenarii e dobânda compusă: câștigurile fac la rândul lor câștiguri. Anii reali vor fi neregulați, cu scăderi de 20–30% pe drum. Nu e o promisiune, e un ordin de mărime.'],
   agitatie:['Cât de mult se mișcă portofoliul','Agitația (volatilitatea) arată cât urcă și coboară valoarea într-un an obișnuit, calculată din prețurile ultimelor până la 12 luni, cu ponderile de azi. VWCE e reperul. Cea mai mare scădere e de la un vârf la minimul de după. O lună proastă apare cam o dată la 20 de luni. Testele de stres arată cât ai pierde în scenarii plauzibile. Scăderile de felul ăsta sunt normale pe termen lung. Întrebarea e dacă le-ai privi liniștit, fără să vinzi.'],
+  castigAcum:['Câștig pe poziții','Cât au câștigat sau pierdut, în lei, pozițiile pe care le ai acum: valoarea de azi minus cât ai plătit pe ele. La eToro, ce ai plătit în dolari e socotit cu cursul BNR din ziua fiecărei cumpărări, deci intră și câștigul sau pierderea din curs. Nu intră dividendele încasate și câștigurile din ce ai vândut: pe acelea le vezi în Analiză → Randamentul tău, care le socotește pe toate.'],
   castigPoz:['De unde vine câștigul','Câștigul sau pierderea în lei a fiecărei poziții, de când o ai. Așa vezi care alegeri au contat cu adevărat, nu doar procentual: 50% pe o poziție mică poate valora mai puțin decât 10% pe una mare.'],
   alocare:['Alocare: acum și ținta','În Plan, inelul exterior e ținta și cel interior e împărțirea de acum, pe ETF și sectoare; se schimbă pe loc când muți glisoarele. În Analiză, bara de sus arată cum e împărțit portofoliul azi, pe ETF și sectoare. Bara de jos arată împărțirea țintă, după orizontul tău. Plafoanele pe sector și pe acțiune se schimbă din Plan → Profilul tău. Ajungi la țintă din depuneri, fără să vinzi.'],
   corelatie:['Ce se mișcă împreună','Corelația arată cât de des două acțiuni urcă și coboară în aceleași săptămâni: 1 înseamnă identic, 0 independent, sub 0 invers. „Diversificarea reală” arată câte poziții cu adevărat diferite ai: zece acțiuni care se mișcă la fel valorează cât o singură poziție. Se calculează din randamentele pe câte 5 zile de bursă din ultimul an: pe zile, acțiunile europene (închise la 18:30) și cele americane (închise la 23:00, ora României) ar părea mai puțin legate decât sunt. Diversificarea reală înseamnă poziții care nu cad toate odată.'],
-  xirr:['Randamentul real','Câștigul tău pe an, socotit corect pentru cineva care depune lunar: fiecare sumă contează de la data la care a intrat. 1.000 de lei puși acum o lună au avut mai puțin timp să crească decât 1.000 puși acum 3 ani. E metoda folosită de fondurile de investiții (XIRR). Sumele de la eToro sunt convertite cu cursul BNR din ziua fiecărei depuneri. Comparația cu VWCE folosește exact aceleași sume, în aceleași zile, puse integral în VWCE la prețul și cursul BNR din acea zi; vânzările și dividendele scot bani din ambele variante. Dacă ești sub VWCE ani la rând, varianta simplă ar fi fost mai bună.'],
+  xirr:['Randamentul pe an','Câștigul tău pe an, înainte de inflație, socotit corect pentru cineva care depune lunar: socotit corect pentru cineva care depune lunar: fiecare sumă contează de la data la care a intrat. 1.000 de lei puși acum o lună au avut mai puțin timp să crească decât 1.000 puși acum 3 ani. E metoda folosită de fondurile de investiții (XIRR). Sumele de la eToro sunt convertite cu cursul BNR din ziua fiecărei depuneri. Comparația cu VWCE folosește exact aceleași sume, în aceleași zile, puse integral în VWCE la prețul și cursul BNR din acea zi; vânzările și dividendele scot bani din ambele variante. Dacă ești sub VWCE ani la rând, varianta simplă ar fi fost mai bună. „După inflație” scade inflația anuală din România (INS): cât a crescut de fapt puterea de cumpărare a banilor tăi.'],
   costuri:['Costurile','Ce plătești ca să investești: comisionul valutar la Trading 212 (0,15% la fiecare cumpărare în altă monedă decât leul), costul anual al ETF-ului (TER 0,14% pentru VWCE, din iulie 2026, scăzut direct din prețul lui) și estimarea pentru depunerile tale lunare. eToro nu raportează prin API comisioanele de conversie la depunere. Pe 10 ani, 0,5% pe an în plus înseamnă aproximativ 5% din valoarea finală.'],
   dividende:['Dividendele','Partea din profit pe care unele companii o plătesc acționarilor, de obicei trimestrial. Estimarea anuală vine din randamentul anunțat al fiecărei acțiuni. VWCE nu plătește dividende: le reinvestește singur, deci câștigul apare în prețul lui. La brokerii străini, dividendele se declară în Declarația Unică; impozitul reținut în SUA se scade din cel datorat în România.'],
   ter:['TER: costul anual al ETF-ului','Total Expense Ratio: cât la sută pe an ia administratorul fondului. Nu-l plătești separat: se scade zilnic, puțin câte puțin, din prețul ETF-ului. VWCE are 0,14% pe an: la 10.000 de lei, 14 lei pe an.'],
@@ -616,7 +617,7 @@ function animaOdo(){
   ODO_PREV = v;
 }
 // Starea zilei colorează aurora: plus → verde-turcoaz, minus → magenta, aproape zero → albastrul obișnuit.
-function stareZi(){ if (!SNAP?.pozitii) return; const z = SNAP.pozitii.reduce((a,p)=>a+(p.ind?.r1z!=null&&!p.virtual?p.pondere*p.ind.r1z/100:0),0);
+function stareZi(){ if (!SNAP?.pozitii) return; const z = SNAP.pozitii.reduce((a,p)=>{ const m=miscare(p); return a+(m&&!p.virtual?p.pondere*m.xl/100:0); },0);
   const m = z > 0.15 ? 'sus' : z < -0.15 ? 'jos' : ''; if (document.documentElement.dataset.mood !== m || !AUR.gata) { document.documentElement.dataset.mood = m; aurora(); }
   const hc = document.querySelector('.card.hcard'); if (hc && !AUR.orb) { AUR.orb = true; hc.classList.add('orb'); } } // orbita se rotește o dată pe deschidere, apoi stă
 // Aurora: un canvas mic (72×144) întins pe tot ecranul. Gradientele sunt moi, deci mărirea nu se vede, iar telefonul
@@ -804,7 +805,7 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.41.0';
+const MIN_ANALIZA = '0.42.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
@@ -812,7 +813,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.37.0': ['runner/paza.js', 'runner/analiza.js', 'runner/config.js'],
   '0.38.0': ['runner/stare.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml'],
   '0.40.0': ['runner/config.js', 'runner/engine.js'],
-  '0.41.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js', 'runner/notificari.js', 'runner/fcm.js', 'runner/paza.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'] };
+  '0.41.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js', 'runner/notificari.js', 'runner/fcm.js', 'runner/paza.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
+  '0.42.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -1707,15 +1709,36 @@ function structurat(t){
   return `${cap.length?`<div>${link(cap.join(' '))}</div>`:''}<ul class="lst">${lst.map(f=>{ const i=f.indexOf(':'); return `<li><b>${esc(f.slice(0,i))}:</b> ${link(f.slice(i+1).trim())}</li>`; }).join('')}</ul>`;
 }
 // ===== Mișcarea: crește, scade, stagnează =====
-const MISC = p => { const x = intraValid() ? INTRA.pozitii.find(y=>y.symbol===p.symbol)?.var : null; return x ?? p.ind?.r1z ?? null; };
+// v0.42: mișcarea zilei pentru o poziție, cu momentul ei. Fiecare poziție își spune singură de când e cifra: prețul de acum
+// (verificarea din timpul zilei), ziua de azi încă deschisă (analiza a rulat în timpul ședinței) sau ultima închidere.
+// x = în moneda acțiunii (cum o vezi la broker); xl = în lei (cu cursul BNR), pentru totalul în lei.
+const BURSE_EU = /\.(DE|PA|AS|MI|MC|BR|L|SW|VI|LS|HE|CO|ST|OL)$/;
+const bursaEU = p => BURSE_EU.test(p.symbol) || !!p.etf || ['EUR','GBP','CHF'].includes(p.moneda);
+// ora și ziua în fusul bursei: Xetra/Euronext 09:00–17:30 (Berlin), New York 09:30–16:00
+function sedintaDeschisa(p, iso){
+  const eu = bursaEU(p), tz = eu ? 'Europe/Berlin' : 'America/New_York';
+  const f = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+  if (['Sat','Sun'].includes(f.weekday)) return false;
+  const m = +f.hour * 60 + +f.minute; return eu ? m >= 540 && m < 1050 : m >= 570 && m < 960;
+}
+const oraRo = iso => new Date(iso).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' });
+function miscare(p){
+  const iv = intraValid() ? INTRA.pozitii.find(y => y.symbol === p.symbol && y.var != null && !y.deVerificat) : null;
+  if (iv) return { x: iv.var, xl: iv.varLei ?? iv.var, f: iv.fs ?? 1, pret: iv.pret, cand: 'acum', ora: INTRA.generat };
+  const x = p.ind?.r1z; if (x == null) return null;
+  const desc = SNAP?.generat && p.ind?.data === SNAP.generat.slice(0, 10) && sedintaDeschisa(p, SNAP.generat);
+  return { x, xl: p.ind?.r1zLei ?? x, f: 1, pret: p.ind?.pret, cand: desc ? 'azi' : 'inchidere', ora: SNAP?.generat };
+}
+const MISC = p => miscare(p)?.x ?? null;
 const tr = (x, prag=0.3) => x==null||isNaN(x) ? 'flat' : x > prag ? 'up' : x < -prag ? 'down' : 'flat';
 const TCOL = {up:'--pos', down:'--neg', flat:'--flat'};
 const mv = (x, lg, prag) => { const t=tr(x,prag); return `<span class="mv ${lg?'lg':''} ${t}">${x==null||isNaN(x)?'–':t==='flat'?'● '+sg(x,2)+'%':(x>0?'▲ ':'▼ ')+nf(Math.abs(x),2)+'%'}</span>`; };
-const momentZi = () => intraValid() ? 'azi' : 'la ultima închidere';
-// Câștigul zilei în lei: din prețul de acum (intraday) sau din ultima închidere.
+const momentPoz = p => { const m = miscare(p); return !m ? '' : m.cand === 'acum' ? 'azi, acum' : m.cand === 'azi' ? `azi, până la ${oraRo(m.ora)}` : 'la ultima închidere'; };
+// Pentru totaluri: „Azi” dacă măcar o poziție are mișcarea de azi, altfel „Ultima zi”.
+const momentZi = () => SNAP?.pozitii?.some(p => !p.virtual && ['acum','azi'].includes(miscare(p)?.cand)) ? 'azi' : 'la ultima închidere';
+// Câștigul zilei în lei: valoarea de acum a fiecărei poziții × mișcarea ei în lei față de închiderea de ieri.
 function ziua(poz){
-  const iv = intraValid();
-  return poz.reduce((a,p)=>{ const x=MISC(p); return x==null?a:a+p.valueRON*x/(iv?100:100+x); },0);
+  return poz.reduce((a,p)=>{ const m=miscare(p); if (!m || p.virtual) return a; const v = p.valueRON*(m.f||1); return a + v*m.xl/(100+m.xl); },0);
 }
 // Harta zilei: dreptunghiuri cât ponderea, colorate după mișcare (algoritmul „squarified”).
 function squarify(items, x, y, w, h){
@@ -1880,7 +1903,7 @@ function vAzi(){
   const SORT = {semnal:(a,b)=>(ORD[sem(a)]-ORD[sem(b)])||(b.pondere-a.pondere), pondere:(a,b)=>b.pondere-a.pondere, castig:(a,b)=>b.pnlPct-a.pnlPct,
     azi:(a,b)=>((MISC(b) ?? -1e9)-(MISC(a) ?? -1e9))};
   const poz = [...VC.poz].sort(SORT[S.sort]||SORT.semnal);
-  const zi = ziua(VC.poz), ziP = VC.total-zi ? zi/(VC.total-zi)*100 : 0, t = tr(ziP, 0.15);
+  const zi = ziua(VC.poz), tzi = VC.poz.reduce((a,p)=>a+p.valueRON*(miscare(p)?.f||1),0), ziP = tzi-zi ? zi/(tzi-zi)*100 : 0, t = tr(ziP, 0.15);
   const c = ceFac(), ist = (IST||[]).filter(x=>x.totalRON).slice(-60);
   const tIst = ist.length>5 ? tr((ist.at(-1).totalRON/ist[0].totalRON-1)*100, 0.5) : 'flat';
   let h = '';
@@ -1895,9 +1918,9 @@ function vAzi(){
     <div class="hero num big">${S.privat?'•••••':odo(nf(VC.total))}<small>lei</small></div>
     <div class="kpi3 num">
       <div><span>${momentZi()==='azi'?'Azi':'Ultima zi'}</span>${mv(ziP,1,0.15)}<small>${sgL(zi,0)} lei</small></div>
-      <div><span>Câștig total</span>${mv(pc,1,0.5)}<small>${S.privat?'•••':sg(pnl)} lei</small></div>
+      <div data-c="${A('termen','castigAcum')}"><span>Câștig pe poziții</span>${mv(pc,1,0.5)}<small>${S.privat?'•••':sg(pnl)} lei</small></div>
       ${C==='toate'&&SNAP.randament?.anual!=null?(()=>{ const r=randPerioada(SNAP.randament.anual, SNAP.randament.dela), v=SNAP.randament.vwce?.anual!=null?randPerioada(SNAP.randament.vwce.anual, SNAP.randament.dela):null;
-        return `<div data-c="${A('termen','xirr')}"><span>${r.an?'Pe an, real':'Real, '+r.et}</span><b class="${cls(r.v)}">${sg(r.v,1)}%</b><small>${v?`VWCE ${sg(v.v,1)}%`:'pe banii tăi'}</small></div>`; })():''}
+        return `<div data-c="${A('termen','xirr')}"><span>${r.an?'Pe an':'Randament, '+r.et}</span><b class="${cls(r.v)}">${sg(r.v,1)}%</b><small>${v?`VWCE ${sg(v.v,1)}%`:r.an?`după inflație ${sg(dupaInflatie(r.v),1)}%`:'pe banii tăi'}</small></div>`; })():''}
     </div>
     ${VC.usd?`<div class="sub num" style="margin-top:8px">În dolari, ca în aplicația eToro: <b class="ink2">$${S.privat?'•••':nf(VC.usd.v)}</b> · <span class="${cls(VC.usd.v-VC.usd.c)}">${S.privat?'•••':(VC.usd.v-VC.usd.c>=0?'+':'−')+'$'+nf(Math.abs(VC.usd.v-VC.usd.c))}</span></div>`:''}
     ${C!=='toate'?`<div class="sub" style="margin-top:8px">${VC.poz.length} ${VC.poz.length===1?'poziție':'poziții'} · ${nf(VC.total/SNAP.totalRON*100,1)}% din portofoliu. Semnalele și planul țin cont de ambele conturi.</div>`:''}
@@ -1994,8 +2017,8 @@ function detaliu(sym, zile){
   const html = `<div class="fisa" style="${stil}"><div class="dh"><div class="grab"></div>
     <div style="display:flex;gap:16px;align-items:center">${avatar(p,'lg')}<div style="flex:1;min-width:0"><div class="row"><div class="fd" style="font-size:var(--t5);font-weight:700">${p.oportunitate?'<span class="star">★ </span>':''}${esc(p.symbol)}</div>${chip(u)}</div>
       <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'')}</div><div class="sub" style="color:var(${col})">● ${esc(p.tema)}</div></div></div>
-    <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">preț de închidere</div></div>
-      <div style="text-align:right">${mv(MISC(p),1)}<div class="sub" style="margin-top:4px">${momentZi()}</div></div></div></div>
+    <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(miscare(p)?.pret ?? i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">${({ acum: 'preț acum', azi: `preț la ${oraRo(SNAP.generat)} (bursa e deschisă)` })[miscare(p)?.cand] || 'preț de închidere'}</div></div>
+      <div style="text-align:right">${mv(MISC(p),1)}<div class="sub" style="margin-top:4px">${momentPoz(p)}</div></div></div></div>
   <div class="vd" style="--k:var(${SEMC[u]})">${ic(VIC[u])}<div>${link(verdict(p))}</div></div>
   ${verdictHTML(p.symbol, true)}
   ${graf}
@@ -2529,6 +2552,11 @@ function riscPortofoliu(){
 }
 // Piața globală are ~62% în dolari (FTSE All-World). Abia peste 70% e un pariu în plus pe dolar.
 const DOLAR_MAX = 70;
+// Inflația anuală din România (INS), pentru randamentul după inflație. Se actualizează când INS publică o lună nouă.
+const INFLATIE_RO = { an: 6.61, luna: 'septembrie 2026' };
+const dupaInflatie = (v, ani = 1) => ((1 + v / 100) / Math.pow(1 + INFLATIE_RO.an / 100, Math.min(ani, 1)) - 1) * 100;
+// cât din piața globală (FTSE All-World, VWCE) e în dolari: companiile americane, cam 64%
+const DOLAR_PIATA = 64;
 function sanatate(){
   const pr=P(), etf=SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.pondere,0);
   const [tn,tp] = Object.entries(SNAP.teme).filter(([n])=>!n.startsWith('ETF')&&n!=='Altele').sort((a,b)=>b[1]-a[1])[0]||['',0];
@@ -2674,14 +2702,14 @@ function sectiuniAnaliza(){
         <p style="margin:8px 0 0;font-size:var(--t2);line-height:1.55;color:var(--ink2)">${pp.susPct!=null?`${nf(pp.susPct,0)}% din portofoliu e în poziții cu trendul lung în sus${pp.josPct?`, ${nf(pp.josPct,0)}% în poziții cu trendul în jos (${esc(pp.slabe.slice(0,4).join(', '))})`:''}. `:''}${PIATA()?`Sentimentul pieței: ${PIATA().scor}/100. `:''}Asta descrie direcția de acum, pentru următoarele luni; se poate schimba repede.</p></div>
         <div class="card" style="margin-top:12px"><div class="lbl">Ce spune istoria, pentru portofoliul tău</div>
         <div class="kv num" style="margin-top:8px">
-          <span>Randament așteptat pe an</span><span>~${nf(pp.randAn,1)}%</span>
+          <span>Randament pe an, media pieței</span><span>~${nf(pp.randAn,1)}%</span>
           <span>Cât se mișcă pe an (volatilitate)</span><span>~${nf(pp.volAn,0)}%</span>
           <span>Peste 1 an, 8 ani din 10</span><span>${lim(pp.an.p10)} … ${lim(pp.an.p90)}</span>
           <span>Șansa să fie pe minus după 1 an</span><span>~${nf(pp.an.sansaPierdere,0)}%</span>
           <span>Peste ${pp.orizont.ani} ani (orizontul tău), cel mai probabil</span><span>${lim(pp.orizont.median)}</span>
           <span>Peste ${pp.orizont.ani} ani, 8 cazuri din 10</span><span>${lim(pp.orizont.p10)} … ${lim(pp.orizont.p90)}</span>
           <span>Șansa să fie pe minus după ${pp.orizont.ani} ani</span><span>~${nf(pp.orizont.sansaPierdere,0)}%</span></div>
-        <div class="sub" style="margin-top:8px">Pentru suma de acum, fără depunerile viitoare. Randamentul așteptat vine din scenariul „mediu” (${nf(pp.muAct,0)}% pe an pentru acțiuni, 3% pentru obligațiuni și aur), iar riscul din cât s-a mișcat fiecare poziție în ultimul an. Pe termen lung, timpul lucrează pentru tine: șansa de pierdere scade cu fiecare an. Nu e o garanție.</div></div>`; } }
+        <div class="sub" style="margin-top:8px">Pentru suma de acum, fără depunerile viitoare. Randamentul e media istorică a pieței (${nf(pp.muAct,0)}% pe an pentru acțiuni, 3% pentru obligațiuni și aur), nu o estimare pentru acțiunile tale: nimeni nu poate spune care acțiune va bate piața. Ce e al tău e riscul: din cât s-a mișcat fiecare poziție în ultimul an, în lei. De aceea un portofoliu concentrat are aceeași medie, dar un interval mult mai larg. Pe termen lung, timpul lucrează pentru tine: șansa de pierdere scade cu fiecare an. Nu e o garanție.</div></div>`; } }
   return O;
 }
 
@@ -2727,11 +2755,12 @@ function corelatiiHTML(c){
 }
 function randamentHTML(){
   const r = SNAP.randament, e = SNAP.etfRef||{};
-  if (!r || r.anual==null) return `<div class="sec"><h2>Randamentul tău real ${q('xirr')}</h2></div><div class="card sub">${r?.inCurs?'Se adună istoricul tranzacțiilor din Trading 212, câteva pagini la fiecare analiză. Apare după câteva rulări.':'Apare după prima analiză cu istoricul tranzacțiilor.'}</div>`;
-  return `<div class="sec"><h2>Randamentul tău real ${q('xirr')}</h2></div><div class="card">
+  if (!r || r.anual==null) return `<div class="sec"><h2>Randamentul tău ${q('xirr')}</h2></div><div class="card sub">${r?.inCurs?'Se adună istoricul tranzacțiilor din Trading 212, câteva pagini la fiecare analiză. Apare după câteva rulări.':'Apare după prima analiză cu istoricul tranzacțiilor.'}</div>`;
+  return `<div class="sec"><h2>Randamentul tău ${q('xirr')}</h2></div><div class="card">
     ${(()=>{ const a=randPerioada(r.anual, r.dela), b=r.vwce?.anual!=null?randPerioada(r.vwce.anual, r.dela):null, pe=a.an?' pe an':'';
     return `<div class="row"><div><div class="lbl">${a.an?'Pe an, pe banii tăi':`Pe banii tăi, ${a.et}`}</div><div class="hero fd ${cls(a.v)}" style="font-size:var(--t6)">${sg(a.v,1)}<small>%</small></div></div>
       ${b?`<div style="text-align:right"><div class="lbl">VWCE, aceleași depuneri</div><div class="fd ${cls(b.v)}" style="font-size:var(--t4);font-weight:700">${sg(b.v,1)}%</div></div>`:''}</div>
+    ${a.an?`<div class="sub" style="margin-top:4px">După inflație: <b class="${cls(dupaInflatie(a.v))}">${sg(dupaInflatie(a.v),1)}%</b> pe an (inflația din România: ${nf(INFLATIE_RO.an,1)}%, ${INFLATIE_RO.luna}, INS).</div>`:''}
     ${a.an?'':`<div class="sub" style="margin-top:4px">Investești de ${Math.round(a.zile/30.4)} ${Math.round(a.zile/30.4)===1?'lună':'luni'}: sub un an, randamentul nu se anualizează, pentru că ar ieși umflat. Ca procent anual: ${sg(r.anual,1)}%, dar doar orientativ.</div>`}
     ${b?`<div class="al ${a.v>=b.v?'good':''}" style="margin:12px 0 0">${a.v>=b.v?`Alegerile tale au adus <b>${nf(a.v-b.v,1)} puncte procentuale</b>${pe} peste varianta „totul în VWCE”.`:`Varianta „totul în VWCE”, cu exact aceleași sume și date, ar fi adus <b>${nf(b.v-a.v,1)} puncte procentuale</b>${pe} mai mult.`}`:''}`; })()}${r.vwce?.anual!=null?`${r.vwce.valoare&&!S.privat?` Ar valora azi ${nf(r.vwce.valoare,0)} lei.`:''}</div>`:`<div class="sub" style="margin-top:8px">Comparația cu VWCE pe aceleași depuneri apare când există prețul VWCE pentru toate datele depunerilor.</div>`}
     <div class="sub" style="margin-top:8px">${r.dela?`Din ${ziRo(r.dela)}. `:''}${r.complet?'':'Istoricul Trading 212 încă se adună: cifra se va corecta.'}</div></div>`;
@@ -2808,7 +2837,7 @@ function gxDate(){
   // v0.38: în centru e portofoliul; ETF-urile (VWCE etc.) sunt planete pe orbita cea mai apropiată, ca orice altă poziție
   const orb = [...(etf.length ? [{ n:'ETF', etf:true, c:gxCul('--acc'), plin:false, R:0.3 }] : []),
     ...[...sect].sort((a,b)=>cnt(a)-cnt(b)).map((b,k)=>({ n:b.n, c:gxCul(b.c), plin:(SNAP.teme[b.n]||0)>pr.maxTema, R: (etf.length?0.46:0.36) + (etf.length?0.52:0.62)*(n<2?0.5:k/(n-1)) }))];
-  const zi = ziua(SNAP.pozitii), ziP = SNAP.totalRON-zi ? zi/(SNAP.totalRON-zi)*100 : 0;
+  const zi = ziua(SNAP.pozitii), tzi = SNAP.pozitii.reduce((a,p)=>a+p.valueRON*(miscare(p)?.f||1),0), ziP = tzi-zi ? zi/(tzi-zi)*100 : 0;
   const pl = [];
   orb.forEach((o,k)=>{ const ps = SNAP.pozitii.filter(p=>o.etf ? p.etf : !p.etf && p.tema===o.n);
     ps.forEach((p,j)=>{ const cl = culoriActiune(p.symbol), l = sigla(p); let im = null; if (l) { im = new Image(); im.src = l; }
@@ -2979,16 +3008,16 @@ function vAnaliza(){
   const nJ = jurnalTot_().length, dif = SNAP.bench?.diferenta;
   h += `<div class="sec gsec"><h2>Cum merg banii</h2><span class="sub">randament și comparații</span></div><div class="bento">
     ${SNAP.randament?.anual!=null?(()=>{ const a=randPerioada(SNAP.randament.anual, SNAP.randament.dela), b=SNAP.randament.vwce?.anual!=null?randPerioada(SNAP.randament.vwce.anual, SNAP.randament.dela):null;
-      return tile('randament','racheta','Randamentul tău real', sg(a.v,1)+`<small>% ${a.et}</small>`, b?`VWCE cu aceleași depuneri: ${sg(b.v,1)}%`:'pe banii tăi, la data fiecărei depuneri','','lat acc'); })():tile('randament','racheta','Randamentul tău real','în curând','se adună istoricul tranzacțiilor','','lat')}
+      return tile('randament','racheta','Randamentul tău', sg(a.v,1)+`<small>% ${a.et}</small>`, `${b?`VWCE cu aceleași depuneri: ${sg(b.v,1)}%`:'pe banii tăi, la data fiecărei depuneri'}${a.an?` · după inflație: ${sg(dupaInflatie(a.v),1)}%`:''}`,'','lat acc'); })():tile('randament','racheta','Randamentul tău','în curând','se adună istoricul tranzacțiilor','','lat')}
     ${tile('vwce','trofeu','Tu față de VWCE', dif!=null?sgL(dif,0)+' <small>lei</small>':'în curând', dif!=null?(dif>=0?'alegerile tale au adăugat valoare':'varianta simplă ar fi dat mai mult'):'apare după câteva luni de date', ist.length>5?spark(ist.map(x=>x.totalRON/x.bench)):'')}
-    ${tile('castig','monede','Câștig total', sgL(tot,0)+' <small>lei</small>', `${cs[0]?.symbol} aduce cel mai mult`, `<div class="minib">${cs.slice(0,6).map(p=>`<i style="height:${Math.max(Math.abs(p.pnlRON)/mx*100,6)}%;background:var(${p.pnlRON>=0?'--pos':'--neg'})"></i>`).join('')}</div>`)}
+    ${tile('castig','monede','Câștig pe poziții', sgL(tot,0)+' <small>lei</small>', `${cs[0]?.symbol} aduce cel mai mult`, `<div class="minib">${cs.slice(0,6).map(p=>`<i style="height:${Math.max(Math.abs(p.pnlRON)/mx*100,6)}%;background:var(${p.pnlRON>=0?'--pos':'--neg'})"></i>`).join('')}</div>`)}
     ${an.length&&!incepator()?tile('an','stea','Pe un an vs VWCE', `${esc(an[0].s)} <small>${sg(an[0].d,0)} pp</small>`, `cea mai slabă: ${esc(an.at(-1).s)} ${sg(an.at(-1).d,0)} pp`,'','lat'):''}
   </div>`;
   h += `<div class="sec gsec"><h2>Riscul</h2><span class="sub">cât de tare se poate mișca</span></div><div class="bento">
     ${r?tile('risc','puls','Volatilitate pe an', nf(r.vol,0)+'%', r.volE?`VWCE: ${nf(r.volE,0)}%`:'', `<div class="gauge" style="--k:var(${r.volE&&r.vol>r.volE*1.3?'--warn':'--acc'})"><i style="width:${Math.min(r.vol/40*100,100)}%"></i>${r.volE?`<b style="left:${Math.min(r.volE/40*100,100)}%"></b>`:''}</div>`):''}
     ${r?tile('risc','alerta','Cel mai rău scenariu', '−'+(S.privat?'•••':nf(stresMax,0))+' <small>lei</small>', 'din testele de stres', `<div class="gauge" style="--k:var(--neg)"><i style="width:${Math.min(stresMax/T*100*2.5,100)}%"></i></div>`):''}
     ${(()=>{ const c=incepator()?null:corelatiiPortofoliu(); return c?tile('corelatii','link','Diversificare reală', '~'+Math.max(1,Math.round(c.ne))+` <small>din ${c.poz.length}</small>`, c.grupuri[0]?`${c.grupuri[0].s.length} se mișcă împreună: ${nf(c.grupuri[0].pondere,0)}% din bani`:'nicio grupare puternică', `<div class="minih">${c.poz.slice(0,6).map(a=>c.poz.slice(0,6).map(b=>`<i style="background:${a===b?'var(--line)':culRho(c.K.M[a.symbol][b.symbol])}"></i>`).join('')).join('')}</div>`):''; })()}
-    ${tile('monede','glob','În dolari', nf(usd,0)+'%', usd>DOLAR_MAX?'mai mult decât piața globală':'cam cât piața globală', `<div class="gauge" style="--k:var(${usd>DOLAR_MAX?'--warn':'--acc'})"><i style="width:${usd}%"></i><b style="left:${DOLAR_MAX}%"></b></div>`)}
+    ${tile('monede','glob','În dolari', nf(usd,0)+'%', `piața globală: ~${DOLAR_PIATA}%`, `<div class="gauge" style="--k:var(${usd>DOLAR_MAX?'--warn':'--acc'})"><i style="width:${usd}%"></i><b style="left:${DOLAR_MAX}%"></b></div>`)}
     ${tile('alocare','tinta','Alocare: acum și ținta', `${nf(SNAP.teme[B[0]?.n]||0,0)}% <small>în ${B[0]?.n.startsWith('ETF')?'ETF':'primul sector'}</small>`, '', `<div class="sub" style="margin-top:8px">Acum</div>${stack(n=>SNAP.teme[n])}<div class="sub" style="margin-top:8px">Ținta ta</div>${stack(tintaTema)}`, 'lat')}
   </div>`;
   h += `<div class="sec gsec"><h2>Costuri și taxe</h2><span class="sub">ce plătești</span></div><div class="bento">

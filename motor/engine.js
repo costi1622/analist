@@ -88,6 +88,8 @@ export function indicators(candles) {
     protectie, subProtectie: protectie != null && last < protectie,
     deLaMaxim: pct(last, hi52),
     deLaMaxim3l: pct(last, Math.max(...c.slice(-63))),
+    // v0.42: data ultimei lumânări (poate fi ziua de azi, încă deschisă) și închiderea dinainte, pentru „azi” corect
+    data: candles.at(-1)?.t ? String(candles.at(-1).t).slice(0, 10) : null, dataPrec: candles.at(-2)?.t ? String(candles.at(-2).t).slice(0, 10) : null, prec: c.at(-2) ?? null,
     r1z: ret(c, 1), r1l: ret(c, 21), r3l: ret(c, 63), r6l: ret(c, 126), r1a: ret(c, 252),
     zile: c.length,
   };
@@ -159,7 +161,9 @@ export function riscIstoric(pozitii, n = 252) {
   const zile = toate.filter(d => d >= start).slice(-(n + 1));
   if (zile.length < 30) return null;
   const W = poz.reduce((a, p) => a + p.pondere, 0);
-  const preturi = poz.map(p => { const m = new Map(p.serie.d.map((d, i) => [d, p.serie.c[i]])); let u = null; return zile.map(d => (u = m.get(d) ?? u)); });
+  // v0.42: prețurile în lei (prețul × cursul BNR al zilei), când analiza a pus cursurile în serie: riscul pe care îl simți tu
+  const lei = (p, i) => p.serie.fx?.length === p.serie.c.length && p.serie.fx[i] > 0 ? p.serie.c[i] * p.serie.fx[i] : p.serie.c[i];
+  const preturi = poz.map(p => { const m = new Map(p.serie.d.map((d, i) => [d, lei(p, i)])); let u = null; return zile.map(d => (u = m.get(d) ?? u)); });
   const R = [];
   for (let i = 1; i < zile.length; i++) R.push(poz.reduce((a, p, k) => { const x = preturi[k][i - 1], y = preturi[k][i]; return a + (x && y ? p.pondere / W * (y / x - 1) : 0); }, 0));
   const sd = a => { const m = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); };
@@ -1001,12 +1005,33 @@ const Phi = z => { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * 
 // Perspectiva portofoliului: direcția semnalelor de azi (termen scurt) + intervalul statistic (1 an și orizontul tău).
 // Randamentul așteptat vine din scenariul „mediu” (acțiuni), 3% (obligațiuni, aur), iar riscul din volatilitatea fiecărei poziții,
 // cu o corelație de 0,6 între acțiuni (cât au de obicei acțiunile între ele) și 0,1 între acțiuni și obligațiuni sau aur.
+// v0.42: prețul față de care se măsoară „azi”: închiderea de ieri. Dacă ultima lumânare e chiar de azi (analiza a rulat în timpul
+// ședinței), e cea dinaintea ei.
+export function referintaZi(ind, azi) {
+  if (!ind?.pret) return { pret: null, data: null };
+  return ind.data === azi && ind.prec > 0 ? { pret: ind.prec, data: ind.dataPrec } : { pret: ind.pret, data: ind.data };
+}
+// v0.42: costul unei poziții eToro în lei, cu cursul din ziua fiecărei cumpărări (curs(data) → lei pentru 1 USD).
+// Loturile pot acoperi doar o parte din cost (vânzări parțiale): se folosește cursul lor mediu, ponderat cu sumele. null = lipsă curs.
+export function costInLei(costUSD, loturi, curs) {
+  const L = (loturi || []).filter(l => l.usd > 0 && l.data), tot = L.reduce((a, l) => a + l.usd, 0);
+  if (!tot || !(costUSD > 0)) return null;
+  let lei = 0; for (const l of L) { const c = curs(String(l.data).slice(0, 10)); if (!(c > 0)) return null; lei += l.usd * c; }
+  return costUSD * lei / tot;
+}
+// Volatilitatea anuală în lei (prețul × cursul BNR al zilei), din seria pusă de analiză; null dacă lipsește cursul.
+export function volLei(p, n = 252) {
+  const s = p?.serie; if (!s?.c?.length || s.fx?.length !== s.c.length) return null;
+  const v = s.c.map((x, i) => x * s.fx[i]).slice(-(n + 1)); if (v.length < 60) return null;
+  const r = []; for (let i = 1; i < v.length; i++) if (v[i - 1] > 0 && v[i] > 0) r.push(Math.log(v[i] / v[i - 1]));
+  const m = r.reduce((a, b) => a + b, 0) / r.length; return Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length - 1) * 252) * 100;
+}
 export function perspectivaPortofoliu(pozitii = [], piata = null, profil = PROFIL) {
   const L = pozitii.filter(p => !p.virtual && (p.pondere || 0) > 0); if (!L.length) return null;
   const W = L.reduce((a, p) => a + p.pondere, 0);
   const cls = p => ['obligatiuni'].includes(ETF_CATALOG[p.symbol]?.rol) ? 'obl' : ETF_CATALOG[p.symbol]?.rol === 'aur' ? 'aur' : 'act';
   const mu = { act: SCENARII.mediu, obl: 3, aur: 3 }, volImp = { act: 18, obl: 5, aur: 15 };
-  const x = L.map(p => { const c = cls(p), v = p.ind?.volAn ?? (c === 'act' && !p.etf ? 30 : volImp[c]); return { p, c, w: p.pondere / W, v: v / 100, m: mu[c] / 100 }; });
+  const x = L.map(p => { const c = cls(p), v = volLei(p) ?? p.ind?.volAn ?? (c === 'act' && !p.etf ? 30 : volImp[c]); return { p, c, w: p.pondere / W, v: v / 100, m: mu[c] / 100 }; });
   const m = x.reduce((a, e) => a + e.w * e.m, 0);
   let varP = 0; for (const a of x) for (const b of x) { const rho = a === b ? 1 : a.c === 'act' && b.c === 'act' ? 0.6 : a.c === b.c ? 0.5 : 0.1; varP += a.w * b.w * a.v * b.v * rho; }
   const s = Math.sqrt(varP), ml = Math.log(1 + m);

@@ -2,8 +2,23 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.40.3';
+const APP_VER = '0.41.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
+// v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
+// (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
+// (Chrome trece „android-app://ro.costi.analist” ca sursă), apoi scoatem ancora din adresă. Analizei pleacă abia când apeși tu
+// „Direct din aplicație” în Setări → Notificări, criptat cu DATA_KEY.
+const NATIV_TOK = t => typeof t === 'string' && t.length >= 100 && t.length <= 4096 && /^[A-Za-z0-9:_-]+$/.test(t);
+const NATIV_CHEIE = k => typeof k === 'string' && /^B[A-Za-z0-9_-]{86}$/.test(k); // 65 de octeți, 04 | X | Y
+(() => { try { const h = location.hash; if (!h.startsWith('#nativ=')) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  localStorage.setItem('analist_nativ_sursa', document.referrer || '(gol)');
+  if (!/^android-app:\/\/ro\.costi\.analist\/?$/.test(document.referrer)) return;
+  const b = atob(h.slice(7).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((h.length - 7 + 3) % 4));
+  const j = JSON.parse(new TextDecoder().decode(Uint8Array.from(b, c => c.charCodeAt(0))));
+  if (NATIV_TOK(j.t) && NATIV_CHEIE(j.k)) localStorage.setItem('analist_nativ', JSON.stringify({ t: j.t, k: j.k }));
+} catch (e) {} })();
+const nativ = () => { try { const x = JSON.parse(localStorage.getItem('analist_nativ') || 'null'); return x && NATIV_TOK(x.t) && NATIV_CHEIE(x.k) ? x : null; } catch { return null; } };
 const KEY = 'analist_v1'; // localStorage e comun cu Nivelo pe același domeniu: chei separate
 const ETI = {adauga:'Adaugă',pastreaza:'Păstrează',nu_adauga:'Nu mai adăuga',asteapta:'Așteaptă',verifica:'Verifică acțiunea',reechilibreaza:'Reechilibrează'};
 const ORD = {uita:0,cumpara:1,reducere:2,las:3};
@@ -789,14 +804,15 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.40.0';
+const MIN_ANALIZA = '0.41.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.34.0': ['runner/notificari.js', 'runner/analiza.js', 'runner/sources.js', 'runner/paza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.37.0': ['runner/paza.js', 'runner/analiza.js', 'runner/config.js'],
   '0.38.0': ['runner/stare.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml'],
-  '0.40.0': ['runner/config.js', 'runner/engine.js'] };
+  '0.40.0': ['runner/config.js', 'runner/engine.js'],
+  '0.41.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js', 'runner/notificari.js', 'runner/fcm.js', 'runner/paza.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -1085,6 +1101,8 @@ async function diagNotificari(){
   r.push(['push permissionState', await t(async () => { const g = await navigator.serviceWorker?.getRegistration(); return g ? await g.pushManager.permissionState({ userVisibleOnly: true }) : 'fără service worker'; })]);
   r.push(['abonament push', await t(async () => { const g = await navigator.serviceWorker?.getRegistration(); return (await g?.pushManager.getSubscription()) ? 'da' : 'nu'; })]);
   r.push(['deschis din', document.referrer || '(gol)']);
+  r.push(['aplicația Android', nativ() ? 'înregistrată' : 'nu (sursa ultimei porniri: ' + (localStorage.getItem('analist_nativ_sursa') || '–') + ')']);
+  r.push(['notificări directe', pushNativ() ? 'active' : 'oprite']);
   r.push(['mod afișare', matchMedia('(display-mode: standalone)').matches ? 'standalone' : matchMedia('(display-mode: fullscreen)').matches ? 'fullscreen' : 'browser']);
   r.push(['Chrome', (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '?']);
   r.push(['service worker activ', navigator.serviceWorker?.controller ? 'da' : 'nu']);
@@ -1093,7 +1111,8 @@ async function diagNotificari(){
 const pushSuport = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const pushPerm = () => pushSuport() ? Notification.permission : 'nesuportat';
 const pushTipuri = () => Object.fromEntries(TIPURI_PUSH.map(([k]) => [k, S.pushTipuri?.[k] !== false]));
-const pushActiv = () => !!S.pushActiv && pushPerm() === 'granted';
+const pushNativ = () => typeof S.pushNativ === 'string' && S.pushNativ.length > 80;
+const pushActiv = () => (!!S.pushActiv && pushPerm() === 'granted') || pushNativ();
 const u8b64u = s => { const b = atob(String(s).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(s).length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
 async function abonamentTelefon(creeaza){
   const reg = await navigator.serviceWorker.ready, cheie = u8b64u(pushCheie());
@@ -1125,8 +1144,18 @@ async function activeazaPush(){
   } catch(e) { toast('Nu am putut activa notificările pe acest telefon. Reîncearcă.'); }
   finally { PUSH_OCUPAT = false; render(); if ($('sheet').classList.contains('on') && $('sheet').querySelector('.pushf')) notificariFoaie(); }
 }
+// Notificările direct din aplicația Android: telefonul trimite analizei tokenul și cheia publică, apoi primește un test.
+async function activeazaNativ(){
+  const n = nativ(); if (!n || doarCitire() || PUSH_OCUPAT) return; PUSH_OCUPAT = true; vib();
+  try { if (await trimitePushProfil({ tel: n, discret: !!S.pushDiscret, tipuri: pushTipuri() }, 'pushtest')) {
+      S.pushNativ = n.k; S.pushNativT = n.t; S.pushAmanat = null; S.pushSalvat = true; save(); toast('Gata. În cel mult un minut primești o notificare de test, direct din aplicație.'); } }
+  finally { PUSH_OCUPAT = false; render(); if ($('sheet').classList.contains('on') && $('sheet').querySelector('.pushf')) notificariFoaie(); }
+}
 async function testPush(){
-  if (PUSH_OCUPAT || !pushActiv()) return; PUSH_OCUPAT = true; vib();
+  if (PUSH_OCUPAT || !pushActiv()) return;
+  if (pushNativ()) { PUSH_OCUPAT = true; vib(); try { const n = nativ() || { t: S.pushNativT, k: S.pushNativ };
+      if (await trimitePushProfil({ tel: n }, 'pushtest')) toast('Trimis. Notificarea ajunge în cel mult un minut, direct din aplicație.'); } finally { PUSH_OCUPAT = false; } return; }
+  PUSH_OCUPAT = true; vib();
   try { const sub = await abonamentTelefon(false); if (!sub) { S.pushActiv = false; save(); toast('Abonamentul a expirat. Activează din nou.'); return; }
     const j = sub.toJSON();
     if (await trimitePushProfil({ sub: { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth } }, 'pushtest')) toast('Trimis. Notificarea ajunge în cel mult un minut.');
@@ -1137,8 +1166,8 @@ async function opresteNotificari(){
   if (PUSH_OCUPAT) return; PUSH_OCUPAT = true; vib();
   try { const sub = pushSuport() ? await abonamentTelefon(false).catch(() => null) : null, ep = sub?.endpoint;
     if (sub) await sub.unsubscribe().catch(() => {});
-    if (ep) await trimitePushProfil({ scoate: ep }, 'profil');
-    S.pushActiv = false; save(); toast('Notificările sunt oprite pe acest telefon.');
+    if (ep || pushNativ()) await trimitePushProfil({ ...(ep ? { scoate: ep } : {}), ...(pushNativ() ? { scoateTel: S.pushNativ } : {}) }, 'profil');
+    S.pushActiv = false; S.pushNativ = null; S.pushNativT = null; save(); toast('Notificările sunt oprite pe acest telefon.');
   } finally { PUSH_OCUPAT = false; render(); if ($('sheet').classList.contains('on')) notificariFoaie(); }
 }
 function comutaTipPush(k){ if (!TIPURI_PUSH.some(([x]) => x === k)) return; S.pushTipuri = { ...pushTipuri(), [k]: !pushTipuri()[k] }; S.pushSalvat = false; save(); vib(); notificariFoaie(); }
@@ -1153,6 +1182,10 @@ async function salveazaPreferintePush(){
 let PUSH_VERIFICAT = false;
 async function verificaAbonament(){
   if (PUSH_VERIFICAT || !pushActiv() || !pushCheie() || !DK) return; PUSH_VERIFICAT = true;
+  // aplicația Android și-a schimbat tokenul (Google îl reînnoiește din când în când): îl trimitem analizei
+  const n = nativ(); if (pushNativ() && n && (n.t !== S.pushNativT || n.k !== S.pushNativ)) {
+    if (await trimitePushProfil({ tel: n, ...(n.k !== S.pushNativ ? { scoateTel: S.pushNativ } : {}) }, 'profil')) { S.pushNativ = n.k; S.pushNativT = n.t; save(); } }
+  if (pushNativ() && !(S.pushActiv && pushPerm() === 'granted')) return;
   try {
     let sub = await abonamentTelefon(false), nou = false;
     if (!sub) { sub = await abonamentTelefon(true); nou = true; }
@@ -1162,22 +1195,25 @@ async function verificaAbonament(){
 function amanaPush(){ S.pushAmanat = aziISO(); save(); vib(); render(); }
 // Banda de pe Acasă: o dată, apoi peste 14 zile dacă ai zis „Mai târziu”.
 function bandaPush(){
-  if (ePCcitire() || pushActiv() || !pushSuport() || !pushCheie() || pushPerm() === 'denied') return '';
+  if (ePCcitire() || pushActiv() || !pushCheie() || (!nativ() && (!pushSuport() || pushPerm() === 'denied'))) return '';
   if (S.pushAmanat && (Date.parse(aziISO()) - Date.parse(S.pushAmanat)) / 864e5 < 14) return '';
   return `<div class="card pz"><div class="pzt">${ic('bec')}<b>Lasă analistul să te anunțe</b></div>
     <div class="sub">Primești o notificare când o acțiune din plan e la reducere, când portofoliul se mișcă mult, când apare un semnal nou și când raportul de dimineață e gata. Criptate, direct în aplicație.</div>
-    <div class="pzb"><button class="btn sm" data-c="${A('activeazaPush')}">Activează</button><button class="btn ghost sm" data-c="${A('amanaPush')}">Mai târziu</button></div></div>`;
+    <div class="pzb"><button class="btn sm" data-c="${A(nativ() ? 'activeazaNativ' : 'activeazaPush')}">Activează</button><button class="btn ghost sm" data-c="${A('amanaPush')}">Mai târziu</button></div></div>`;
 }
-const starePush = () => pushActiv() ? ['ok', 'Active pe acest telefon'] : !pushSuport() ? ['nu', 'Browserul acesta nu le suportă'] : pushPerm() === 'denied' ? ['nu', 'Blocate din setările telefonului'] : !pushCheie() ? ['atentie', 'Pornesc după prima analiză nouă'] : ['atentie', 'Oprite'];
+const starePush = () => pushNativ() ? ['ok', 'Direct din aplicația Analist'] : pushActiv() ? ['ok', 'Active pe acest telefon'] : !pushSuport() ? ['nu', 'Browserul acesta nu le suportă'] : pushPerm() === 'denied' ? ['nu', 'Blocate din setările telefonului'] : !pushCheie() ? ['atentie', 'Pornesc după prima analiză nouă'] : ['atentie', 'Oprite'];
 function notificariFoaie(){
   const [st, txt] = starePush(), tp = pushTipuri(), test = STARE?.push?.test;
   const sw = (on, c) => `<span class="sw ${on?'on':''}" role="switch" aria-checked="${on}"></span>`;
   foaie(`<div class="pushf">${capFoaie('bec','Notificări', txt)}
-    ${pushActiv() ? `<div class="sub" style="margin:0 0 12px;line-height:1.5">Ce ți se trimite e criptat pe drum: doar telefonul tău îl poate citi.${test ? ` Ultimul test: ${esc(cand(test.cand))}, ${test.ok ? 'trimis' : 'netrimis'}.` : ''}</div>`
+    ${pushNativ() ? `<div class="sub" style="margin:0 0 12px;line-height:1.5">Vin direct din aplicația Analist, nu prin Chrome. Le criptează analiza cu cheia acestui telefon: Google, care le duce, vede doar octeți criptați.${STARE?.push?.firebase === false ? ' <b style="color:var(--warn)">Lipsește secretul FCM_CONT din GitHub: până îl adaugi, notificările vin prin Chrome.</b>' : ''}${test ? ` Ultimul test: ${esc(cand(test.cand))}, ${test.ok ? 'trimis' : 'netrimis'}.` : ''}</div>`
+      : nativ() ? `<div class="card" style="margin:0 0 12px;border-color:color-mix(in srgb,var(--acc) 40%,var(--line))"><b>Direct din aplicație</b><div class="sub" style="margin:4px 0 12px;line-height:1.5">Notificările vin din aplicația Analist, nu prin Chrome, criptate cu cheia acestui telefon. Ajung și când Chrome e oprit de telefon ca să economisească bateria.</div><button class="btn" style="margin:0" data-c="${A('activeazaNativ')}">Activează direct din aplicație</button></div>` : ''}
+    ${pushActiv() && !pushNativ() ? `<div class="sub" style="margin:0 0 12px;line-height:1.5">Ce ți se trimite e criptat pe drum: doar telefonul tău îl poate citi.${test ? ` Ultimul test: ${esc(cand(test.cand))}, ${test.ok ? 'trimis' : 'netrimis'}.` : ''}</div>`
+      : pushActiv() ? ''
       : pushPerm() === 'denied' ? `<div class="al" style="margin:0 0 12px">Ai blocat notificările pentru Analist. Le pornești din setările telefonului: Aplicații → Chrome (sau Analist) → Notificări, apoi revii aici.</div>`
       : `<div class="sub" style="margin:0 0 12px;line-height:1.5">În zilele de bursă, analistul se uită la piață la fiecare 30 de minute, de la deschiderea Europei până la închiderea SUA, și te anunță doar când e ceva de știut.</div>`}
     ${pushActiv() ? `<div style="display:flex;gap:8px"><button class="btn sm" style="flex:1;margin:0" data-c="${A('testPush')}">Trimite un test</button><button class="btn ghost sm" style="flex:1;margin:0" data-c="${A('opresteNotificari')}">Oprește</button></div>`
-      : st !== 'nu' ? `<button class="btn" data-c="${A('activeazaPush')}" ${pushCheie()?'':'disabled'}>Activează pe acest telefon</button>` : ''}
+      : st !== 'nu' && !nativ() ? `<button class="btn" data-c="${A('activeazaPush')}" ${pushCheie()?'':'disabled'}>Activează pe acest telefon</button>` : ''}
     <div class="lbl" style="margin:16px 0 8px">Ce primești</div>
     <div class="card grp">${TIPURI_PUSH.map(([k, t, d]) => `<button class="it" data-c="${A('comutaTipPush', k)}"><span class="tx"><b>${t}</b><small>${d}</small></span>${sw(tp[k])}</button>`).join('')}
       <div class="it" style="cursor:default"><span class="tx"><b>Alarmele de securitate</b><small>mereu, nu se pot opri</small></span><b style="color:var(--pos);font-size:var(--t3)">✓</b></div></div>
@@ -1239,7 +1275,7 @@ function vNoutati(){
   for (const x of fil) {
     const z = ziNout(x.cand); if (z !== zi) { zi = z; h += `<div class="lbl nout-zi">${esc(z)}</div>`; }
     const [et, col, ico] = TIP_NOUT[x.tip] || TIP_NOUT.sistem, act = actiuneNout(x), nou = x.cand > vaz;
-    const liv = x.trimisa === 'oprit' ? 'fără notificare (oprită din setări)' : neprimita(x) ? '<span style="color:var(--warn)">n-a ajuns pe telefon</span>' : x.trimisa ? (PRIMITE.has(x.id) ? 'primită pe telefon' : 'trimisă pe telefon') : 'fără notificare pe telefon';
+    const liv = x.trimisa === 'oprit' ? 'fără notificare (oprită din setări)' : neprimita(x) ? '<span style="color:var(--warn)">n-a ajuns pe telefon</span>' : x.trimisa ? (PRIMITE.has(x.id) ? 'primită pe telefon' : x.trimisa === 'aplicatie' ? 'trimisă în aplicație' : 'trimisă pe telefon') : 'fără notificare pe telefon';
     h += `<div class="card nout ${nou?'nou':''} ${NOUT_SEL===x.id?'sel':''}" id="n-${esc(x.id)}" style="--k:var(${col})">
       <div class="nh"><span class="tic">${ic(ico)}</span><div style="flex:1;min-width:0"><div class="nt"><span class="lbl">${et}</span><span class="sub num">${oraNout(x.cand)}</span></div>
       <b>${esc(String(x.titlu||'').slice(0,160))}</b></div></div>
@@ -1273,12 +1309,13 @@ function citestePrimite(){
     r.onerror = () => res(); } catch(e) { res(); } });
 }
 function ghidFundal(){
+  const n = pushNativ(), app = n ? '<b>Analist</b>' : '<b>Chrome</b>';
   foaie(`${capFoaie('bec','Notificări cu aplicația închisă','Honor și alte telefoane Android')}
-    <div class="sub" style="margin:0 0 12px;line-height:1.55">Notificările vin prin Chrome, chiar dacă Analist e închis. Unele telefoane opresc însă Chrome în fundal ca să economisească bateria, iar notificarea ajunge abia când îl deschizi. Pe Honor, o dată:</div>
-    <ol class="lst"><li>Setări telefon → <b>Baterie</b> → <b>Lansare aplicații</b> (sau „Gestionare lansare aplicații”) → <b>Chrome</b>: oprește „Gestionează automat”, apoi pornește toate trei: lansare automată, lansare secundară, rulare în fundal.</li>
-      <li>Setări telefon → <b>Aplicații</b> → <b>Chrome</b> → <b>Notificări</b>: permise, inclusiv pentru costi1622.github.io.</li>
-      <li>Dacă ai Analist instalat pe ecranul principal, fă același lucru și pentru aplicația <b>Analist</b>.</li>
-      <li>Nu închide Chrome din lista aplicațiilor recente cu „Închide tot”.</li></ol>
+    <div class="sub" style="margin:0 0 12px;line-height:1.55">${n ? 'Notificările vin direct în aplicația Analist, chiar dacă e închisă. Unele telefoane opresc însă aplicațiile în fundal ca să economisească bateria. Pe Honor, o dată:' : 'Notificările vin prin Chrome, chiar dacă Analist e închis. Unele telefoane opresc însă Chrome în fundal ca să economisească bateria, iar notificarea ajunge abia când îl deschizi. Pe Honor, o dată:'}</div>
+    <ol class="lst"><li>Setări telefon → <b>Baterie</b> → <b>Lansare aplicații</b> (sau „Gestionare lansare aplicații”) → ${app}: oprește „Gestionează automat”, apoi pornește toate trei: lansare automată, lansare secundară, rulare în fundal.</li>
+      <li>Setări telefon → <b>Aplicații</b> → ${app} → <b>Notificări</b>: permise${n ? '' : ', inclusiv pentru costi1622.github.io'}.</li>
+      ${n ? '<li>Pentru rezervă (dacă aplicația nu poate fi trezită, notificarea vine prin Chrome): fă pașii 1 și 2 și pentru <b>Chrome</b>.</li>' : '<li>Dacă ai Analist instalat pe ecranul principal, fă același lucru și pentru aplicația <b>Analist</b>.</li>'}
+      <li>Nu închide ${n ? 'Analist' : 'Chrome'} din lista aplicațiilor recente cu „Închide tot”.</li></ol>
     <div class="sub" style="margin-top:12px;line-height:1.55">Apoi apasă „Trimite un test” și blochează telefonul: notificarea trebuie să apară în cel mult un minut. Ce n-a ajuns găsești oricum în Noutăți.</div>
     <div style="display:flex;gap:8px;margin-top:16px"><button class="btn" style="flex:1;margin:0" data-c="${A('testPush')}" ${pushActiv()?'':'disabled'}>Trimite un test</button><button class="btn ghost" style="flex:1;margin:0" data-c="${A('closeSheet')}">Închide</button></div>`);
 }
@@ -2324,7 +2361,7 @@ function verdictHTML(k, compact){
     <div class="fd" style="font-size:var(--t5);font-weight:800;color:var(--k);margin-top:2px">${esc(v.titlu)}</div>
     <p style="margin:8px 0 0;font-size:var(--t2);line-height:1.55;color:var(--ink2)">${esc(v.sfat)}</p>
     <div style="margin-top:12px">${li(v.plus,true)}${li(v.minus,false)}</div>
-    <div class="sub" style="margin-top:8px">Din trend, din cât a scăzut față de piață, din cifrele companiei, din părerea analiștilor${pi?` și din sentimentul pieței (${pi.scor}/100, ${esc(pi.eticheta.toLowerCase())})`:''}. Nu e o predicție și nu e un sfat: decizia e a ta.</div></div>`;
+    <div class="sub" style="margin-top:8px">Din trend, din distanța de la maxim, din cifrele companiei, din părerea analiștilor${pi?` și din sentimentul pieței (${pi.scor}/100, ${esc(pi.eticheta.toLowerCase())})`:''}: semnalele care, pe 24 de ani de istoric, au deosebit cumpărările urmate de căderi mari de celelalte. Nu e o predicție și nu e un sfat: decizia e a ta.</div></div>`;
 }
 function arataVerdict(k){ openSheet(`${capFoaie('tinta', esc(k)+': merită acum?', 'semnalele de azi, pe scurt')}${verdictHTML(k)}<button class="btn ghost" style="margin-top:16px" data-c="${A('closeSheet')}">Închide</button>`); }
 function cardRec(r){
@@ -3910,7 +3947,7 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   exportSeif, alegeSeif, arataForta, arataRho, setAnRaport, ghidDU, exportDU,
   deschideLectiePotrivita, arataRecap, raspundeRecap, simulator, verificaInainte, verifRasp, verifGata,
   tokenFoaie, setTokenExp, setCronExp, calculatoareFoaie, calcAcces, rapSari, exercitii, exAlege, exUrm, simCriza, creeazaCalculator, descarcaCalculator, calculatorDetalii, stergeCalculatorIntreaba, stergeCalculator, conectCalcFoaie, calcMod, alegeFisCalc, deschideCalculator, raportLuna, raportAnFoaie, tiparesteRaport, setIncepator, tur, reiaTur, verificaPornire, exportFoaie, exporta, optimizareFoaie,
-  activeazaPush, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie,
+  activeazaPush, activeazaNativ, testPush, opresteNotificari, comutaTipPush, comutaDiscret, salveazaPreferintePush, amanaPush, notificariFoaie,
   setFiltruNout, deschideDinNout, ghidFundal, conexiuniFoaie, parolaFoaie, aspectFoaie, ajutorFoaie, automatFoaie
 }));
 function ruleazaCmd(spec, el, ev){

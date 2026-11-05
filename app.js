@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.42.0';
+const APP_VER = '0.43.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -805,7 +805,7 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.42.0';
+const MIN_ANALIZA = '0.43.0';
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
@@ -814,7 +814,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.38.0': ['runner/stare.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml'],
   '0.40.0': ['runner/config.js', 'runner/engine.js'],
   '0.41.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js', 'runner/notificari.js', 'runner/fcm.js', 'runner/paza.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
-  '0.42.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'] };
+  '0.42.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
+  '0.43.0': ['runner/analiza.js', 'runner/sources.js', 'runner/config.js'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -1029,6 +1030,7 @@ async function verificaPornire(){
   catch(e) { R.push(rand('atentie','Ultima rulare','Nu s-a putut citi.')); }
   { const [st, txt] = starePush(); R.push(rand(st==='ok'?'ok':'atentie', 'Notificări pe telefon', st==='ok' ? `${txt}.` : `${txt}. Le pornești din Setări → Notificări.`)); }
   R.push(analizaVeche() ? rand('atentie','Versiunea analizei', `Repo-ul are ${esc(SNAP.versiune)}, aplicația are nevoie de ${MIN_ANALIZA}. Urcă: ${esc(fisiereDeUrcat().join(', '))}.`) : SNAP?.versiune ? rand('ok','Versiunea analizei', esc(SNAP.versiune)) : rand('atentie','Versiunea analizei','Apare după prima analiză.'));
+  { const d = SNAP?.costEtoroDiag; if (d?.pozitii) R.push(d.laCumparare===d.pozitii ? rand('ok','Cost eToro în lei', `La cursul BNR din ziua cumpărării, ${d.pozitii} din ${d.pozitii} poziții.`) : rand('atentie','Cost eToro în lei', `${d.pozitii-d.laCumparare} din ${d.pozitii} poziții au costul la cursul de azi.${d.faraData?.length?` Fără data cumpărării: ${esc(d.faraData.join(', '))}.`:''}${d.faraCurs?.length?` Fără curs BNR: ${esc(d.faraCurs.join(', '))}.`:''}${d.aniLipsa?.length?` Arhiva BNR ${esc(d.aniLipsa.map(x=>x.an+': '+x.motiv).join('; '))}.`:''}`)); }
   R.push(SNAP ? rand('ok','Cheia de date','Datele din GitHub se decriptează corect.') : rand('atentie','Cheia de date','Încă nu există date de decriptat.'));
   const cx = STARE?.conexiuni || SNAP?.conexiuni || {};
   for (const [k,t] of Object.entries(NUMEC)) { const c = cx[k]; if (!c || k==='seif' || k==='push' || c.stare==='optional') continue; R.push(rand(c.stare==='ok'?'ok':c.stare==='eroare'?'nu':'atentie', t, esc(c.mesaj||''))); }
@@ -1580,6 +1582,13 @@ function verificare(){
 // Un singur cont: aceleași poziții, cu valorile, câștigul și ponderea doar din contul ales.
 // Semnalele rămân cele calculate pe tot portofoliul (riscul real e cel cumulat).
 const CONTURI = [['toate','Ambele'],['Trading 212','Trading 212'],['eToro','eToro']];
+// v0.43: arată dacă costul în lei al pozițiilor eToro e la cursul BNR din ziua cumpărării (corect) sau la cel de azi (și de ce).
+function costEtoroHTML(){
+  const d = SNAP?.costEtoroDiag; if (!d?.pozitii) return '';
+  if (d.laCumparare===d.pozitii) return `<div class="sub" style="margin-top:8px">Câștigul în lei include cursul: costul e la cursul BNR din ziua fiecărei cumpărări (${d.pozitii} din ${d.pozitii} poziții).</div>`;
+  const de = [d.faraData?.length?`fără data cumpărării de la eToro: ${d.faraData.map(esc).join(', ')}`:'', d.faraCurs?.length?`fără cursul BNR din ziua cumpărării: ${d.faraCurs.map(esc).join(', ')}`:'', d.aniLipsa?.length?`arhiva BNR pe ${d.aniLipsa.map(x=>esc(x.an)).join(', ')} n-a răspuns`:''].filter(Boolean).join('; ');
+  return `<div class="sub" style="margin-top:8px"><b style="color:var(--warn)">Costul în lei e la cursul de azi pentru ${d.pozitii-d.laCumparare} din ${d.pozitii} poziții</b>, deci câștigul lor în lei nu include cursul dolarului${de?` (${de})`:''}. Se reîncearcă la fiecare analiză completă.</div>`;
+}
 function vedereCont(C){
   if (C==='toate') return { poz: SNAP.pozitii, total: SNAP.totalRON, cost: SNAP.costRON };
   const poz = SNAP.pozitii.filter(p=>p.brokers.some(b=>b.broker===C)).map(p=>{
@@ -1923,6 +1932,7 @@ function vAzi(){
         return `<div data-c="${A('termen','xirr')}"><span>${r.an?'Pe an':'Randament, '+r.et}</span><b class="${cls(r.v)}">${sg(r.v,1)}%</b><small>${v?`VWCE ${sg(v.v,1)}%`:r.an?`după inflație ${sg(dupaInflatie(r.v),1)}%`:'pe banii tăi'}</small></div>`; })():''}
     </div>
     ${VC.usd?`<div class="sub num" style="margin-top:8px">În dolari, ca în aplicația eToro: <b class="ink2">$${S.privat?'•••':nf(VC.usd.v)}</b> · <span class="${cls(VC.usd.v-VC.usd.c)}">${S.privat?'•••':(VC.usd.v-VC.usd.c>=0?'+':'−')+'$'+nf(Math.abs(VC.usd.v-VC.usd.c))}</span></div>`:''}
+    ${C==='eToro'?costEtoroHTML():''}
     ${C!=='toate'?`<div class="sub" style="margin-top:8px">${VC.poz.length} ${VC.poz.length===1?'poziție':'poziții'} · ${nf(VC.total/SNAP.totalRON*100,1)}% din portofoliu. Semnalele și planul țin cont de ambele conturi.</div>`:''}
     ${graficCont(C, ist)}
     ${C!=='eToro'?inelLuna(true):''}

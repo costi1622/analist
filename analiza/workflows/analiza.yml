@@ -1,0 +1,92 @@
+name: Analiza
+
+on:
+  schedule:
+    # Rezervă pentru analiza completă: luni–vineri la 21:30 UTC, după închiderea bursei US (23:30 ora României iarna, 00:30 vara).
+    # De obicei o face deja rularea cron-job.org de la 23:15; atunci aceasta se oprește singură (o analiză completă pe zi).
+    - cron: '30 21 * * 1-5'
+    # Supraveghere în timpul zilei: la fiecare 30 de minute, 07:15–20:45 UTC.
+    # Acoperă bursele europene (VWCE, Airbus) de la deschidere și ședința US, iarna și vara.
+    # GitHub sare des aceste rulări programate: cron-job.org (gratuit) le pornește sigur, prin workflow_dispatch.
+    - cron: '15,45 7-20 * * 1-5'
+  workflow_dispatch:      # butoanele din aplicație și cron-job.org
+    inputs:
+      mod:
+        description: 'zi = analiza completă; intraday = prețurile de acum; test = analiza + conexiunile + notificare de test; pushtest = doar notificarea de test; profil = doar profilul; sync = doar starea comună a dispozitivelor'
+        default: 'zi'
+      cheie:
+        description: 'cheia publică a telefonului (pentru raport), criptată cu DATA_KEY, trimisă de aplicație la test'
+        required: false
+        default: ''
+      profil:
+        description: 'orizontul și suma lunară, criptate cu DATA_KEY, trimise de aplicație'
+        required: false
+        default: ''
+      programat:
+        description: '1 = pornită de cron-job.org la ora programată (după 23:00 devine singură analiza completă a zilei)'
+        required: false
+        default: '0'
+      stare:
+        description: 'starea comună a dispozitivelor (jurnal, plan bifat, lecții, decizii), doar ce s-a schimbat, criptată cu DATA_KEY'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analiza
+  cancel-in-progress: false
+
+jobs:
+  analiza:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MOD: ${{ github.event.inputs.mod || (github.event.schedule == '15,45 7-20 * * 1-5' && 'intraday' || 'zi') }}
+      # analiza completă programată (GitHub sau cron-job.org după 23:00) trimite rezumatul zilei și reîmprospătează o parte din universul de idei
+      SCANARE: ${{ (github.event_name == 'schedule' || github.event.inputs.programat == '1') && '1' || '0' }}
+      PROGRAMAT: ${{ (github.event_name == 'schedule' || github.event.inputs.programat == '1') && '1' || '0' }}
+    steps:
+      # acțiunile sunt fixate la commit-uri exacte (nu la etichete care se pot muta): nimeni nu poate strecura alt cod în rulare
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Rulează analistul
+        env:
+          T212_KEY: ${{ secrets.T212_KEY }}
+          T212_SECRET: ${{ secrets.T212_SECRET }}
+          T212_ENV: live
+          ETORO_API_KEY: ${{ secrets.ETORO_API_KEY }}
+          ETORO_USER_KEY: ${{ secrets.ETORO_USER_KEY }}
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+          FCM_CONT: ${{ secrets.FCM_CONT }}
+          CHEIE_PUBLICA: ${{ github.event.inputs.cheie }}
+          PROFIL_NOU: ${{ github.event.inputs.profil }}
+          STARE_NOUA: ${{ github.event.inputs.stare }}
+          APP_URL: https://costi1622.github.io/analist/
+        run: node runner/ruleaza.js
+      - name: Anunță pe telefon dacă analiza completă a eșuat
+        # anunta.js află modul real al rulării (după 23:00, o rulare programată intraday devine analiza completă);
+        # o rulare intraday, de sincronizare sau de profil eșuată nu anunță: se reia singură
+        if: failure()
+        env:
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+          FCM_CONT: ${{ secrets.FCM_CONT }}
+          APP_URL: https://costi1622.github.io/analist/
+        # pe telefon și în Noutăți; dacă nici asta nu merge, rularea rămâne marcată cu roșu în GitHub
+        run: node runner/anunta.js esec || true
+      - name: Salvează rezultatele
+        if: always()   # și când rularea eșuează: aplicația trebuie să vadă ce n-a mers (inclusiv anunțul de mai sus, în Noutăți)
+        run: |
+          git config user.name "analist-bot"
+          git config user.email "analist-bot@users.noreply.github.com"
+          git add date/
+          git diff --cached --quiet && exit 0
+          git commit -m "analiza $(date -u +%F)"
+          git pull --rebase origin main
+          git push

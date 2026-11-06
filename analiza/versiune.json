@@ -1,0 +1,26 @@
+{
+ "versiune": "0.46.0",
+ "fisiere": {
+  "runner/analiza.js": "f644dd33984a533461ecbb98cb6a2c771f3c89aef83a374c5423cf2bdb4f8464",
+  "runner/anunta.js": "7169b7838486ecc214014b4569a0afb0cbd12326a577eaeb54e0497eca0868f6",
+  "runner/config.js": "0a5b627d9c3b8af49d820cb591580263d3c1a2742665673afa48edef1db8702c",
+  "runner/cripteaza-raport.js": "39ea2b6617e5c143ac141178f2ad55d281be1b4a92a9764bffddd41094a561a8",
+  "runner/demo.js": "67ee40706017c44b121d22fe3f2055108110099632807988c6cc89fdedb3c3b9",
+  "runner/engine.js": "1db4cab11412105e17f4ad8ebfb9962ab92481c727bb6d598da6510acbe7447d",
+  "runner/fcm.js": "90f5017d2e25a12c37cfb65642ee1d33241df9293d7f974d2a2ae7b034d0437f",
+  "runner/notificari.js": "f052b7ffc33936ac8ae7b79563001068b0b61bac355a05e2316e1fcaf827387b",
+  "runner/paza.js": "0d177d9b05b7db4ed84b4fc8879710e4946e2a8d01adafd4e1c7385df3ce68ed",
+  "runner/ruleaza.js": "41930eff366a4030b345dd815779769f1a491e53455c7927f468518a2e27591a",
+  "runner/seif.js": "bc263f6964949d200bad204c5f1ce6e48350850af2dbda5115cf06210c851a84",
+  "runner/sources.js": "87d63806c05fa855033966b64d22ba2f6faca5cb59c1adb65517e910d9f787ec",
+  "runner/stare.js": "f7bf48bef2e85c988bff2c2886c2130d338c0d4c37d06ffd04d5672a081a51b2",
+  "runner/tacute.js": "58a726cb8de44d533555fb3503cc47c693cf91bff68660a36d45497d044c5a8e",
+  "runner/webpush.js": "c13c4ad1259e33e9f673f7e2176a8284d015bc546439d993baa3e354400b8b88",
+  "package.json": "31ee0b181ac434f3d612cbc9e9b77c154119bfcaa1ffc2d92da86184ef50df0c"
+ },
+ "workflows": {
+  "actualizeaza.yml": "f60af268f7426fb19855a573e7165182ec769c3b9684b7ad2241df034d39071f",
+  "analiza.yml": "c122f5d25f198d3748a6d7cf674fba2e16c927562ac393c91f53e310b66491a0",
+  "raport.yml": "59e337c161867ab052c446105c0613758dded128881c21cdb5ecccec28317d38"
+ }
+}

@@ -1,6 +1,6 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență: vezi LICENSE.
 // Configurarea analistului. Tot ce e „părere” stă aici, nu în cod.
-export const VERSION = '0.45.1';
+export const VERSION = '0.46.0';
 
 // ---------- Profilul tău ----------
 // Strategie „nucleu + sateliți”: nucleul e ETF-ul global, sateliții sunt acțiunile alese de tine.

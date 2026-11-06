@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.47.0';
+const APP_VER = '0.47.1';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -647,7 +647,9 @@ function render(){
   if (!intra) v.classList.remove('intra'); // o redesenare (date noi) nu reia animația de intrare
   const pre = PRE?.v === VIEW && PRE.html != null ? PRE.html : null;
   $('v').innerHTML = (pre ?? vederi[VIEW]()) + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.${versiuneHTML()}</footer>`;
-  panouri(v); graficeDupaCadru(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
+  // v0.47.1: graficele se amână un cadru doar la intrarea pe o pagină nouă (ascuns de animația de intrare). La o redesenare
+  // pe aceeași pagină (perioada 1L/3L/6L/1A, contul, date noi) se desenează imediat: altfel graficul clipea un cadru gol.
+  panouri(v); if (intra) graficeDupaCadru(); else { cancelAnimationFrame(GR_RAF); GR_RAF = 0; montaGrafice(); } countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
   if (VIEW === 'noutati') { intraNoutati(); if (intra) filtreVizibile(); } else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }
 }

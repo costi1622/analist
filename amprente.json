@@ -1,9 +1,9 @@
 {
- "versiune": "0.45.1",
+ "versiune": "0.46.0",
  "fisiere": {
   "runner/analiza.js": "c504c855237be4122a0b9f51736e807df678f789e8bcdc6698e2878fa68c69e8",
   "runner/anunta.js": "c81bac7922a7cf91a4b577957e7e8c3b6d17dae588a98d9acf6243980daacacb",
-  "runner/config.js": "a15b0c207cf28a4ca57eac98c2905baaa628d65087e95bf4c270b2c111d2e6b4",
+  "runner/config.js": "2b3d09e559e4f800c8383ac3fea81642973551b4aab2b02cf9e16ad347c82e0f",
   "runner/cripteaza-raport.js": "903cfbdc958decafc2effe53a4978a4df92a76932c85f1999fcb59e06c66d037",
   "runner/demo.js": "22b2f930d342dcbcf93aee5b1749b9bd5c2eb23f29a53bb1f15d6803b0ffb198",
   "runner/engine.js": "15251569248af1463b04a5f62c93f0b92a8a3f3dd14634345948b1490c05bd40",
@@ -17,6 +17,7 @@
   "runner/tacute.js": "18ac2876101a81c220caa3bc61689a090993331c3eeab071c3ecec1393c09b93",
   "runner/webpush.js": "52ae0cd797293f19b2606b29c417322570534b438ab3ef79a7f1733d123d76d3",
   "package.json": "47c7df350ea09b291f5e2dc3033ea167486477abb678bf6524b1450bd156e07b",
+  ".github/workflows/actualizeaza.yml": "f60af268f7426fb19855a573e7165182ec769c3b9684b7ad2241df034d39071f",
   ".github/workflows/analiza.yml": "c122f5d25f198d3748a6d7cf674fba2e16c927562ac393c91f53e310b66491a0",
   ".github/workflows/raport.yml": "59e337c161867ab052c446105c0613758dded128881c21cdb5ecccec28317d38"
  }

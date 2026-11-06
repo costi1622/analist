@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.45.2';
+const APP_VER = '0.46.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -514,7 +514,7 @@ async function reincarca(manual) {
     if (live()) {
       const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/utilizator.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
-      saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{});
+      saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{}); versiuneSite().then(v=>{ if (v && analizaNoua() && VIEW==='azi') render(); }).catch(()=>{});
       if (manual === true) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
       $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return schimbat;
     }
@@ -802,7 +802,9 @@ function randAmprente(a, rand){
   if (a.eroare) return rand('atentie','Codul analizei',`Nu s-a putut verifica: ${esc(a.eroare)}.`);
   const p = [a.difera.length&&`diferă: ${a.difera.join(', ')}`, a.lipsa.length&&`lipsesc: ${a.lipsa.join(', ')}`, a.inPlus.length&&`în plus: ${a.inPlus.join(', ')}`].filter(Boolean);
   if (!p.length) return rand('ok','Codul analizei',`Identic cu versiunea ${esc(a.versiune)} (${a.n} fișiere).`);
-  return rand(a.inPlus.length?'nu':'atentie','Codul analizei', `Nu e identic cu versiunea ${esc(a.versiune)}: ${esc(p.join('; '))}. Dacă nu le-ai urcat încă, urcă-le din arhivă. Dacă le-ai urcat și tot apar, sau dacă apare un fișier în plus pe care nu l-ai pus tu, folosește Oprirea de urgență și scrie-mi.`);
+  const wf = [...a.difera, ...a.lipsa].filter(f=>f.startsWith('.github/workflows/')).map(f=>f.split('/').pop()), cod = [...a.difera, ...a.lipsa].filter(f=>!f.startsWith('.github/'));
+  const butWf = wf.map(n=>`<button class="btn ghost sm" style="margin-top:8px" data-c="${A('copiazaWorkflow',n)}">Copiază textul nou: ${esc(n)}</button>`).join('');
+  return rand(a.inPlus.length?'nu':'atentie','Codul analizei', `Nu e identic cu versiunea ${esc(a.versiune)}: ${esc(p.join('; '))}. ${cod.length?'Fișierele de cod le aduce „Actualizează analiza” de pe Acasă. ':''}${wf.length?`Workflow-urile le schimbi tu (GitHub nu lasă un workflow să schimbe alt workflow): în repo-ul analist-date deschizi <code>.github/workflows/…</code>, creionul, ștergi tot, lipești textul copiat de mai jos, Commit changes. Un workflow care lipsește îl creezi cu Add file → Create new file, cu numele <code>.github/workflows/…</code>.`:''} Dacă apare un fișier în plus pe care nu l-ai pus tu, folosește Oprirea de urgență și scrie-mi.${butWf}`);
 }
 // Codul din GitHub: telefonul ține minte ultima versiune pe care ai confirmat-o. O versiune nouă pe care n-ai urcat-o tu
 // (cod strecurat de altcineva) apare aici, independent de ce raportează analiza.
@@ -863,7 +865,7 @@ function pazaDetalii(){
 function t212Verificat(){ S.t212Citire=new Date().toISOString().slice(0,10); save(); pazaDetalii(); }
 // ===================== v0.30 =====================
 // Versiunea minimă a analizei din GitHub de care are nevoie aplicația, și fișierele de urcat pentru fiecare pas.
-const MIN_ANALIZA = '0.45.1';
+const MIN_ANALIZA = '0.45.1'; // v0.46: versiunile noi se oferă pe Acasă (analiza/versiune.json), fără să blocheze nimic
 const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'runner/config.js'],
   '0.32.0': ['runner/webpush.js', 'runner/notificari.js', 'runner/anunta.js', 'runner/analiza.js', 'runner/ruleaza.js', 'runner/paza.js', 'runner/engine.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
   '0.33.0': ['runner/notificari.js', 'runner/ruleaza.js', 'runner/anunta.js', 'runner/config.js', '.github/workflows/analiza.yml', '.github/workflows/raport.yml'],
@@ -895,8 +897,23 @@ const csvText = rows => '﻿' + rows.map(r=>r.map(csvCel).join(';')).join('\r\n'
 const numCsv = x => x==null||isNaN(x) ? '' : String(Math.round(x*100)/100).replace('.',',');
 
 // ---- 2) Analiza din GitHub, mai veche decât aplicația ----
+// v0.46: versiunea analizei publicată pe site (analiza/versiune.json). Dacă e mai nouă decât cea din repo, Acasă oferă
+// „Actualizează analiza”: workflow-ul actualizeaza.yml din repo își ia singur fișierele, verificate cu amprenta lor.
+let VSITE = null, VSITE_T = 0;
+async function versiuneSite(fortat){
+  if (!live() || OFFLINE || (!fortat && Date.now()-VSITE_T < 10*60e3)) return VSITE; VSITE_T = Date.now();
+  try { const r = await fetch('analiza/versiune.json?t='+Date.now(), {cache:'no-store'}); const j = r.ok ? await r.json() : null;
+    VSITE = j && /^\d+\.\d+\.\d+$/.test(j.versiune||'') ? j : null; } catch(e) { VSITE = null; }
+  return VSITE;
+}
+const analizaNoua = () => !!(VSITE?.versiune && SNAP?.versiune && maiMica(SNAP.versiune, VSITE.versiune));
+const sursaApp = () => location.origin + location.pathname.replace(/[^/]*$/, '');
 function bandaAnaliza(){
-  if (!analizaVeche()) return '';
+  if (!analizaVeche() && !analizaNoua()) return '';
+  if (!ePCcitire()) { const v = VSITE?.versiune || MIN_ANALIZA;
+    return `<div class="card pz ${analizaVeche()?'galben':''}"><div class="pzt">${ic('refresh')}<b>${analizaVeche()?'Actualizează analiza din GitHub':`Analiza ${esc(v)} e gata`}</b></div>
+    <div class="sub">${analizaVeche()?`Aplicația are nevoie de analiza ${esc(MIN_ANALIZA)}, în repo e ${esc(SNAP.versiune)}.`:`În repo e ${esc(SNAP.versiune)}.`} O atingere: analiza își ia singură fișierele noi, verificate, și pornește o analiză completă. Durează ~2 minute. Nu urci nimic.</div>
+    <div class="pzb"><button class="btn sm" data-c="${A('actualizeazaAnaliza')}">Actualizează analiza</button></div></div>`; }
   return `<div class="card pz galben"><div class="pzt">${ic('refresh')}<b>Actualizează analiza din GitHub</b></div>
     <div class="sub">Aplicația are nevoie de analiza ${MIN_ANALIZA}, în repo e ${esc(SNAP.versiune)}. Urcă în repo-ul <b class="ink2">analist-date</b> fișierele:</div>
     <ul class="lst">${fisiereDeUrcat().map(f=>`<li><code>${esc(f)}</code></li>`).join('')}</ul>
@@ -1090,7 +1107,8 @@ async function verificaPornire(){
     else { const z=(Date.now()-Date.parse(u.created_at))/864e5; R.push(u.conclusion==='success' && z<4 ? rand('ok','Ultima rulare', `Reușită, ${esc(cand(u.created_at))}.`) : u.conclusion==='failure' ? rand('nu','Ultima rulare a eșuat', 'În repo, la Actions, rularea cu X roșu arată eroarea.') : rand('atentie','Ultima rulare', `${u.status==='completed'?'Terminată':'În curs'}, ${esc(cand(u.created_at))}.`)); } }
   catch(e) { R.push(rand('atentie','Ultima rulare','Nu s-a putut citi.')); }
   { const [st, txt] = starePush(); R.push(rand(st==='ok'?'ok':'atentie', 'Notificări pe telefon', st==='ok' ? `${txt}.` : `${txt}. Le pornești din Setări → Notificări.`)); }
-  R.push(analizaVeche() ? rand('atentie','Versiunea analizei', `Repo-ul are ${esc(SNAP.versiune)}, aplicația are nevoie de ${MIN_ANALIZA}. Urcă: ${esc(fisiereDeUrcat().join(', '))}.`) : SNAP?.versiune ? rand('ok','Versiunea analizei', esc(SNAP.versiune)) : rand('atentie','Versiunea analizei','Apare după prima analiză.'));
+  await versiuneSite(true);
+  R.push(analizaVeche() || analizaNoua() ? rand('atentie','Versiunea analizei', `Repo-ul are ${esc(SNAP.versiune)}; ${analizaVeche()?`aplicația are nevoie de ${MIN_ANALIZA}`:`pe site e ${esc(VSITE.versiune)}`}. Pe Acasă: „Actualizează analiza”.`) : SNAP?.versiune ? rand('ok','Versiunea analizei', esc(SNAP.versiune)) : rand('atentie','Versiunea analizei','Apare după prima analiză.'));
   { const d = SNAP?.costEtoroDiag; if (d?.pozitii) R.push(d.laCumparare===d.pozitii ? rand('ok','Cost eToro în lei', `La cursul BNR din ziua cumpărării, ${d.pozitii} din ${d.pozitii} poziții.`) : rand('atentie','Cost eToro în lei', `${d.pozitii-d.laCumparare} din ${d.pozitii} poziții au costul la cursul de azi.${d.faraData?.length?` Fără data cumpărării: ${esc(d.faraData.join(', '))}.`:''}${d.faraCurs?.length?` Fără curs BNR: ${esc(d.faraCurs.join(', '))}.`:''}${d.aniLipsa?.length?` Arhiva BNR ${esc(d.aniLipsa.map(x=>x.an+': '+x.motiv).join('; '))}.`:''}`)); }
   if (SNAP?.bunSimt) R.push(SNAP.bunSimt.length ? rand('atentie','Verificările cifrelor', `${SNAP.bunSimt.length} de verificat: ${esc(SNAP.bunSimt.map(x=>x.text).join(' '))}`) : rand('ok','Verificările cifrelor','Valorile, costurile, cursurile și ponderile se leagă.'));
   if (SNAP?.tacute) R.push(SNAP.tacute.length ? rand('atentie','Erori ocolite', esc(SNAP.tacute.map(x=>`${x.loc}${x.n>1?` (×${x.n})`:''}: ${x.motiv}${x.mod?` · ${x.mod}`:''}`).join('; ')) + '. Analiza a mers mai departe fără ele.') : rand('ok','Erori ocolite','Niciuna la ultima analiză.'));
@@ -3658,6 +3676,51 @@ function deconecteaza(){
 let PROGRES_TEXT = '';
 function progres(t){ PROGRES_TEXT = t||''; document.querySelectorAll('#rulc .pt').forEach(x=>x.textContent=PROGRES_TEXT); const el=$('prog'); if (!el) return; if (t==null) { el.classList.remove('on'); return; } el.innerHTML=`<i></i><span>${esc(t)}</span>`; el.classList.add('on'); }
 let RULEAZA = false;
+// v0.46: actualizarea analizei dintr-o atingere (workflow-ul actualizeaza.yml din repo), apoi o analiză completă
+async function copiazaWorkflow(n){
+  if (!/^[a-z0-9-]+\.yml$/.test(n)) return;
+  try { const r = await fetch('analiza/workflows/'+n+'?t='+Date.now(), {cache:'no-store'}); if (!r.ok) throw new Error('HTTP '+r.status); copiaza(await r.text()); }
+  catch(e) { toast('Nu am putut citi textul: '+(e.message||e)); }
+}
+function ghidWorkflowActualizare(){
+  foaie(`${capFoaie('refresh','Butonul de actualizare','o singură dată, ~2 minute')}
+    <div class="sub" style="line-height:1.55;margin-bottom:12px">De acum, analiza se actualizează dintr-o atingere. Ca să meargă, repo-ul tău <b class="ink2">analist-date</b> are nevoie, o singură dată, de workflow-ul „Actualizează analiza”.</div>
+    <div class="sub" style="line-height:1.6"><b class="ink2">1.</b> Apasă butonul de mai jos: textul workflow-ului se copiază.<br>
+    <b class="ink2">2.</b> În GitHub, în repo-ul <b class="ink2">analist-date</b>: <b class="ink2">Add file → Create new file</b>.<br>
+    <b class="ink2">3.</b> La nume scrie exact <code>.github/workflows/actualizeaza.yml</code> și lipește textul.<br>
+    <b class="ink2">4.</b> <b class="ink2">Commit changes</b>. Apoi revino aici și apasă din nou „Actualizează analiza”.</div>
+    <button class="btn" style="margin-top:16px" data-c="${A('copiazaWorkflow','actualizeaza.yml')}">Copiază textul workflow-ului</button>
+    <button class="btn ghost" data-c="${A('closeSheet')}">Închide</button>`);
+}
+async function actualizeazaAnaliza(){
+  if (RULEAZA || doarCitire()) return;
+  if (S.kill) { pasiOprire(); return; }
+  const v = (await versiuneSite(true))?.versiune; if (!v) { toast('Nu găsesc versiunea nouă pe site. Încearcă peste câteva minute.'); return; }
+  let wf = null; try { wf = await gh('/actions/workflows/actualizeaza.yml', {optional:true}); } catch(e) { toast(e.message); return; }
+  if (!wf) { ghidWorkflowActualizare(); return; }
+  RULEAZA = true; logoRuleaza(true); const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
+  let ok = false;
+  try { vib();
+    const inainte = new Date(Date.now()-120000).toISOString();
+    await gh('/actions/workflows/actualizeaza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:{versiune:v, sursa:sursaApp()}})});
+    progres(`Actualizez analiza la ${v}…`);
+    for (let i=0;i<60;i++) {
+      await new Promise(r=>setTimeout(r, i<3?2000:3000));
+      const j = await gh('/actions/workflows/actualizeaza.yml/runs?event=workflow_dispatch&per_page=1'), run = j.workflow_runs?.[0];
+      if (!run || run.created_at < inainte.slice(0,19)) { progres(`GitHub pregătește actualizarea… ${sec()} s`); continue; }
+      if (run.status!=='completed') { progres(`Verific și pun fișierele noi… ${sec()} s`); continue; }
+      progres(null);
+      if (run.conclusion==='success') { ok = true; break; }
+      foaie(`${capFoaie('alerta','Actualizarea n-a mers','nimic nu s-a schimbat în repo','--neg')}
+        <div class="sub" style="line-height:1.55">Analiza a rămas la ${esc(SNAP?.versiune||'')} și merge ca înainte. Cel mai des, site-ul încă nu avea versiunea nouă (GitHub Pages se actualizează în câteva minute): încearcă din nou peste 5 minute. Motivul exact: GitHub → analist-date → Actions → „Actualizează analiza” → ultima rulare.</div>
+        <button class="btn" style="margin-top:16px" data-c="${A('actualizeazaAnaliza')}">Încearcă din nou</button><button class="btn ghost" data-c="${A('closeSheet')}">Închide</button>`);
+      return;
+    }
+    if (!ok) { progres(null); toast('Actualizarea încă rulează. Verifică peste un minut.'); }
+  } catch(e){ progres(null); toast(e.message); }
+  finally { RULEAZA = false; logoRuleaza(false); }
+  if (ok) { toast(`Analiza e la ${v}. Pornesc o analiză completă.`); verificaAmprente(true).catch(()=>{}); ruleaza(false); }
+}
 async function ruleaza(test, scurta){
   if (RULEAZA || doarCitire()) return; test = test === true; scurta = scurta === true && !test;
   if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; logoRuleaza(true); if (!test && ['azi'].includes(VIEW) || !SNAP) render();
@@ -4077,7 +4140,7 @@ function quizUrm(){ QZ.i++; QZ.ales=null; arataQuiz(); }
 function alegeFisier(){ $('fimp').click(); }
 function stergeJConfirmat(id){ J=J.filter(x=>x.id!==id); saveJ(); closeSheet(); if($('sheet').classList.contains('on')) closeSheet(); render(); }
 const CMD = Object.freeze(Object.assign(Object.create(null), {
-  comutaAuto, go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
+  comutaAuto, actualizeazaAnaliza, copiazaWorkflow, go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
   deblocheaza, deblocheazaAmprenta, uitatParola, stergeSeif, schimbaParola, aratăCheia, cheieNoua, cheieExistenta,
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan, comutaEtfToate, arataVerdict,

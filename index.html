@@ -50,7 +50,8 @@ html{font-size:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 html,body{margin:0;background:var(--bg) radial-gradient(120% 60% at 50% -10%,var(--glow),transparent 60%) no-repeat;background-attachment:fixed;color:var(--ink);font:var(--t3)/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
 /* Pe telefon se poartă ca o aplicație, nu ca o pagină web: fără selectare de text și bara de căutare Chrome, fără meniul de apăsare lungă,
    fără „trage în jos ca să reîncarci”, fără zoom la dublă atingere, fără bare de derulare. Câmpurile și codurile de copiat rămân selectabile. */
-@media (pointer:coarse){html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}input,textarea,select,.sel,.codc{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}img,a{-webkit-user-drag:none;-webkit-touch-callout:none}html{touch-action:manipulation;scrollbar-width:none}*::-webkit-scrollbar{display:none}*{scrollbar-width:none}}
+html.tactil,html.tactil body,html.tactil body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}html.tactil :is(input,textarea,select,.textliber,.codc),html.tactil :is(.textliber,.codc) *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}html.tactil{overscroll-behavior:none}
+@media (pointer:coarse){html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}input,textarea,select,.textliber,.codc{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}img,a{-webkit-user-drag:none;-webkit-touch-callout:none}html{touch-action:manipulation;scrollbar-width:none}*::-webkit-scrollbar{display:none}*{scrollbar-width:none}}
 :focus:not(:focus-visible){outline:none}
 .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 button{font:inherit;color:inherit}
@@ -126,7 +127,16 @@ html,body{overflow-x:clip}body{min-height:100vh;min-height:100dvh}
 .wb{width:78px;height:5px;border-radius:3px;background:var(--panel2);position:relative;overflow:visible}
 .wb i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--mut)}.wb i.over{background:var(--warn)}
 .wb b{position:absolute;top:-3px;width:2px;height:11px;background:var(--ink);border-radius:1px}
-main.dr{animation:inDr .22s ease}main.st{animation:inSt .22s ease}@keyframes inDr{from{opacity:.4;transform:translateX(18px)}to{opacity:1;transform:none}}@keyframes inSt{from{opacity:.4;transform:translateX(-18px)}to{opacity:1;transform:none}}
+/* v0.47: ce e sub ecran nu se așază și nu se desenează până nu ajungi la el (derularea rămâne exactă: mărimea se ține minte) */
+@media (max-width:1099px){#v>:nth-child(n+5):not(footer):not(:has(.chart,canvas,svg.alsvg,[data-count],.odo)){content-visibility:auto;contain-intrinsic-size:auto 320px}}
+/* v0.47: trecerea între ecrane, doar opacitate și deplasare (rulează pe compozitor, lin chiar când firul principal lucrează) */
+#v.pleaca.tpdr{animation:vPleacaSt .11s cubic-bezier(.4,0,1,1) both}#v.pleaca.tpst{animation:vPleacaDr .11s cubic-bezier(.4,0,1,1) both}
+#v.vine.tvdr{animation:vVineDr .32s cubic-bezier(.2,.8,.2,1) both}#v.vine.tvst{animation:vVineSt .32s cubic-bezier(.2,.8,.2,1) both}
+@keyframes vPleacaSt{to{opacity:0;transform:translate3d(-14px,0,0)}}@keyframes vPleacaDr{to{opacity:0;transform:translate3d(14px,0,0)}}
+@keyframes vVineDr{from{opacity:0;transform:translate3d(18px,0,0)}to{opacity:1;transform:none}}@keyframes vVineSt{from{opacity:0;transform:translate3d(-18px,0,0)}to{opacity:1;transform:none}}
+#v.lin{animation:vLin .26s ease both}@keyframes vLin{from{opacity:.55}}
+@media (prefers-reduced-motion:reduce){#v.pleaca,#v.vine,#v.lin{animation:none!important}}
+
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* grafice */
 .chart{position:relative;touch-action:pan-y}
@@ -329,18 +339,6 @@ input[type=range]{padding:0;margin:8px 0 0;height:36px;accent-color:var(--acc);b
 .ali i{width:10px;height:10px;border-radius:3px}.ali span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}.ali b{font-size:var(--t1);white-space:nowrap}.ali .alt{color:var(--ink)}
 @media (max-width:370px){.alw{flex-direction:column;align-items:stretch}.alsvg{margin:0 auto}}
 /* tranziții continue */
-header{view-transition-name:hdr}nav{view-transition-name:nav}#sheet.on{view-transition-name:fisa}#veil.on{view-transition-name:val}
-::view-transition-group(*){animation-duration:.4s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
-::view-transition-group(avsel){animation-duration:.45s;z-index:5}
-html[data-vt=dr]::view-transition-old(root){animation:vtIesSt .2s ease-in both}html[data-vt=dr]::view-transition-new(root){animation:vtVineDr .34s cubic-bezier(.2,.8,.2,1) both}
-html[data-vt=st]::view-transition-old(root){animation:vtIesDr .2s ease-in both}html[data-vt=st]::view-transition-new(root){animation:vtVineSt .34s cubic-bezier(.2,.8,.2,1) both}
-@keyframes vtIesSt{to{opacity:0;transform:translateX(-28px)}}@keyframes vtIesDr{to{opacity:0;transform:translateX(28px)}}
-@keyframes vtVineDr{from{opacity:0;transform:translateX(28px)}}@keyframes vtVineSt{from{opacity:0;transform:translateX(-28px)}}
-html[data-vt=fisa]::view-transition-new(fisa){animation:vtSus .42s cubic-bezier(.2,.9,.25,1) both}html[data-vt=fisa]::view-transition-new(val){animation:vtApare .3s ease both}
-html[data-vt=inchide]::view-transition-old(fisa){animation:vtJos .32s cubic-bezier(.4,0,.8,.4) both}html[data-vt=inchide]::view-transition-old(val){animation:vtDispare .3s ease both}
-html[data-vt=fisa]::view-transition-old(root),html[data-vt=fisa]::view-transition-new(root),html[data-vt=inchide]::view-transition-old(root),html[data-vt=inchide]::view-transition-new(root){animation:none}
-@keyframes vtSus{from{transform:translateY(100%)}}@keyframes vtJos{to{transform:translateY(100%)}}@keyframes vtApare{from{opacity:0}}@keyframes vtDispare{to{opacity:0}}
-html[data-vt] .sheet,html[data-vt] .veil{transition:none!important}
 /* Plan: liste pliabile, acțiunile tale */
 .dd{border-radius:var(--r3);margin-bottom:12px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
 .dd>summary{list-style:none;display:flex;gap:12px;align-items:center;padding:12px 16px;cursor:pointer}.dd>summary::-webkit-details-marker{display:none}
@@ -373,7 +371,7 @@ html[data-vt] .sheet,html[data-vt] .veil{transition:none!important}
 /* Acasă: trei cifre sub total */
 .kpi3{display:grid;grid-template-columns:repeat(auto-fit,minmax(5.75rem,1fr));gap:8px;margin-top:16px}
 .kpi3>div{background:color-mix(in srgb,var(--panel2) 70%,transparent);border:1px solid var(--line);border-radius:var(--r3);padding:8px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.kpi3 span{font-size:var(--t1);color:var(--mut);font-weight:600;white-space:nowrap}.kpi3 small{font-size:var(--t1);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi3 span{font-size:var(--t1);color:var(--mut);font-weight:600;line-height:1.25;overflow-wrap:break-word;hyphens:manual}.kpi3 small{font-size:var(--t1);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi3 b{font-size:var(--t3);font-family:var(--fd)}.kpi3 .mv{align-self:flex-start}
 /* Învață: cursul */
 .srch{display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:0 12px;border-radius:var(--r3);background:var(--panel);border:1px solid var(--line)}.srch .ico{width:18px;height:18px;stroke:var(--mut);flex:none}.srch input{border:0;background:none;margin:0;padding:12px 0}.srch input:focus{box-shadow:none}
@@ -535,7 +533,7 @@ html,body{background-color:var(--bg)}
 .sheet{background:linear-gradient(180deg,color-mix(in srgb,var(--m1) 9%,var(--panel)),var(--panel) 160px)!important;box-shadow:0 -1px 0 color-mix(in srgb,var(--m2) 45%,transparent),0 -20px 60px -20px color-mix(in srgb,var(--m1) 45%,transparent)}
 .sec h2{background:linear-gradient(90deg,var(--mut),color-mix(in srgb,var(--mut) 60%,var(--m2)));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .sec h2 .sic,.sec h2 .q{-webkit-text-fill-color:initial}
-.q,.chip,.link,.term,summary.sub,.dv[data-c],a.ext{position:relative}.q::after{content:"";position:absolute;inset:-10px}.chip::after,.link::after,summary.sub::after,a.ext::after{content:"";position:absolute;inset:-8px -4px}.term::after{content:"";position:absolute;inset:-7px -3px}summary.sub{padding:4px 0}.dv[data-c]{padding:8px 0}
+.q,.chip,.link,.term,summary.sub,.dv[data-c],a.ext{position:relative}.q::after{content:"";position:absolute;inset:-10px}.chip::after,.link::after,summary.sub::after{content:"";position:absolute;inset:-8px -4px}a.ext::after{content:"";position:absolute;inset:-10px -4px}.term::after{content:"";position:absolute;inset:-9px -6px}summary.sub{padding:4px 0}.dv[data-c]{padding:8px 0}
 nav .in{box-shadow:inset 0 1px 0 var(--muchie),0 20px 40px -12px rgba(0,0,0,.6),0 0 0 1px color-mix(in srgb,var(--m1) 18%,transparent)}
 nav .ind{box-shadow:0 0 24px -4px color-mix(in srgb,var(--m1) 70%,transparent)}
 /* efecte reduse */
@@ -589,14 +587,8 @@ nav .in{background:color-mix(in srgb,var(--panel) 97%,var(--m1))!important;backd
 .pz.rosu .pzt{color:var(--neg)}.pz.galben .pzt{color:var(--warn)}
 .pzb{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.pzb .btn{flex:1 1 9rem;margin:0}
 /* v0.29: schimbările de stare (cont, listă/hartă, sortare) se topesc lin una în alta */
-html[data-vt=lin]::view-transition-old(root){animation:vtLinOld .32s cubic-bezier(.4,0,.2,1) both}
-html[data-vt=lin]::view-transition-new(root){animation:vtLinNew .42s cubic-bezier(.22,1,.36,1) both}
-@keyframes vtLinOld{to{opacity:0;filter:blur(3px);transform:scale(.995)}}
-@keyframes vtLinNew{from{opacity:0;filter:blur(3px);transform:scale(1.005)}}
 .pseg button,.seg button,.chips button{transition:background-color .3s cubic-bezier(.22,1,.36,1),color .3s,box-shadow .3s,transform .2s}
 .pseg button:active,.seg button:active,.chips button:active{transform:scale(.96)}
-.seg.mini button.on{view-transition-name:cont-on}.pseg button.on{view-transition-name:per-on}.vbar .seg button.on{view-transition-name:viz-on}.sortr button.on{view-transition-name:sort-on}
-::view-transition-group(cont-on),::view-transition-group(per-on),::view-transition-group(viz-on),::view-transition-group(sort-on){animation-duration:.42s;animation-timing-function:cubic-bezier(.22,1,.36,1)}
 /* v0.29: lista pozițiilor — fiecare poziție e un card */
 .list2{display:flex;flex-direction:column;gap:8px}
 .pr.p2{display:grid;grid-template-columns:3rem minmax(0,1fr) auto;grid-template-areas:"av m r" "w w w";column-gap:12px;row-gap:12px;align-items:center;padding:12px 16px 12px 16px;border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);border-radius:var(--r3);overflow:hidden;isolation:isolate;

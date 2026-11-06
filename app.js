@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.46.0';
+const APP_VER = '0.47.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -348,8 +348,11 @@ addEventListener('pageshow', e => { if (e.persisted && SESIUNE()) location.reloa
 const dataRo = iso => iso ? new Date(iso).toLocaleString('ro-RO',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '–';
 const ziRo = (iso,an=true) => iso ? new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',an?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short'}) : '–';
 const P = () => SNAP?.profil || {tintaETF:60,maxActiune:10,maxTema:25,contributieMin:350,contributieMax:350,contributieTipica:350,orizontAni:10,anTinta:new Date().getFullYear()+10,treapta:'lung',brokerPreferat:'Trading 212'};
-const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function aplicaTema(){ const r=document.documentElement; if(S.tema==='auto') delete r.dataset.theme; else r.dataset.theme=S.tema; r.classList.toggle('fx-redus', S.fx==='redus'); }
+// v0.47: valorile variabilelor CSS se țin minte până se schimbă tema. Citite în timpul unei redesenări, fiecare
+// getComputedStyle obliga browserul să recalculeze stilurile întregii pagini (~100 ms pe telefon, la ecranul Plan).
+const CSSV = new Map(); const TEMA_MQ = matchMedia('(prefers-color-scheme: dark)'); TEMA_MQ.addEventListener?.('change', () => CSSV.clear());
+const cssv = n => { if (!CSSV.has(n)) CSSV.set(n, getComputedStyle(document.documentElement).getPropertyValue(n).trim()); return CSSV.get(n); };
+function aplicaTema(){ CSSV.clear(); const r=document.documentElement; if(S.tema==='auto') delete r.dataset.theme; else r.dataset.theme=S.tema; r.classList.toggle('fx-redus', S.fx==='redus'); }
 aplicaTema();
 
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
@@ -552,25 +555,54 @@ function stare(){
   document.querySelector('nav button[data-v=azi]').querySelector('.dot')?.remove();
   bulinaNout();
 }
-// ===== Tranziții continue (View Transitions, nativ în Chrome pe Android). Fără suport: animațiile de până acum. =====
-const VT = () => !!document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches && !ANIM_OPRIT;
-let ANIM_OPRIT = false, VT_ACUM = null;
-function tranzitie(fn, tip){
-  if (!VT() || VT_ACUM) { fn(); return null; }
-  document.documentElement.dataset.vt = tip;
-  const t = VT_ACUM = document.startViewTransition(fn);
-  t.finished.finally(()=>{ if (VT_ACUM===t) { VT_ACUM=null; delete document.documentElement.dataset.vt; } });
-  return t;
-}
+// ===== Tranziții (v0.47: doar animații CSS pe compozitor; View Transitions scos, pentru că oprea ecranul) =====
+let ANIM_OPRIT = false;
+// v0.47: schimbările în aceeași pagină (contul, sortarea, vederea, modul începător): pagina se redesenează imediat,
+// apoi apare cu o scurtă trecere de opacitate (pe compozitor). Fără View Transitions, deci fără poză înghețată.
+function redesenLin(fn){ fn(); const v = $('v'); if (!v || miscareRedusa()) return; v.classList.remove('lin'); requestAnimationFrame(()=>{ v.classList.add('lin'); clearTimeout(redesenLin.t); redesenLin.t = setTimeout(()=>v.classList.remove('lin'), 320); }); }
+// v0.47: trecerea între ecrane fără „înghețare”. Înainte, View Transitions ținea pe ecran o poză a paginii vechi cât se
+// construia cea nouă (100–200 ms pe telefon): asta era micul freeze. Acum: meniul de jos reacționează în același cadru,
+// pagina veche pleacă printr-o animație pe compozitor (merge lin chiar dacă firul principal lucrează), pagina nouă se
+// construiește în timpul ei și intră tot pe compozitor. Nimic nu așteaptă o poză.
+let GO_T = 0, GO_N = 0, GO_PEND = false;
 function go(v, dir){ if (ED && v!=='plan') { ED=null; aplicaProfil(); } const i0=TABS.indexOf(VIEW), i1=TABS.indexOf(v), sens = i0<0||i1<0||i0===i1 ? '' : i1>i0 ? 'dr' : 'st'; if(v!==VIEW) vib();
-  const aplica = () => { TRANZ = VT() ? '' : sens; VIEW=v; document.querySelectorAll('nav button').forEach(b=>{ const on=b.dataset.v===v; b.classList.toggle('on',on); if(on){ b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); } }); $('bset')?.classList.toggle('on', v==='setari'); muta(); render(); scrollTo(0,0); };
-  if (sens && v!==VIEW) tranzitie(aplica, sens); else aplica(); }
+  const n = ++GO_N, schimba = v!==VIEW, el = $('v');
+  // 1) meniul: imediat (indicatorul alunecă prin CSS, pe compozitor)
+  document.querySelectorAll('nav button').forEach(b=>{ const on=b.dataset.v===v; b.classList.toggle('on',on); b.classList.remove('pop'); if (on) { void b.offsetWidth; b.classList.add('pop'); } }); // animația iconiței pornește din nou la fiecare atingere (meniul e mic: așezarea lui e ieftină)
+  $('bset')?.classList.toggle('on', v==='setari'); muta();
+  if (!schimba || !sens || ANIM_OPRIT || matchMedia('(prefers-reduced-motion: reduce)').matches || !el) { clearTimeout(GO_T); GO_PEND=false; el?.classList.remove('pleaca','tpdr','tpst'); VIEW=v; render(); scrollTo(0,0); return; }
+  // starea aplicației trece imediat pe pagina nouă (notificările, datele care sosesc între timp o văd deja);
+  // doar desenul așteaptă sfârșitul animației de plecare: o redesenare cerută între timp se face la schimb
+  VIEW = v; GO_PEND = true;
+  // 2) pagina veche pleacă (opacitate + deplasare, pe compozitor); între timp se pregătește cea nouă
+  el.classList.remove('vine','tvdr','tvst'); el.classList.add('pleaca', sens==='dr'?'tpdr':'tpst');
+  clearTimeout(GO_T); const t0 = performance.now();
+  // textul paginii noi se construiește cât pleacă cea veche (animația merge pe compozitor), apoi se pune pe ecran
+  setTimeout(()=>{ if (n!==GO_N) return; try { render.pre = SNAP ? { v, html: vederi[v]?.() } : null; } catch(e) { render.pre = null; }
+    GO_T = setTimeout(()=>{ if (n!==GO_N) return; GO_PEND = false; TRANZ=''; render.vine = sens; render(); scrollTo(0,0); el.classList.remove('pleaca','tpdr','tpst'); }, Math.max(0, 110 - (performance.now()-t0))); }, 0);
+}
 // Fișa acțiunii: avatarul din listă crește și devine antetul fișei; la închidere se întoarce la locul lui.
+// v0.47: fără View Transitions (țineau ecranul pe o poză cât se construia fișa). Foaia urcă prin CSS, iar sigla zboară
+// printr-o copie pusă deasupra, animată doar cu transform (pe compozitor): nimic nu se oprește.
+const miscareRedusa = () => ANIM_OPRIT || matchMedia('(prefers-reduced-motion: reduce)').matches;
+function zborAvatar(din, spre, catre, dur){
+  // din: elementul de unde pleacă; spre: elementul unde ajunge; catre(): dreptunghiul final (al lui „spre”, când foaia stă pe loc)
+  if (!din || !spre || miscareRedusa() || !spre.animate) return;
+  const r0 = din.getBoundingClientRect(), r1 = catre();
+  if (!r0.width || !r1?.width || r0.bottom < 0 || r0.top > innerHeight) return;
+  const c = spre.cloneNode(true); c.removeAttribute('id');
+  Object.assign(c.style, { position:'fixed', left:r1.left+'px', top:r1.top+'px', width:r1.width+'px', height:r1.height+'px', margin:'0', zIndex:'60', pointerEvents:'none', transformOrigin:'0 0', viewTransitionName:'none' });
+  document.body.appendChild(c); din.style.visibility = 'hidden'; spre.style.visibility = 'hidden';
+  const a = c.animate([{ transform:`translate(${r0.left-r1.left}px,${r0.top-r1.top}px) scale(${r0.width/r1.width})` }, { transform:'none' }], { duration:dur, easing:'cubic-bezier(.2,.9,.25,1)' });
+  const gata = () => { c.remove(); din.style.visibility = ''; spre.style.visibility = ''; };
+  a.onfinish = gata; a.oncancel = gata; setTimeout(gata, dur + 200);
+}
+const tyFoaie = sh => { try { return new DOMMatrixReadOnly(getComputedStyle(sh).transform).m42 || 0; } catch(e) { return 0; } };
 function deschideDetaliu(sym, el){
-  if (!VT() || !el || $('sheet').classList.contains('on')) { detaliu(sym); return; }
-  el.style.viewTransitionName = 'avsel';
-  const t = tranzitie(()=>{ el.style.viewTransitionName=''; detaliu(sym); const a=$('sheet').querySelector('.dh .av'); if(a) a.style.viewTransitionName='avsel'; }, 'fisa');
-  t?.finished.finally(()=>{ const a=$('sheet').querySelector('.dh .av'); if(a) a.style.viewTransitionName=''; });
+  if (!el || $('sheet').classList.contains('on')) { detaliu(sym); return; }
+  detaliu(sym);
+  const sh = $('sheet'), a = sh.querySelector('.dh .av'); if (!a) return;
+  zborAvatar(el, a, () => { const r = a.getBoundingClientRect(), ty = tyFoaie(sh); return { left:r.left, top:r.top-ty, width:r.width, height:r.height }; }, 420);
 }
 function spatiuJos(){ const n=document.querySelector('nav .in'); if(n) document.documentElement.style.setProperty('--navh', (n.getBoundingClientRect().height+12)+'px'); }
 // Antetul: etichetele de sub iconițe rămân cât încap; pe ecrane foarte înguste sau cu text mărit rămân doar iconițele.
@@ -595,7 +627,10 @@ function panouri(v){
 DESK.addEventListener?.('change', () => { if (V || !are_seif()) render(); });
 // Ce versiune rulezi: aplicația (de pe telefon) și analiza (din GitHub), jos pe fiecare ecran.
 const versiuneHTML = () => `<span class="verx num">Aplicația ${APP_VER}${SNAP?.versiune ? ` · analiza ${esc(SNAP.versiune)}${analizaVeche() ? ' (de actualizat)' : SNAP.versiune !== APP_VER ? ' (la zi)' : ''}` : ''}</span>`;
+const vederi = { azi:()=>vAzi(), plan:()=>vPlan(), analiza:()=>vAnaliza(), noutati:()=>vNoutati(), invata:()=>vInvata(), setari:()=>vSetari() };
 function render(){
+  if (GO_PEND) { render.pre = null; return; } // o trecere între pagini e în curs: pagina nouă se desenează la schimb, cu datele de atunci
+  const PRE = render.pre; render.pre = null; // HTML pregătit în timpul tranziției (doar pentru pagina cerută)
   ascundeSplash(); $('v').classList.remove('pan2'); // panourile se refac doar pentru ecranele cu date
   document.documentElement.classList.toggle('inchis', are_seif() && !V); // pe ecranul de blocare, antetul nu are butoane
   document.documentElement.classList.toggle('sesiune', SESIUNE());
@@ -607,9 +642,12 @@ function render(){
     if (foc) $('pw')?.focus(); else if(!citesteSeif()?.bio) setTimeout(()=>$('pw')?.focus(),50); return; }
   if (!live()) VIEW='setari';
   if (!SNAP && VIEW!=='setari') { $('v').innerHTML = LOADED ? ecranFaraDate() : skeleton(); opresteIlustratii(); return; }
-  const v=$('v'), intra = !!TRANZ || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); if(TRANZ){ void v.offsetWidth; v.classList.add(TRANZ); TRANZ=''; }
-  $('v').innerHTML = ({azi:vAzi,plan:vPlan,analiza:vAnaliza,noutati:vNoutati,invata:vInvata,setari:vSetari})[VIEW]() + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.${versiuneHTML()}</footer>`;
-  panouri(v); montaGrafice(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
+  const v=$('v'), intra = !!TRANZ || !!render.vine || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); TRANZ='';
+  if (render.vine) { v.classList.remove('vine','tvdr','tvst'); v.classList.add('vine', render.vine==='dr'?'tvdr':'tvst'); const vv = v; setTimeout(()=>vv.classList.remove('vine','tvdr','tvst'), 420); render.vine = ''; }
+  if (!intra) v.classList.remove('intra'); // o redesenare (date noi) nu reia animația de intrare
+  const pre = PRE?.v === VIEW && PRE.html != null ? PRE.html : null;
+  $('v').innerHTML = (pre ?? vederi[VIEW]()) + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.${versiuneHTML()}</footer>`;
+  panouri(v); graficeDupaCadru(); countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
   if (VIEW === 'noutati') { intraNoutati(); if (intra) filtreVizibile(); } else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }
 }
@@ -1053,7 +1091,7 @@ function rapoarteHTML(){
 // ---- 7) Modul începător și turul ghidat ----
 const incepator = () => !!S.incepator;
 const indiciu = t => incepator() ? `<div class="inc">${ic('bec')}<span>${t}</span></div>` : '';
-function setIncepator(v){ S.incepator = !!v; save(); vib(); tranzitie(render, 'lin'); refaFoaie();
+function setIncepator(v){ S.incepator = !!v; save(); vib(); redesenLin(render); refaFoaie();
   if (S.incepator && !S.turVazut) { render.tur = true; closeSheet(); tur.t = setTimeout(()=>tur(0), 700); } }
 const TUR = [
   ['.hcard .hero', 'Valoarea ta', 'Cât valorează acum tot ce ai, cât ai câștigat și cum te descurci față de VWCE, ETF-ul global de referință.'],
@@ -1542,10 +1580,17 @@ function praguri(lo, hi, n=5){
   const t0=Math.floor(lo/pas)*pas, out=[]; for(let v=t0; v<hi+pas*0.999; v+=pas) out.push(+v.toPrecision(12));
   return {t:out, pas};
 }
+// v0.47: graficele se desenează după ce pagina nouă a apărut pe ecran (un cadru mai târziu), nu în același pas cu ea.
+// Pagina intră imediat; liniile se desenează oricum cu animație, deci întârzierea de un cadru nu se vede.
+let GR_RAF = 0;
+function graficeDupaCadru(){ cancelAnimationFrame(GR_RAF); GR_RAF = requestAnimationFrame(()=>{ GR_RAF = 0; setTimeout(montaGrafice, 0); }); }
 function montaGrafice(){
-  for (const [id,o] of Object.entries(GR)) {
-    const el=$(id); if(!el){ delete GR[id]; continue; }
-    const W=Math.max(el.clientWidth,260), H=o.H, pl=2, pr=46, pt=8, pb=22;
+  // v0.47: întâi toate lățimile (o singură așezare a paginii), apoi desenele. Înainte, fiecare grafic citea lățimea după ce
+  // cel dinainte schimbase pagina: browserul reașeza tot ecranul o dată pe grafic.
+  const L = []; for (const [id,o] of Object.entries(GR)) { const el=$(id); if(!el){ delete GR[id]; continue; } L.push([id,o,el]); }
+  const LW = L.map(([,,el])=>el.clientWidth);
+  for (const [k0,[id,o,el]] of L.entries()) {
+    const W=Math.max(LW[k0],260), H=o.H, pl=2, pr=46, pt=8, pb=22;
     const all=o.series.flatMap(s=>s.v).concat((o.h||[]).map(h=>h.v)).filter(x=>x!=null&&isFinite(x));
     if (!all.length) { el.innerHTML='<div class="sub">Date insuficiente.</div>'; continue; }
     const {t:ticks, pas} = praguri(Math.min(...all), Math.max(...all)), lo=ticks[0], hi=ticks[ticks.length-1];
@@ -1939,8 +1984,12 @@ document.addEventListener('scroll', e => { const car = e.target; if (car?.id !==
   document.querySelectorAll('#dots i').forEach((d,k)=>d.classList.toggle('on', k===i)); }, { capture:true, passive:true });
 // atingi rândul de puncte: merge la cel mai apropiat punct (tot rândul e țintă, punctele sunt prea mici pentru deget)
 // Pe telefon, ca o aplicație: apăsarea lungă nu deschide meniul browserului și nu selectează text (în afară de câmpuri și coduri de copiat).
-if (matchMedia('(pointer:coarse)').matches) {
-  const liber = e => { const el = e.target?.nodeType === 3 ? e.target.parentElement : e.target; return !!el?.closest?.('input,textarea,select,.sel,.codc'); };
+// v0.47: „.sel” era și clasa notificării alese în Noutăți: cardul ales devenea selectabil. Acum: „.textliber”, doar pentru coduri.
+// Telefonul se recunoaște după orice indicator tactil (unele telefoane raportează și un indicator „fin”).
+const TACTIL = matchMedia('(pointer:coarse), (any-pointer:coarse), (hover:none)').matches;
+document.documentElement.classList.toggle('tactil', TACTIL);
+if (TACTIL) {
+  const liber = e => { const el = e.target?.nodeType === 3 ? e.target.parentElement : e.target; return !!el?.closest?.('input,textarea,select,.textliber,.codc'); };
   document.addEventListener('contextmenu', e => { if (!liber(e)) e.preventDefault(); });
   document.addEventListener('selectstart', e => { if (!liber(e)) e.preventDefault(); });
   document.addEventListener('dragstart', e => { if (!liber(e)) e.preventDefault(); });
@@ -1991,7 +2040,7 @@ function culoriActiune(sym){ const c=CUL[sym]; if(!c) return null; const luminos
   return { c:hex, c2:hslHex((c.h+28)%360,c.s,l), ink: L>0.45?'#06121f':'#ffffff' }; }
 function pregatesteCulori(){ let rest=0, gasit=false;
   for (const p of SNAP?.pozitii||[]) { const l=sigla(p); if (!l || p.symbol in CUL) continue; CUL[p.symbol]=null; rest++; const im=new Image();
-    const gata=()=>{ if (--rest===0 && gasit && V && !$('sheet').classList.contains('on') && !VT_ACUM) render(); }; // o singură redesenare, când sunt gata toate
+    const gata=()=>{ if (--rest===0 && gasit && V && !$('sheet').classList.contains('on')) render(); }; // o singură redesenare, când sunt gata toate
     im.onload=()=>{ try { CUL[p.symbol]=culoareDin(im); gasit = gasit || !!CUL[p.symbol]; } catch(e) { CUL[p.symbol]=null; } gata(); }; im.onerror=gata; im.src=l; } }
 function avErr(im){ const a=im.parentNode; a.classList.remove('img'); a.textContent=im.dataset.t||''; }
 const avatar = (p, m) => { const l=sigla(p), t=esc(p.symbol.replace(/\..*$/,'').slice(0,4)), cl=l&&culoriActiune(p.symbol); const l4 = t.length>=4 ? ' l4' : ''; return l ? `<span class="av img${l4}${m?' '+m:''}" style="--c:${cl?cl.c:`var(${culoareTema(p.tema)})`}"><img src="${l}" alt="" loading="lazy" decoding="async" data-t="${t}" data-er="${A('avErr','$el')}"></span>` : `<span class="av${l4}${m?' '+m:''}${p.virtual?' vt':''}" style="--c:var(${culoareTema(p.tema)})">${t}</span>`; };
@@ -2130,7 +2179,7 @@ function detaliu(sym, zile){
       <div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.name||'')}</div>${laBroker(p)?`<div class="sub">${esc(laBroker(p))}</div>`:''}<div class="sub" style="color:var(${col})">● ${esc(p.tema)}</div></div></div>
     <div class="row" style="margin-top:16px;align-items:flex-end;flex-wrap:wrap"><div><div class="hero num" style="font-size:var(--t6);margin:0">${nf(miscare(p)?.pret ?? i.pret)}<small>${esc(p.moneda||'')}</small></div><div class="sub">${({ acum: 'preț acum', azi: `preț la ${oraRo(SNAP.generat)} (bursa e deschisă)` })[miscare(p)?.cand] || 'preț de închidere'}</div></div>
       <div style="text-align:right">${mv(MISC(p),1)}<div class="sub" style="margin-top:4px">${momentPoz(p)}</div></div></div></div>
-  <div class="vd" style="--k:var(${SEMC[u]})">${ic(VIC[u])}<div>${link(verdict(p))}</div></div>
+  <div class="vd" style="--k:var(${semCol(p)})">${ic(VIC[u])}<div>${link(verdict(p))}</div></div>
   ${verdictHTML(p.symbol, true)}
   ${graf}
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
@@ -2176,17 +2225,13 @@ function notaJurnal(sym){ vib();
 // Foi pe două niveluri: o explicație se deschide peste detaliu fără să-l închidă.
 function openSheet(html){
   const lvl2 = $('sheet').classList.contains('on'), sh = $(lvl2?'sheet2':'sheet'), vl = $(lvl2?'veil2':'veil');
-  sh.innerHTML = html; iconiteSectiuni(sh); esalon(sh.querySelector(":scope>.fisa")||sh); sh.scrollTop = 0; vl.classList.add('on'); sh.classList.add('on'); document.documentElement.classList.add('blocat'); history.pushState({s:lvl2?2:1},''); montaGrafice();
+  sh.innerHTML = html; iconiteSectiuni(sh); esalon(sh.querySelector(":scope>.fisa")||sh); sh.scrollTop = 0; vl.classList.add('on'); sh.classList.add('on'); document.documentElement.classList.add('blocat'); history.pushState({s:lvl2?2:1},''); graficeDupaCadru();
 }
 function closeSheet(fromPop){
   if (!$('sheet').classList.contains('on') && !$('sheet2').classList.contains('on')) return;
-  if (VT_ACUM && document.documentElement.dataset.vt==='inchide') return; // se închide deja
-  const lvl2 = $('sheet2').classList.contains('on'), a = !lvl2 && $('sheet').querySelector('.dh .av'), li = a && DET.sym && document.querySelector(`.pr[data-s="${CSS.escape(DET.sym)}"] .av`);
-  if (a && li && VT() && li.getBoundingClientRect().bottom > 0 && li.getBoundingClientRect().top < innerHeight) {
-    a.style.viewTransitionName = 'avsel';
-    const t = tranzitie(()=>{ a.style.viewTransitionName=''; inchideFoaia(fromPop); li.style.viewTransitionName='avsel'; }, 'inchide');
-    t?.finished.finally(()=>{ li.style.viewTransitionName=''; }); if (t) return;
-  }
+    const lvl2 = $('sheet2').classList.contains('on'), a = !lvl2 && $('sheet').querySelector('.dh .av'), li = a && DET.sym && document.querySelector(`.pr[data-s="${CSS.escape(DET.sym)}"] .av`);
+  // sigla se întoarce în listă (copie animată), în timp ce foaia coboară prin CSS
+  if (a && li) { const r = li.getBoundingClientRect(); zborAvatar(a, li, () => r, 300); }
   inchideFoaia(fromPop);
 }
 function inchideFoaia(fromPop){
@@ -2269,7 +2314,9 @@ function vPlan(){
 
 // ===== Stil comun: antetul foilor, intrarea eșalonată =====
 const capFoaie = (icon, titlu, sub, col='--acc') => `<div class="grab"></div><div class="cap"><span class="tic" style="--k:var(${col})">${ic(icon)}</span><div style="min-width:0"><h3>${esc(titlu)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div></div>`;
-function esalon(root){ let i=0; for (const el of root.children) { if (el.matches('.card,.sec,.al,.tiles,.lz,.btn,.lect,.rec,.qo,.brks,.pan')) { el.style.setProperty('--i', Math.min(i++, 14)); } } root.classList.remove('intra'); void root.offsetWidth; root.classList.add('intra'); }
+// v0.47: fără `offsetWidth` (forța browserul să așeze toată pagina încă o dată, ~50 ms pe telefon). Conținutul e nou la
+// fiecare apel, deci animația pornește singură când primește clasa.
+function esalon(root){ let i=0; for (const el of root.children) { if (el.matches('.card,.sec,.al,.tiles,.lz,.btn,.lect,.rec,.qo,.brks,.pan')) { el.style.setProperty('--i', Math.min(i++, 14)); } } root.classList.add('intra'); }
 // ===== Învață: școala de investiții, pe module, cu cifrele tale =====
 const NR = x => S.privat ? '•••' : nf(x,0);
 const MODULE = [
@@ -2506,7 +2553,7 @@ function cardRec(r){
     ${verdictRand(r.ticker)}
     <p style="margin:12px 0 0;font-size:var(--t2);line-height:1.55;color:var(--ink2)">${esc(r.motiv)}</p>
     ${r.despre?`<div class="sub" style="margin-top:8px">${esc(r.despre)}</div>`:''}
-    <div class="meta num"><span><b>${esc(String(r.companii||''))}</b> companii</span><span>indice <b>${esc(r.indice||'')}</b></span><span>ISIN <b class="sel">${esc(r.isin)}</b> ${q('isin')}</span></div>
+    <div class="meta num"><span><b>${esc(String(r.companii||''))}</b> companii</span><span>indice <b>${esc(r.indice||'')}</b></span><span>ISIN <b class="textliber">${esc(r.isin)}</b> ${q('isin')}</span></div>
     ${r.nota?`<div class="al" style="margin:12px 0 0">${esc(r.nota)}</div>`:''}
     ${r.acum!==false?`<div class="sug">${ic('portofel')}<span>${sugestie(r).text}</span></div>`:''}
     <div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" data-c="${A('verificaInainte',r.ticker,true)}">Da, investesc</button><button class="btn ghost" style="flex:1" data-c="${A('decideETF',r.ticker,'nu')}">Nu, arată alta</button></div>
@@ -2955,7 +3002,7 @@ function gxDate(){
   const pl = [];
   orb.forEach((o,k)=>{ const ps = SNAP.pozitii.filter(p=>o.etf ? p.etf : !p.etf && p.tema===o.n);
     ps.forEach((p,j)=>{ const cl = culoriActiune(p.symbol), l = sigla(p); let im = null; if (l) { im = new Image(); im.src = l; }
-      pl.push({ p, o, R:o.R, a0:(j/ps.length)*Math.PI*2 + k*1.3, w:0.32/Math.pow(o.R+0.25,1.5), c: cl ? cl.c : o.c, s: gxCul(SEMC[sem(p)]), im, pond:p.pondere, m: MISC(p) }); }); });
+      pl.push({ p, o, R:o.R, a0:(j/ps.length)*Math.PI*2 + k*1.3, w:0.32/Math.pow(o.R+0.25,1.5), c: cl ? cl.c : o.c, s: gxCul(semCol(p)), im, pond:p.pondere, m: MISC(p) }); }); });
   // reluarea: ponderea fiecărei zile, din prețurile istorice (cantitățile de azi)
   const zile = [...new Set(SNAP.pozitii.flatMap(p=>p.serie?.d||[]))].filter(Boolean).sort().slice(-252);
   const val = SNAP.pozitii.map(p=>{ const s=p.serie; if(!s?.c?.length) return zile.map(()=>p.valueRON); const m=new Map(s.d.map((d,i)=>[d,s.c[i]])), u=s.c.at(-1); let x=null; return zile.map(d=>{ x=m.get(d)??x; return x&&u ? p.valueRON*x/u : p.valueRON; }); });
@@ -3025,7 +3072,13 @@ function galaxie(){
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.18,x.c); g.addColorStop(1,'#000000');
       ctx.globalAlpha=dim; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r,0,6.283); ctx.fill();
       // sigla companiei pe planetă (la orice mărime); fără siglă, inițialele
-      if (x.im?.complete && x.im.naturalWidth) { ctx.save(); ctx.beginPath(); ctx.arc(q.x,q.y,r*0.8,0,6.283); ctx.clip(); ctx.fillStyle='#fff'; ctx.fill(); ctx.drawImage(x.im,q.x-r*0.64,q.y-r*0.64,r*1.28,r*1.28); ctx.restore(); }
+      // v0.47: discul alb cu sigla se pregătește o singură dată (un mic canvas) și apoi doar se copiază; decupajul (clip) pe fiecare
+      // cadru și pentru fiecare planetă era cea mai scumpă parte a galaxiei
+      if (x.im?.complete && x.im.naturalWidth) {
+        const SP = GX.spr || (GX.spr = new Map()); let sp = SP.get(x.im);
+        if (!sp) { const Z = 96; sp = document.createElement('canvas'); sp.width = sp.height = Z; const c2 = sp.getContext('2d');
+          c2.beginPath(); c2.arc(Z/2,Z/2,Z/2,0,6.283); c2.closePath(); c2.fillStyle='#fff'; c2.fill(); c2.save(); c2.clip(); c2.imageSmoothingQuality='high'; c2.drawImage(x.im, Z*0.1, Z*0.1, Z*0.8, Z*0.8); c2.restore(); SP.set(x.im, sp); }
+        ctx.drawImage(sp, q.x-r*0.8, q.y-r*0.8, r*1.6, r*1.6); }
       else if (r>=7) { ctx.fillStyle='#ffffff'; ctx.globalAlpha=dim*0.95; ctx.font=`700 ${Math.max(7,r*0.58)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; const ti=x.p.symbol.replace(/\..*$/,'').slice(0,r>=12?4:2); ctx.lineWidth=Math.max(2,r*0.16); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineJoin='round'; ctx.strokeText(ti, q.x, q.y+0.5); ctx.fillText(ti, q.x, q.y+0.5); ctx.textBaseline='alphabetic'; }
       // inelul semnalului
       ctx.beginPath(); ctx.arc(q.x,q.y,r+2.2,0,6.283); ctx.strokeStyle=x.s; ctx.lineWidth=1.6; ctx.stroke();
@@ -3048,8 +3101,10 @@ function galaxie(){
     // Cele din față au prioritate; un nume care s-ar suprapune nu se scrie în cadrul acesta (reapare când planeta se mută).
     const puse = [], vazut = GX.etV || new Set(), acum = new Set(), stea = rStar()*1.15;
     for (const e of ET.sort((a,b)=>b.z-a.z)) {
-      const fs = Math.max(9,10*e.k); ctx.font=`600 ${fs}px system-ui,sans-serif`;
-      const m = vazut.has(e.sym) ? 0 : 2, w = ctx.measureText(e.t).width/2 + 2 + m, h = fs*0.62 + m, cy0 = e.y - fs*0.35;
+      // v0.47: mărimea textului rotunjită la 0,5 px și lățimea ținută minte: measureText la fiecare cadru era jumătate din costul galaxiei
+      const fs = Math.max(9, Math.round(20*e.k)/2), fk = `600 ${fs}px system-ui,sans-serif`; if (ctx.font !== fk) ctx.font = fk;
+      const mk = fs+'|'+e.t, MT = GX.mt || (GX.mt = new Map()); if (!MT.has(mk)) MT.set(mk, ctx.measureText(e.t).width);
+      const m = vazut.has(e.sym) ? 0 : 2, w = MT.get(mk)/2 + 2 + m, h = fs*0.62 + m, cy0 = e.y - fs*0.35;
       const peste = puse.some(b => Math.abs(b.x-e.x) < w+b.w && Math.abs(b.y-cy0) < h+b.h)
         || P_.some(p => p.p.symbol!==e.sym && Math.abs(p.q.x-e.x) < w+p.r && Math.abs(p.q.y-cy0) < h+p.r)
         || (Math.abs(W/2-e.x) < w+stea && Math.abs(H/2-cy0) < h+stea);
@@ -3100,7 +3155,9 @@ function vAnaliza(){
   if (incepator()) h += indiciu('Aici vezi cum merg banii, cât risc ai și ce plătești. Atinge orice cartonaș pentru explicații.');
   else h += `<div class="sec" style="margin-top:8px"><h2>Galaxia ta ${q('orbita')}</h2><span class="sub">trage, atinge</span></div>
   <div class="card gxc">${galaxieHTML()}
-    <div class="leg" style="justify-content:center;margin-top:8px"><span><i style="background:var(--adauga);height:8px;width:8px;border-radius:50%"></i>Cumpără</span><span><i style="background:var(--opor);height:8px;width:8px;border-radius:50%"></i>La reducere</span><span><i style="background:var(--pastreaza);height:8px;width:8px;border-radius:50%"></i>Las-o</span><span><i style="background:var(--verifica);height:8px;width:8px;border-radius:50%"></i>Uită-te la ea</span></div></div>`;
+    <div class="leg" style="justify-content:center;margin-top:8px">${(()=>{ const f = new Set(SNAP.pozitii.map(semFel)); /* v0.47: doar etichetele care apar acum, cu culorile de pe carduri */
+      return [['cumpara','--adauga','Cumpără'],['reducere','--opor','La reducere'],['las','--pastreaza','Las-o'],['mare','--reechilibreaza','Prea mare'],['sector','--asteapta','Scade cu sectorul'],['piata','--asteapta','Scade cu piața'],['uita','--verifica','Uită-te la ea']]
+        .filter(([k])=>f.has(k)).map(([,c,t])=>`<span><i style="background:var(${c});height:8px;width:8px;border-radius:50%"></i>${t}</span>`).join(''); })()}</div></div>`;
   // 2) Sănătatea, pe scurt
   h += `<button class="card sanc" data-c="${A('deschideSect','sanatate')}">${inel(sn.sc, sn.et[1])}<div style="flex:1;min-width:0;text-align:left"><div class="lbl">Sănătatea portofoliului</div><div class="fd" style="font-size:var(--t4);font-weight:700;color:var(${sn.et[1]})">${sn.et[0]}</div>
     <div class="mini4">${sn.F.map(f=>`<span title="${esc(f.n)}"><i style="width:${f.v/25*100}%;background:var(${kF(f.v)})"></i></span>`).join('')}</div><div class="sub" style="margin-top:4px">${sn.F.map(f=>f.n.split(' ')[0]).join(' · ')}</div></div><span class="ch">›</span></button>`;
@@ -3148,7 +3205,7 @@ function vAnaliza(){
       return tile('nimerit','trofeu','Cât a nimerit analistul', m&&n?`${sg(m.medie-n.medie,1)} <small>pp</small>`:j?`${j.intrari} <small>verdicte</small>`:'–',
         m&&n?'„Merită” față de „Nu acum”, după 3 luni':j?.primeleRezultate?`primele rezultate: ${ziRo(j.primeleRezultate,false)}`:'apare după prima analiză nouă','','lat'); })()}
   </div>`;
-  if (!incepator()) setTimeout(galaxie, 30);
+  if (!incepator()) setTimeout(galaxie, 360); // v0.47: după ce pagina a intrat (animația durează 320 ms): galaxia nu încetinește intrarea
   return h;
 }
 // v0.45: jurnalul semnalelor. Fiecare verdict „Merită acum?” e notat cu prețul zilei; după 3 și 6 luni se vede ce a urmat.
@@ -4116,10 +4173,10 @@ function arataRho(a,b,v,t){ const el=$('hmv'); if(el) el.textContent=`${a} și $
 function blocheazaAcum(){ blocheaza(); toast('Blocat.'); }
 function blocheazaAnim(el){ el.classList.add('inchide'); setTimeout(blocheazaAcum, 260); }
 function enterDeblocheaza(ev){ if (ev.key==='Enter') deblocheaza(); }
-function setCont(k){ if (S.cont===k) return; S.cont=k; save(); vib(); tranzitie(()=>{ ANIM=true; render(); }, 'lin'); }
+function setCont(k){ if (S.cont===k) return; S.cont=k; save(); vib(); redesenLin(()=>{ ANIM=true; render(); }); }
 function comutaPrivat(){ S.privat=!S.privat; save(); vib(); render(); }
-function setViz(k){ if (S.vizAzi===k) return; S.vizAzi=k; save(); vib(); tranzitie(render, 'lin'); }
-function setSort(k){ if (S.sort===k) return; S.sort=k; save(); vib(); tranzitie(render, 'lin'); }
+function setViz(k){ if (S.vizAzi===k) return; S.vizAzi=k; save(); vib(); redesenLin(render); }
+function setSort(k){ if (S.sort===k) return; S.sort=k; save(); vib(); redesenLin(render); }
 function setTema(k){ S.tema=k; save(); aplicaTema(); render(); refaFoaie(); }
 function setFx(k){ S.fx=k; save(); aplicaTema(); render(); refaFoaie(); }
 function comutaPas(k){ const p=S.pasi||{}; S.pasi={...p, [k]:!p[k]}; save(); render(); }

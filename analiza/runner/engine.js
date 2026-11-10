@@ -480,7 +480,7 @@ export function evalueaza(g, m, teme, azi, profil = PROFIL) {
   let zileRez = null;
   if (m?.rezultate && azi) zileRez = Math.round((Date.parse(m.rezultate) - Date.parse(azi)) / 864e5);
   const rezAproape = zileRez != null && zileRez >= 0 && zileRez <= RISK.zileRezultate;
-  if (rezAproape) atentie.push(`Rezultate trimestriale pe ${dataRo(m.rezultate)}. Sunt posibile mișcări mari, în ambele sensuri.`);
+  if (rezAproape) atentie.push(`Rezultate trimestriale pe ${dataRo(m.rezultate).replace(/\.$/, '')}. Sunt posibile mișcări mari, în ambele sensuri.`);
 
   let semnal, oportunitate = null, cauza = null, refRel = null;
   if (g.etf) {

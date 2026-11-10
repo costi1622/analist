@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.48.1';
+const APP_VER = '0.49.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -360,7 +360,7 @@ aplicaTema();
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
 const GLOS = {
   harta:['Harta zilei','Fiecare dreptunghi e o poziție. Mărimea arată cât din portofoliu ocupă, culoarea arată mișcarea zilei: verde crește, roșu scade, gri stă pe loc (sub 0,3%). Cu cât culoarea e mai intensă, cu atât mișcarea e mai mare. Atinge un dreptunghi ca să deschizi acțiunea.'],
-  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar. În centru e steaua portofoliului: arată cum a mers totul azi (o atingi și vezi valoarea). Pe orbita cea mai apropiată stau ETF-urile, apoi câte o orbită pentru fiecare sector. Fiecare planetă e o poziție: mărimea e ponderea, inelul colorat e semnalul (verde: cumpără, gri: las-o, roșu: uită-te la ea), iar strălucirea arată cum a mers azi. Orbitele pline au trecut de plafonul pe sector. Trage cu degetul ca să rotești și să înclini sistemul, atinge o planetă ca s-o vezi și încă o dată ca să-i deschizi fișa. „Ultimul an” arată, în câteva secunde, cum s-au schimbat mărimile în ultimele 12 luni, după prețurile zilnice (cu cantitățile de azi).'],
+  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar. Fiecare efect spune ceva despre bani. Steaua din centru e portofoliul: cifra arată cum a mers azi. Planetele sunt pozițiile: mărimea e ponderea, inelul colorat e eticheta. Orbitele sunt sectoarele, iar cele pline au trecut de plafon. Centrul de greutate: fiecare acțiune peste ținta ei trage steaua spre ea, așa că un portofoliu dezechilibrat are steaua în afara cercului punctat din mijloc. Pe măsură ce urmezi planul, steaua revine în centru. Constelațiile: acțiunile din același sector sunt unite prin linii fine; atinge una și se aprinde tot sectorul, cu procentul lui. Atmosfera: portocalie când RSI trece de 70 (a urcat repede, e supraîncălzită), albastră când scade sub 30 (răcită). O fisură roșie care pulsează înseamnă că prețul e sub nivelul de alertă. Lunile sunt dividendele: câte una pentru fiecare plată pe an; luna aurie înseamnă plată luna asta sau luna viitoare. În ziua în care investești, stele căzătoare pleacă din centru spre ce ai cumpărat. Trage ca s-o rotești, atinge o planetă ca s-o vezi și încă o dată ca să-i deschizi fișa. „Ultimul an” arată cum s-au schimbat mărimile în ultimele 12 luni.','O acțiune cu 25% din portofoliu și ținta de 4% trage steaua cu 21 de puncte spre ea.','pondere tema rsi dividende'],
   proiectie:['Unde poți ajunge','Trei scenarii pentru valoarea portofoliului la orizontul tău: 3%, 6% și 9% pe an, în lei, înainte de inflație. Linia punctată e doar ce depui. Diferența până la scenarii e dobânda compusă: câștigurile fac la rândul lor câștiguri. Anii reali vor fi neregulați, cu scăderi de 20–30% pe drum. Nu e o promisiune, e un ordin de mărime.'],
   agitatie:['Cât de mult se mișcă portofoliul','Agitația (volatilitatea) arată cât urcă și coboară valoarea într-un an obișnuit, calculată din prețurile ultimelor până la 12 luni, cu ponderile de azi. VWCE e reperul. Cea mai mare scădere e de la un vârf la minimul de după. O lună proastă apare cam o dată la 20 de luni. Testele de stres arată cât ai pierde în scenarii plauzibile. Scăderile de felul ăsta sunt normale pe termen lung. Întrebarea e dacă le-ai privi liniștit, fără să vinzi.'],
   castigAcum:['Câștig pe poziții','Cât au câștigat sau pierdut, în lei, pozițiile pe care le ai acum: valoarea de azi minus cât ai plătit pe ele. La eToro, ce ai plătit în dolari e socotit cu cursul BNR din ziua fiecărei cumpărări, deci intră și câștigul sau pierderea din curs. Nu intră dividendele încasate și câștigurile din ce ai vândut: pe acelea le vezi în Analiză → Randamentul tău, care le socotește pe toate.'],
@@ -784,7 +784,7 @@ const bandaIlustrata = (tip, titlu, text, id='') => `<div class="card ilu mic" $
 // Mișcarea redusă din setările telefonului oprește și animațiile din desene.
 function opresteIlustratii(root=document){ if (matchMedia('(prefers-reduced-motion: reduce)').matches) root.querySelectorAll('.ilsvg').forEach(x=>x.pauseAnimations?.()); }
 function ecranFaraDate(){
-  if (RULEAZA) return ecranIlustrat({tip:'ruleaza', id:'rulc', titlu:'Analiza rulează', text:`<span class="pt">${esc(PROGRES_TEXT||'Pornește analiza…')}</span><br>De obicei durează 1–2 minute. Poți închide aplicația: rezultatul te așteaptă.`});
+  if (RULEAZA) return ecranIlustrat({tip:'ruleaza', id:'rulc', titlu:'Analiza rulează', text:`<span class="pt">${esc(progresLung()||'Pornește analiza')}…</span><br>De obicei durează 1–2 minute. Poți închide aplicația: rezultatul te așteaptă.`});
   if (OFFLINE || !navigator.onLine) return ecranIlustrat({tip:'offline', titlu:'Fără internet', text:'Nu am date salvate pe acest telefon încă. Încerc din nou singur când revine conexiunea.', act:['Încearcă acum', A('reincarca',true)]});
   return ecranIlustrat({tip:'gol', titlu:'Încă nu există o analiză', text:live()?'Prima analiză apare după ce rulează în GitHub, de obicei în 1–2 minute.':'Conectează aplicația ca să vezi portofoliul.', act:live()?['Rulează analiza', A('ruleaza')]:['Deschide setările', A('go','setari')]});
 }
@@ -2119,7 +2119,8 @@ function vAzi(){
   const tIst = ist.length>5 ? tr((ist.at(-1).totalRON/ist[0].totalRON-1)*100, 0.5) : 'flat';
   let h = '';
   h += pazaBanner() + bandaToken() + bandaAnaliza() + bandaPush();
-  if (RULEAZA) h += bandaIlustrata('ruleaza', 'Analiza rulează', `<span class="pt">${esc(PROGRES_TEXT||'Pornește analiza…')}</span>`, 'rulc');
+  // v0.49: cât rulează, progresul e doar în antet. Banda apare numai dacă durează peste un minut.
+  if (RULEAZA && PROGRES_LENT === true) h += bandaIlustrata('ruleaza', 'Durează mai mult ca de obicei', 'GitHub e aglomerat acum. Poți închide aplicația: primești notificare când analiza e gata.', 'rulc');
   else if (OFFLINE) h += bandaIlustrata('offline', 'Fără internet', `Vezi datele din ${esc(cand(SNAP.generat))}. Se actualizează singur când revine conexiunea.`);
   // 1) Portofoliul: totalul, ziua, câștigul, luna
   h += `<div class="card hcard ${t}">
@@ -3085,13 +3086,19 @@ function gxDate(){
   const pl = [];
   orb.forEach((o,k)=>{ const ps = SNAP.pozitii.filter(p=>o.etf ? p.etf : !p.etf && p.tema===o.n);
     ps.forEach((p,j)=>{ const cl = culoriActiune(p.symbol), l = sigla(p); let im = null; if (l) { im = new Image(); im.src = l; }
-      pl.push({ p, o, R:o.R, a0:(j/ps.length)*Math.PI*2 + k*1.3, w:0.32/Math.pow(o.R+0.25,1.5), c: cl ? cl.c : o.c, s: gxCul(semCol(p)), im, pond:p.pondere, m: MISC(p) }); }); });
+      // v0.49: ținta (pentru centrul de greutate), RSI (atmosfera), nivelul de alertă (fisura), dividendele pe an (lunile)
+      const luni = SNAP.dividende?.luni?.[p.symbol] || [], lc = new Date().getMonth()+1, ln = lc%12+1;
+      pl.push({ p, o, R:o.R, a0:(j/ps.length)*Math.PI*2 + k*1.3, w:0.32/Math.pow(o.R+0.25,1.5), c: cl ? cl.c : o.c, s: gxCul(semCol(p)), im, pond:p.pondere, m: MISC(p),
+        tinta: p.tinta, rsi: p.ind?.rsi, fisura: !!p.ind?.subProtectie, luni: Math.min(luni.length, 12), luniAproape: luni.includes(lc) || luni.includes(ln) }); }); });
   // reluarea: ponderea fiecărei zile, din prețurile istorice (cantitățile de azi)
   const zile = [...new Set(SNAP.pozitii.flatMap(p=>p.serie?.d||[]))].filter(Boolean).sort().slice(-252);
   const val = SNAP.pozitii.map(p=>{ const s=p.serie; if(!s?.c?.length) return zile.map(()=>p.valueRON); const m=new Map(s.d.map((d,i)=>[d,s.c[i]])), u=s.c.at(-1); let x=null; return zile.map(d=>{ x=m.get(d)??x; return x&&u ? p.valueRON*x/u : p.valueRON; }); });
   const tot = zile.map((_,i)=>val.reduce((a,v)=>a+v[i],0));
   const istoric = { zile, tot, w: SNAP.pozitii.map((p,k)=>val[k].map((v,i)=>v/tot[i]*100)) };
-  return { pr, etfP, ziP, orb, pl, istoric, star:gxCul('--acc'), star2:gxCul('--acc2'), ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg'), mut:gxCul('--mut'), bg:gxCul('--panel') };
+  // ziua depunerii: cumpărările din ultima zi cu cumpărări din luna asta, dacă a fost azi sau ieri
+  const cb = cumparari().filter(o => o.data.slice(0,7) === LUNA()), ud = cb.map(o=>o.data).sort().at(-1);
+  const dep = ud && (Date.now() - Date.parse(ud)) < 2*864e5 ? { cheie: ud + ':' + cb.length, tinte: [...new Set(cb.filter(o=>o.data===ud).map(o=>o.symbol))], lei: cb.filter(o=>o.data===ud).reduce((a,o)=>a+o.lei,0) } : null;
+  return { pr, etfP, ziP, orb, pl, istoric, dep, star:gxCul('--acc'), star2:gxCul('--acc2'), ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg'), mut:gxCul('--mut'), bg:gxCul('--panel') };
 }
 const GX_LIN = matchMedia('(pointer:fine)').matches && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const SHEET_ON = () => document.getElementById('sheet')?.classList.contains('on');
@@ -3099,7 +3106,9 @@ function galaxie(){
   const cv = $('gxc'); if (!cv) return;
   cancelAnimationFrame(GX.raf);
   const D = gxDate(), calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const st = { yaw: GX.yaw ?? 0.6, tilt: GX.tilt ?? 0.62, vy: 0, t0: performance.now(), sel: GX.sel ?? null, drag: null, rel: null };
+  const st = { yaw: GX.yaw ?? 0.6, tilt: GX.tilt ?? 0.62, vy: 0, t0: performance.now(), sel: GX.sel ?? null, drag: null, rel: null, bx: GX.bx ?? 0, by: GX.by ?? 0, met: null };
+  // ziua depunerii: o stea căzătoare din centru spre fiecare acțiune cumpărată, o singură dată pentru fiecare depunere
+  if (D.dep?.tinte.length && S.gxDep !== D.dep.cheie && !calm) { st.met = { t0: performance.now() + 700, tinte: D.dep.tinte.filter(x => D.pl.some(q => q.p.symbol === x)) }; S.gxDep = D.dep.cheie; save(); if (!st.met.tinte.length) st.met = null; }
   Object.assign(GX, { on:true, D, st });
   const ctx = cv.getContext('2d');
   let W=0, H=0, dpr=1;
@@ -3119,7 +3128,7 @@ function galaxie(){
     if (!cv.isConnected || VIEW!=='analiza') { GX.on=false; return; }
     if (GX.viz===false && !st.drag) { GX.on=false; return; } // galaxia nu se vede (ai derulat mai jos): nu se desenează deloc
     // atingerea, inerția și reluarea merg la 60 de cadre pe secundă
-    const activ = st.drag || Math.abs(st.vy)>=0.0004 || st.rel;
+    const activ = st.drag || Math.abs(st.vy)>=0.0004 || st.rel || st.met;
     if (!activ && SHEET_ON()) { GX.raf = requestAnimationFrame(cadru); return; } // o foaie acoperă galaxia: nu se desenează degeaba
     // galaxia se rotește tot timpul cât o vezi; după 20 s fără atingere coboară la 20 de cadre pe secundă, ca să nu consume degeaba
     // pe calculator: fiecare cadru al ecranului (60–144 Hz), ca mișcarea să fie lină; pe telefon, mai rar, pentru baterie
@@ -3143,15 +3152,37 @@ function galaxie(){
       ctx.strokeStyle=o.c; ctx.globalAlpha=fata?(o.plin?0.75:0.42):(o.plin?0.35:0.18); ctx.lineWidth=o.plin?1.8:1; ctx.setLineDash(o.plin?[]:[3,5]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1; };
     // planetele, ordonate după adâncime
     const P_ = D.pl.map(x=>{ const a=x.a0+t*x.w, q=proj(x.R,a); return {...x, a, q, r:rPl(pond(x.p))*q.k}; }).sort((a,b)=>a.q.z-b.q.z);
+    // v0.49: centrul de greutate. Fiecare acțiune peste ținta ei trage steaua spre ea, cu cât e peste (puncte procentuale).
+    // Cu portofoliul echilibrat, steaua stă în centru; cu un sector supraîncărcat, e trasă spre el și se leagănă când planetele se rotesc.
+    { let gx = 0, gy = 0; const Sx = Math.min(W*0.41,H*0.62);
+      for (const x of P_) { const ex = x.tinta != null ? Math.max(0, pond(x.p) - x.tinta) : 0; gx += ex/100*(x.q.x-W/2); gy += ex/100*(x.q.y-H/2); }
+      gx *= 1.2; gy *= 1.2; const L = Math.hypot(gx,gy), M_ = Sx*0.22; if (L > M_) { gx *= M_/L; gy *= M_/L; }
+      const k = calm ? 1 : Math.min(1, 0.08*pas); st.bx += (gx-st.bx)*k; st.by += (gy-st.by)*k; GX.bx = st.bx; GX.by = st.by; }
+    const cx = W/2 + st.bx, cy = H/2 + st.by; GX.stea = { x: cx, y: cy };
     D.orb.forEach(o=>orbita(o,false));
+    // v0.49: constelațiile. Acțiunile din același sector sunt unite prin linii fine; sectorul planetei atinse se aprinde.
+    const selT = st.sel && st.sel!=='ETF' ? SNAP.pozitii.find(q=>q.symbol===st.sel)?.tema : null;
+    for (const o of D.orb) { if (o.etf) continue; const ps = P_.filter(x=>x.o===o).sort((a,b)=>(a.a%6.283)-(b.a%6.283)); if (ps.length < 2) continue;
+      const aprins = selT === o.n; ctx.beginPath(); ps.forEach((x,i)=> i ? ctx.lineTo(x.q.x,x.q.y) : ctx.moveTo(x.q.x,x.q.y)); if (ps.length > 2) ctx.closePath();
+      ctx.strokeStyle = o.c; ctx.globalAlpha = aprins ? 0.75 : 0.16; ctx.lineWidth = aprins ? 1.4 : 1; ctx.setLineDash(aprins ? [] : [2,4]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+      // numele și procentul sectorului apar dedesubt, în rândul de informații (pe desen ar acoperi steaua)
+    }
     const planeta = x => { const {q,r}=x, behind=q.z<0, dim=behind?0.72:1;
       if (!(isFinite(r) && r>0 && isFinite(q.x) && isFinite(q.y))) return; // ponderi lipsă într-o zi din reluare: planeta nu se desenează în cadrul acesta
       // urma pe orbită
       ctx.beginPath(); for (let i=0;i<=14;i++) { const qq=proj(x.R, x.a - i*0.035); i?ctx.lineTo(qq.x,qq.y):ctx.moveTo(qq.x,qq.y); } ctx.strokeStyle=x.c; ctx.globalAlpha=0.32*dim; ctx.lineWidth=Math.max(r*0.5,1.2); ctx.lineCap='round'; ctx.stroke(); ctx.globalAlpha=1;
       // strălucirea zilei: verde dacă a urcat azi, roșu dacă a scăzut
-      if (x.m!=null && Math.abs(x.m)>0.3 && zi==null) { const g=ctx.createRadialGradient(q.x,q.y,r,q.x,q.y,r*2.6), c=(x.m>0?D.pos:D.neg); g.addColorStop(0,c+'55'); g.addColorStop(1,c+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.6,0,6.283); ctx.fill(); }
+      // v0.49: atmosfera arată RSI-ul: portocalie peste 70 (supraîncălzită), albastru-gheață sub 30 (răcită). Fără atmosferă, rămâne strălucirea zilei.
+      const atm = x.rsi >= 70 ? '#ff8a3d' : x.rsi != null && x.rsi <= 30 ? '#7dd3fc' : null;
+      if (atm) { const pu = 1 + 0.08*Math.sin(t*2 + x.a0*3), g=ctx.createRadialGradient(q.x,q.y,r*0.95,q.x,q.y,r*2.1*pu); g.addColorStop(0,atm+'99'); g.addColorStop(0.45,atm+'33'); g.addColorStop(1,atm+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.1*pu,0,6.283); ctx.fill(); }
+      else if (x.m!=null && Math.abs(x.m)>0.3 && zi==null) { const g=ctx.createRadialGradient(q.x,q.y,r,q.x,q.y,r*2.6), c=(x.m>0?D.pos:D.neg); g.addColorStop(0,c+'55'); g.addColorStop(1,c+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.6,0,6.283); ctx.fill(); }
+      // v0.49: lunile sunt dividendele: câte una pentru fiecare plată pe an; cea aurie înseamnă plată luna asta sau luna viitoare
+      const luna = fata => { if (!x.luni || r < 4.5) return; const n = x.luni, Rm = r*1.5 + 3, rm = Math.max(1.6, r*0.16);
+        for (let i=0;i<n;i++) { const a = t*0.9 + i*6.283/n + x.a0, sn = Math.sin(a); if ((sn>=0) !== fata) continue;
+          ctx.beginPath(); ctx.arc(q.x + Math.cos(a)*Rm, q.y + sn*Rm*st.tilt*0.8, rm, 0, 6.283); ctx.fillStyle = i===0 && x.luniAproape ? '#fbbf24' : '#dfe6ef'; ctx.globalAlpha = dim*(fata?0.95:0.55); ctx.fill(); } ctx.globalAlpha = 1; };
+      luna(false);
       // sfera, luminată dinspre stea
-      const lx=W/2-q.x, ly=H/2-q.y, ln=Math.hypot(lx,ly)||1, g=ctx.createRadialGradient(q.x+lx/ln*r*0.45,q.y+ly/ln*r*0.45,r*0.1,q.x,q.y,r);
+      const lx=cx-q.x, ly=cy-q.y, ln=Math.hypot(lx,ly)||1, g=ctx.createRadialGradient(q.x+lx/ln*r*0.45,q.y+ly/ln*r*0.45,r*0.1,q.x,q.y,r);
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.18,x.c); g.addColorStop(1,'#000000');
       ctx.globalAlpha=dim; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r,0,6.283); ctx.fill();
       // sigla companiei pe planetă (la orice mărime); fără siglă, inițialele
@@ -3165,19 +3196,27 @@ function galaxie(){
       else if (r>=7) { ctx.fillStyle='#ffffff'; ctx.globalAlpha=dim*0.95; ctx.font=`700 ${Math.max(7,r*0.58)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; const ti=x.p.symbol.replace(/\..*$/,'').slice(0,r>=12?4:2); ctx.lineWidth=Math.max(2,r*0.16); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineJoin='round'; ctx.strokeText(ti, q.x, q.y+0.5); ctx.fillText(ti, q.x, q.y+0.5); ctx.textBaseline='alphabetic'; }
       // inelul semnalului
       ctx.beginPath(); ctx.arc(q.x,q.y,r+2.2,0,6.283); ctx.strokeStyle=x.s; ctx.lineWidth=1.6; ctx.stroke();
+      // v0.49: sub nivelul de alertă, o fisură care pulsează pe planetă
+      if (x.fisura) { const al = 0.55 + 0.4*Math.sin(t*3.2); ctx.globalAlpha = al*dim; ctx.strokeStyle = D.neg; ctx.lineWidth = Math.max(1.2, r*0.1); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        if (r >= 6) { const z = [[-0.62,-0.52],[-0.18,-0.12],[-0.36,0.12],[0.16,0.34],[0.02,0.62]]; ctx.beginPath(); z.forEach(([u,v],i)=> i ? ctx.lineTo(q.x+u*r,q.y+v*r) : ctx.moveTo(q.x+u*r,q.y+v*r)); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(q.x,q.y,r+4.5,0,6.283); ctx.stroke(); } ctx.globalAlpha = 1; }
+      luna(true);
       if (st.sel===x.p.symbol) { ctx.beginPath(); ctx.arc(q.x,q.y,r+7+Math.sin(t*4)*1.5,0,6.283); ctx.strokeStyle=D.ink; ctx.globalAlpha=0.8; ctx.lineWidth=1.2; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]);
-        ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(W/2,H/2); ctx.strokeStyle=x.c; ctx.globalAlpha=0.35; ctx.stroke(); }
+        ctx.beginPath(); ctx.moveTo(q.x,q.y); ctx.lineTo(cx,cy); ctx.strokeStyle=x.c; ctx.globalAlpha=0.35; ctx.stroke(); }
       ET.push({ t:x.p.symbol.replace(/\..*$/,''), x:q.x, y:q.y+r+14*q.k, k:q.k, behind, z:q.z, sym:x.p.symbol }); };
     const ET = [];
     P_.filter(x=>x.q.z<0).forEach(planeta);
     // steaua: portofoliul, cu coroană care pulsează; culoarea spune cum a mers azi (în reluare: față de începutul anului arătat)
     const tz = D.istoric.tot, ch = zi==null ? D.ziP : (tz[zi]/tz[0]-1)*100;
-    const rs0 = rStar()*(zi==null?1:Math.sqrt(Math.max(tz[zi],1)/Math.max(tz.at(-1),1))), rs = isFinite(rs0) && rs0>0 ? rs0 : rStar(), cx=W/2, cy=H/2;
+    const rs0 = rStar()*(zi==null?1:Math.sqrt(Math.max(tz[zi],1)/Math.max(tz.at(-1),1))), rs = isFinite(rs0) && rs0>0 ? rs0 : rStar();
     for (let i=0;i<3;i++) { const g=ctx.createRadialGradient(cx,cy,rs*0.6,cx,cy,rs*(2.2+i*0.9+0.15*Math.sin(t*1.3+i))); g.addColorStop(0,D.star+(i?'30':'55')); g.addColorStop(1,D.star+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,rs*3.6,0,6.283); ctx.fill(); }
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.15); for (let i=0;i<12;i++) { ctx.rotate(Math.PI/6); const L=rs*(1.5+0.35*Math.sin(t*2+i*1.7)); const g=ctx.createLinearGradient(0,0,L,0); g.addColorStop(0,D.star2+'aa'); g.addColorStop(1,D.star2+'00'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-rs*0.12); ctx.lineTo(L,0); ctx.lineTo(0,rs*0.12); ctx.fill(); } ctx.restore();
     const gs=ctx.createRadialGradient(cx-rs*0.3,cy-rs*0.35,rs*0.1,cx,cy,rs); gs.addColorStop(0,'#ffffff'); gs.addColorStop(0.35,D.star); gs.addColorStop(1,D.star2); ctx.fillStyle=gs; ctx.beginPath(); ctx.arc(cx,cy,rs,0,6.283); ctx.fill();
     if (Math.abs(ch) >= 0.05) { ctx.beginPath(); ctx.arc(cx,cy,rs+5,0,6.283); ctx.strokeStyle=ch>0?D.pos:D.neg; ctx.globalAlpha=0.8; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1; }
     ctx.fillStyle='#04101d'; ctx.font=`700 ${Math.max(10,rs*0.36)}px SG,system-ui,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(sg(ch,1)+'%', cx, cy+1); ctx.textBaseline='alphabetic';
+    // locul echilibrului: conturul punctat al stelei, acolo unde ar sta într-un portofoliu echilibrat, legat de stea printr-o linie
+    if (Math.hypot(st.bx, st.by) > 4) { ctx.beginPath(); ctx.arc(W/2,H/2,rStar(),0,6.283); ctx.strokeStyle=D.ink; ctx.globalAlpha=0.55; ctx.lineWidth=1.2; ctx.setLineDash([3,4]); ctx.stroke();
+      const dd = Math.hypot(st.bx, st.by); if (dd > rs+2) { ctx.beginPath(); ctx.moveTo(W/2,H/2); ctx.lineTo(W/2+st.bx*(1-rs/dd), H/2+st.by*(1-rs/dd)); ctx.stroke(); } ctx.setLineDash([]); ctx.beginPath(); ctx.arc(W/2,H/2,2,0,6.283); ctx.fillStyle=D.ink; ctx.fill(); ctx.globalAlpha=1; }
     D.orb.forEach(o=>orbita(o,true));
     P_.filter(x=>x.q.z>=0).forEach(planeta);
     // numele planetelor: deasupra tuturor, fără să se calce între ele sau peste alte planete și peste stea.
@@ -3190,12 +3229,24 @@ function galaxie(){
       const m = vazut.has(e.sym) ? 0 : 2, w = MT.get(mk)/2 + 2 + m, h = fs*0.62 + m, cy0 = e.y - fs*0.35;
       const peste = puse.some(b => Math.abs(b.x-e.x) < w+b.w && Math.abs(b.y-cy0) < h+b.h)
         || P_.some(p => p.p.symbol!==e.sym && Math.abs(p.q.x-e.x) < w+p.r && Math.abs(p.q.y-cy0) < h+p.r)
-        || (Math.abs(W/2-e.x) < w+stea && Math.abs(H/2-cy0) < h+stea);
+        || (Math.abs(cx-e.x) < w+stea && Math.abs(cy-cy0) < h+stea);
       if (peste) continue;
       puse.push({ x:e.x, y:cy0, w:w-m, h:h-m }); acum.add(e.sym);
       ctx.globalAlpha=e.behind?0.55:0.9; ctx.fillStyle=D.ink; ctx.textAlign='center'; ctx.fillText(e.t, e.x, e.y);
     }
     ctx.globalAlpha=1; GX.etV = acum;
+    // v0.49: ziua depunerii: stele căzătoare din centru spre ce ai cumpărat, apoi un inel care se lărgește pe planetă
+    if (st.met) { let viu = false;
+      st.met.tinte.forEach((sym, k) => { const x = P_.find(z=>z.p.symbol===sym); if (!x) return; const f = (now - st.met.t0 - k*550)/1300;
+        if (f < 1.7) viu = true; if (f <= 0) return;
+        if (f < 1) { const e = 1 - Math.pow(1-f, 3), mx = cx + (x.q.x-cx)*e - (x.q.y-cy)*0.25*Math.sin(Math.PI*e), my = cy + (x.q.y-cy)*e + (x.q.x-cx)*0.25*Math.sin(Math.PI*e);
+          for (let i=1;i<=10;i++) { const e2 = Math.max(0, e - i*0.035), tx = cx + (x.q.x-cx)*e2 - (x.q.y-cy)*0.25*Math.sin(Math.PI*e2), ty = cy + (x.q.y-cy)*e2 + (x.q.x-cx)*0.25*Math.sin(Math.PI*e2);
+            ctx.beginPath(); ctx.arc(tx, ty, Math.max(0.6, 3.2 - i*0.28), 0, 6.283); ctx.fillStyle = '#fde68a'; ctx.globalAlpha = 0.55*(1 - i/11); ctx.fill(); }
+          const g = ctx.createRadialGradient(mx,my,0,mx,my,9); g.addColorStop(0,'#ffffff'); g.addColorStop(0.35,'#fde68aee'); g.addColorStop(1,'#fde68a00'); ctx.globalAlpha=1; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(mx,my,9,0,6.283); ctx.fill(); }
+        else { const u = (f-1)/0.7; ctx.beginPath(); ctx.arc(x.q.x, x.q.y, x.r + 3 + u*18, 0, 6.283); ctx.strokeStyle = '#fde68a'; ctx.globalAlpha = Math.max(0, 0.9*(1-u)); ctx.lineWidth = 2; ctx.stroke(); }
+        ctx.globalAlpha = 1; });
+      if (st.met && $('gxd') && !st.rel) $('gxd').innerHTML = viu ? `Investiția de azi: <b>${esc(st.met.tinte.join(', '))}</b>` : '';
+      if (!viu) { st.met = null; setTimeout(()=>{ if ($('gxd') && !GX.st?.rel) $('gxd').textContent=''; }, 1800); } }
     GX.cadru = P_;
     if (!calm && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
   }
@@ -3215,17 +3266,27 @@ function gxAtinge(e){
   const cv=$('gxc'), r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, st=GX.st;
   const hit = [...(GX.cadru||[])].reverse().find(p=>Math.hypot(p.q.x-x,p.q.y-y) < p.r+10);
   if (hit) { if (st.sel===hit.p.symbol) { deschideDetaliu(hit.p.symbol); return; } st.sel = GX.sel = hit.p.symbol; vib(); }
-  else if (Math.hypot(x-r.width/2,y-r.height/2) < 40) { st.sel = GX.sel = 'ETF'; vib(); }
+  else if (Math.hypot(x-(GX.stea?.x ?? r.width/2),y-(GX.stea?.y ?? r.height/2)) < 40) { st.sel = GX.sel = 'ETF'; vib(); }
   else st.sel = GX.sel = null;
   gxInfo(); if (!GX.on) GX.cadruF?.(performance.now());
 }
 function gxInfo(){
   const el=$('gxi'); if (!el) return; const s=GX.st?.sel;
-  if (!s) { el.innerHTML = `<span class="sub">Trage ca s-o rotești. Atinge o planetă ca s-o vezi.</span>`; return; }
+  if (!s) { el.innerHTML = `<span class="sub">${gxEchilibru()} Trage ca s-o rotești, atinge o planetă.</span>`; return; }
   if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Portofoliul tău</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
-  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div></div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
+  const rsi = p.ind?.rsi, nl = SNAP.dividende?.luni?.[p.symbol]?.length || 0, sp = p.etf ? null : SNAP.teme?.[p.tema];
+  const extra = [rsi >= 70 ? `RSI ${nf(rsi,0)}, supraîncălzită` : rsi != null && rsi <= 30 ? `RSI ${nf(rsi,0)}, răcită` : '', p.ind?.subProtectie ? '<span class="neg">sub nivelul de alertă</span>' : '', nl ? `${nl} ${nl===1?'dividend':'dividende'} pe an` : ''].filter(Boolean).join(' · ');
+  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)}${sp!=null?` <span class="${sp>P().maxTema?'neg':''}">${nf(sp,0)}%</span>`:''} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div>${extra?`<div class="sub">${extra}</div>`:''}</div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
+}
+// v0.49: ce trage steaua din centru: sectorul cel mai peste plafon, altfel acțiunea cea mai peste țintă
+function gxEchilibru(){
+  const pr = P(), sec = Object.entries(SNAP.teme||{}).filter(([k])=>!/^ETF/.test(k)).map(([k,v])=>[k, v-pr.maxTema, v]).sort((a,b)=>b[1]-a[1])[0];
+  if (sec && sec[1] > 0) return `Steaua e trasă spre <b class="ink2">${esc(sec[0])}</b>: ${nf(sec[2],0)}%, plafonul tău e ${pr.maxTema}%. Revine în centru pe măsură ce urmezi planul.`;
+  const a = SNAP.pozitii.filter(p=>!p.etf && p.tinta!=null).map(p=>[p, p.pondere-p.tinta]).sort((x,y)=>y[1]-x[1])[0];
+  if (a && a[1] > 3) return `Steaua e trasă spre <b class="ink2">${esc(a[0].symbol)}</b>: ${nf(a[0].pondere,1)}%, ținta e ${nf(a[0].tinta,1)}%.`;
+  return 'Portofoliul e echilibrat: steaua stă în centru.';
 }
 function gxReluare(){ if (!GX.st) return; vib(); GX.st.rel = { t0: performance.now() }; GX.atins = performance.now(); $('gxp')?.classList.add('on'); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(GX.cadruF); } }
 addEventListener('resize', ()=>{ if (GX.on && $('gxc')) GX.marime?.(); });
@@ -3240,7 +3301,11 @@ function vAnaliza(){
   <div class="card gxc">${galaxieHTML()}
     <div class="leg" style="justify-content:center;margin-top:8px">${(()=>{ const f = new Set(SNAP.pozitii.map(semFel)); /* v0.47: doar etichetele care apar acum, cu culorile de pe carduri */
       return [['cumpara','--adauga','Cumpără'],['reducere','--opor','La reducere'],['las','--pastreaza','Las-o'],['mare','--reechilibreaza','Prea mare'],['sector','--asteapta','Scade cu sectorul'],['piata','--asteapta','Scade cu piața'],['uita','--verifica','Uită-te la ea']]
-        .filter(([k])=>f.has(k)).map(([,c,t])=>`<span><i style="background:var(${c});height:8px;width:8px;border-radius:50%"></i>${t}</span>`).join(''); })()}</div></div>`;
+        .filter(([k])=>f.has(k)).map(([,c,t])=>`<span><i style="background:var(${c});height:8px;width:8px;border-radius:50%"></i>${t}</span>`).join(''); })()}</div>
+    <div class="leg gxleg" data-c="${A('termen','orbita')}">${(()=>{ const ps = SNAP.pozitii, h = [];
+      if (ps.some(p=>p.ind?.rsi>=70)) h.push('<span><i class="gxa cald"></i>RSI peste 70</span>'); if (ps.some(p=>p.ind?.rsi!=null && p.ind.rsi<=30)) h.push('<span><i class="gxa rece"></i>RSI sub 30</span>');
+      if (ps.some(p=>p.ind?.subProtectie)) h.push('<span><i class="gxa fis"></i>Sub nivelul de alertă</span>'); if (ps.some(p=>SNAP.dividende?.luni?.[p.symbol]?.length)) h.push('<span><i class="gxa luna"></i>Lunile: dividende</span>');
+      h.push('<span><i class="gxa cer"></i>Centrul echilibrului</span>'); return h.join(''); })()}</div></div>`;
   // 2) Sănătatea, pe scurt
   h += `<button class="card sanc" data-c="${A('deschideSect','sanatate')}">${inel(sn.sc, sn.et[1])}<div style="flex:1;min-width:0;text-align:left"><div class="lbl">Sănătatea portofoliului</div><div class="fd" style="font-size:var(--t4);font-weight:700;color:var(${sn.et[1]})">${sn.et[0]}</div>
     <div class="mini4">${sn.F.map(f=>`<span title="${esc(f.n)}"><i style="width:${f.v/25*100}%;background:var(${kF(f.v)})"></i></span>`).join('')}</div><div class="sub" style="margin-top:4px">${sn.F.map(f=>f.n.split(' ')[0]).join(' · ')}</div></div><span class="ch">›</span></button>`;
@@ -3823,7 +3888,45 @@ function deconecteaza(){
 }
 // Analiza la cerere: pornește rularea în GitHub și urmărește-o pas cu pas (la 3 secunde), cu timpul scurs pe ecran.
 let PROGRES_TEXT = '';
-function progres(t){ PROGRES_TEXT = t||''; document.querySelectorAll('#rulc .pt').forEach(x=>x.textContent=PROGRES_TEXT); const el=$('prog'); if (!el) return; if (t==null) { el.classList.remove('on'); return; } el.innerHTML=`<i></i><span>${esc(t)}</span>`; el.classList.add('on'); }
+// v0.49: un singur indicator, în antet. Eticheta butonului „Actualizează” devine pasul curent („Brokeri 2/3”), iar sub antet
+// o linie subțire care se umple. Fără pastilă plutitoare, fără card mare (cardul apare doar dacă durează peste un minut).
+let PROGRES_PAS = 0, PROGRES_DIN = 0, PROGRES_LENT = null;
+// în antet încape un cuvânt; ecranul mare de la prima analiză și titlul (ținut apăsat) au fraza întreagă
+const PROGRES_LUNG = { Pornesc:'GitHub pornește analiza', 'La rând':'În așteptare la GitHub', Prețuri:'Citesc prețurile de acum', Brokeri:'Citesc brokerii și prețurile', Salvez:'Aduc rezultatele', Verific:'Verific și pun fișierele noi', Test:'Testez conexiunile', Aștept:'Aștept actualizarea în curs' };
+const progresLung = () => PROGRES_LUNG[PROGRES_TEXT] || PROGRES_TEXT;
+function progres(t, pas, din){
+  PROGRES_TEXT = t||''; const bt = $('bref'), lb = bt?.querySelector('small'), bar = $('rbar');
+  if (t) document.querySelectorAll('#rulc .pt').forEach(x=>x.textContent=progresLung()+'…');
+  if (t == null) { PROGRES_PAS = 0; document.body.classList.remove('prg'); bar?.classList.remove('on','nedet'); if (bt && !bt.classList.contains('gata')) { bt.classList.remove('rul'); if (lb) lb.textContent = 'Actualizează'; bt.removeAttribute('title'); $('stare')?.removeAttribute('data-pas'); } return; }
+  document.body.classList.add('prg');
+  // eticheta butonului „Actualizează” devine pasul curent, iconița se rotește: progresul e acolo unde ai apăsat
+  const et = pas ? `${t} ${pas}/${din}` : t + '…';
+  if (bt) { bt.classList.remove('gata'); bt.classList.add('rul'); bt.title = progresLung(); if (lb) lb.textContent = et; }
+  const st = $('stare'); if (st) st.dataset.pas = et; // cu antetul strâns (etichetele butoanelor ascunse), pasul apare în locul orei
+  if (!bar) return; const i = bar.firstElementChild; bar.classList.add('on'); bar.classList.toggle('nedet', !pas);
+  if (pas && (pas !== PROGRES_PAS || din !== PROGRES_DIN)) { PROGRES_PAS = pas; PROGRES_DIN = din;
+    // salt scurt la începutul pasului, apoi o umplere lentă până aproape de capătul lui (nu știm exact cât durează)
+    i.style.transition = 'transform .35s cubic-bezier(.22,1,.36,1)'; i.style.transform = `scaleX(${(pas-1)/din})`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { i.style.transition = `transform ${pas===din?3:40}s cubic-bezier(.1,.6,.3,1)`; i.style.transform = `scaleX(${(pas-1+0.85)/din})`; })); }
+}
+// La final: linia se umple, butonul arată „✓ Gata” 2 secunde, apoi revine la „Actualizează”. Cifrele schimbate clipesc scurt.
+function progresGata(text){
+  const bar = $('rbar'), i = bar?.firstElementChild, bt = $('bref'), lb = bt?.querySelector('small');
+  if (i) { i.style.transition = 'transform .3s ease-out'; i.style.transform = 'scaleX(1)'; }
+  setTimeout(() => { bar?.classList.remove('on','nedet'); if (i) { i.style.transition = 'none'; i.style.transform = 'scaleX(0)'; } }, 450);
+  PROGRES_TEXT = ''; PROGRES_PAS = 0; document.body.classList.remove('prg');
+  if (bt) { bt.classList.remove('rul'); bt.classList.add('gata'); bt.removeAttribute('title'); if (lb) lb.textContent = '✓ ' + (text || 'Gata'); }
+  const st = $('stare'); if (st) st.dataset.pas = '✓ ' + (text || 'Gata');
+  clearTimeout(progresGata.t); progresGata.t = setTimeout(() => { const b2 = $('bref'); b2?.classList.remove('gata'); if (!PROGRES_TEXT && b2) { b2.querySelector('small').textContent = 'Actualizează'; $('stare')?.removeAttribute('data-pas'); } }, 2200);
+}
+// Ce arată Acasă înainte de actualizare, ca după ea să clipească doar cifrele care s-au schimbat
+function cifreAcum(){ return [...document.querySelectorAll('#v .kpi3 > div')].map(d => d.querySelector('.mv,b')?.textContent || ''); }
+function clipesteSchimbate(inainte){
+  if (!inainte?.length) return; const lin = matchMedia('(prefers-reduced-motion: reduce)').matches || S.fx==='redus';
+  document.querySelectorAll('#v .kpi3 > div').forEach((d, k) => { const e = d.querySelector('.mv,b'); if (!e || e.textContent === inainte[k]) return;
+    const n = x => parseFloat(String(x).replace(/[^\d,−-]/g,'').replace('−','-').replace(',','.')) * (/▼|−/.test(x) ? -1 : 1);
+    const sus = n(e.textContent) >= n(inainte[k]); d.classList.remove('clip','sus','jos'); void d.offsetWidth; if (!lin) d.classList.add('clip', sus ? 'sus' : 'jos'); });
+}
 let RULEAZA = false;
 // v0.46: actualizarea analizei dintr-o atingere (workflow-ul actualizeaza.yml din repo), apoi o analiză completă
 async function copiazaWorkflow(n){
@@ -3844,7 +3947,7 @@ function ghidWorkflowActualizare(){
 async function actualizeazaAnaliza(){
   if (doarCitire()) return;
   // v0.48.1: dacă tocmai rulează actualizarea automată (la deschidere), așteaptă să se termine în loc să nu facă nimic
-  if (RULEAZA) { progres('Aștept să se termine actualizarea în curs…'); for (let i=0; i<60 && RULEAZA; i++) await new Promise(r=>setTimeout(r,1000)); progres(null);
+  if (RULEAZA) { progres('Aștept'); for (let i=0; i<60 && RULEAZA; i++) await new Promise(r=>setTimeout(r,1000)); progres(null);
     if (RULEAZA) { toast('Încă rulează o actualizare. Încearcă din nou peste un minut.'); return; } }
   if (S.kill) { pasiOprire(); return; }
   const v = (await versiuneSite(true))?.versiune; if (!v) { toast('Nu găsesc versiunea nouă pe site. Încearcă peste câteva minute.'); return; }
@@ -3855,12 +3958,12 @@ async function actualizeazaAnaliza(){
   try { vib();
     const inainte = new Date(Date.now()-120000).toISOString();
     await gh('/actions/workflows/actualizeaza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:{versiune:v, sursa:sursaApp()}})});
-    progres(`Actualizez analiza la ${v}…`);
+    progres('Pornesc', 1, 3);
     for (let i=0;i<60;i++) {
       await new Promise(r=>setTimeout(r, i<3?2000:3000));
       const j = await gh('/actions/workflows/actualizeaza.yml/runs?event=workflow_dispatch&per_page=1'), run = j.workflow_runs?.[0];
-      if (!run || run.created_at < inainte.slice(0,19)) { progres(`GitHub pregătește actualizarea… ${sec()} s`); continue; }
-      if (run.status!=='completed') { progres(`Verific și pun fișierele noi… ${sec()} s`); continue; }
+      if (!run || run.created_at < inainte.slice(0,19)) { progres('Pornesc', 1, 3); continue; }
+      if (run.status!=='completed') { progres('Verific', 2, 3); continue; }
       progres(null);
       if (run.conclusion==='success') { ok = true; break; }
       foaie(`${capFoaie('alerta','Actualizarea n-a mers','nimic nu s-a schimbat în repo','--neg')}
@@ -3871,30 +3974,31 @@ async function actualizeazaAnaliza(){
     if (!ok) { progres(null); toast('Actualizarea încă rulează. Verifică peste un minut.'); }
   } catch(e){ progres(null); toast(e.message); }
   finally { RULEAZA = false; logoRuleaza(false); }
-  if (ok) { toast(`Analiza e la ${v}. Pornesc o analiză completă.`); verificaAmprente(true).catch(()=>{}); ruleaza(false); }
+  if (ok) { progresGata(v); verificaAmprente(true).catch(()=>{}); setTimeout(() => ruleaza(false), 1200); }
 }
 async function ruleaza(test, scurta){
   if (RULEAZA || doarCitire()) return; test = test === true; scurta = scurta === true && !test;
   if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; logoRuleaza(true); if (!test && ['azi'].includes(VIEW) || !SNAP) render();
   const t0 = Date.now(), sec = () => Math.round((Date.now()-t0)/1000);
+  PROGRES_LENT = setTimeout(() => { PROGRES_LENT = true; if (RULEAZA && VIEW==='azi') render(); }, 60000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
     await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:await encDate(V.pub)}:{mod:scurta?'intraday':'zi'}})});
-    progres(test?'Testez conexiunile…':scurta?'Cer prețuri proaspete…':'Pornește analiza…');
+    progres(test?'Test':'Pornesc', 1, 3);
     let run = null;
     for (let i=0;i<120;i++) {
       await new Promise(r=>setTimeout(r, i<3?2000:3000));
       const j = await gh('/actions/workflows/analiza.yml/runs?event=workflow_dispatch&per_page=1');
-      run = j.workflow_runs?.[0]; if (!run || run.created_at < inainte.slice(0,19)) { progres(`GitHub pregătește rularea… ${sec()} s`); continue; }
-      if (run.status!=='completed') { progres(`${run.status==='in_progress'?(scurta?'Citesc prețurile de acum':'Citesc brokerii și prețurile'):'În așteptare la GitHub'}… ${sec()} s`); continue; }
-      progres('Aduc rezultatele…'); await new Promise(r=>setTimeout(r,1200)); await reincarca(); progres(null);
+      run = j.workflow_runs?.[0]; if (!run || run.created_at < inainte.slice(0,19)) { progres('Pornesc', 1, 3); continue; }
+      if (run.status!=='completed') { progres(run.status==='in_progress'?(scurta?'Prețuri':'Brokeri'):'La rând', run.status==='in_progress'?2:1, 3); continue; }
+      progres('Salvez', 3, 3); const inainteCifre = cifreAcum(); await new Promise(r=>setTimeout(r,1200)); await reincarca(); progresGata(test ? 'Test gata' : 'Gata'); requestAnimationFrame(() => clipesteSchimbate(inainteCifre));
       if (test || run.conclusion!=='success') { go('setari'); if (live()) setTimeout(conexiuniFoaie, 350); toast(run.conclusion==='success'?`Testul s-a terminat în ${sec()} s.`:'O conexiune nu merge. Vezi ce trebuie reparat.'); return; }
-      if (scurta) { render(); toast(`Prețuri actualizate în ${sec()} s.`); return; }
-      go('azi'); toast(`Analiză actualizată în ${sec()} s.`); return;
+      if (scurta) { render(); return; }
+      go('azi'); return;
     }
     progres(null); toast('Încă rulează. Reîncarcă peste un minut.');
   } catch(e){ progres(null); toast(e.message); }
-  finally { RULEAZA = false; logoRuleaza(false); if ($('rulc')) render(); }
+  finally { RULEAZA = false; logoRuleaza(false); if (PROGRES_LENT !== true) clearTimeout(PROGRES_LENT); PROGRES_LENT = null; if ($('rulc')) render(); }
 }
 
 // ===== Mișcare cu inerție (D5): foile și glisarea între tab-uri urmează viteza degetului =====

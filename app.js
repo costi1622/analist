@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.48.0';
+const APP_VER = '0.48.1';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -46,7 +46,8 @@ function motivScurt(p){
   const fata = /^sectorul/.test(p.refNume||'') ? 'sectorul ei' : 'piața (VWCE)';
   return p.refRel!=null ? `sub nivelul de alertă, pe 3 luni cu ${nf(Math.abs(p.refRel),0)} puncte sub ${fata}` : 'sub nivelul de alertă';
 }
-const sem = p => p.reducere ? 'reducere' : ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
+// v0.48.1: „La reducere” doar când sectorul mai are loc. Cu sectorul peste plafon, eticheta urmează semnalul (ca în Plan).
+const sem = p => p.reducere && !p.reducere.sectorPeste ? 'reducere' : ['verifica','reechilibreaza'].includes(p.semnal) ? 'uita' : inPlan(p.symbol) ? 'cumpara' : 'las';
 // Verdictul într-o propoziție, pentru fișa acțiunii.
 // „La reducere” (v0.22): a scăzut mult, dar ca sectorul sau piața, iar firma arată bine. Se cumpără în trei tranșe.
 // Tranșa = o treime din cât lipsește până la ținta ei, cel mult o treime din suma lunară, rotunjită la 10 lei.
@@ -62,13 +63,14 @@ function textReducere(p){
 function verdict(p){
   if (p.deVerificat) return `Date de verificat: ${SNAP.paza?.motiv||'mișcare neobișnuită'} Semnalele pentru ea au fost oprite azi.`;
   const l = inPlan(p.symbol);
-  if (p.reducere) return textReducere(p);
+  if (p.reducere && !p.reducere.sectorPeste) return textReducere(p);
   if (sem(p)==='uita') return p.atentie[0] || 'Verifică dacă motivul pentru care o ții mai e valabil.';
+  if (p.reducere) return textReducere(p);
   const oz = intraValid() ? INTRA.pozitii.find(x=>x.symbol===p.symbol)?.oportunitate : null;
   if (oz) return `★ Azi: ${oz}${l?` E în planul lunii: ${l.suma} ${de(l.suma)}lei la ${l.broker}.`:''}`;
   if (l) return `E în planul lunii: ${l.suma} ${de(l.suma)}lei la ${l.broker}.${p.oportunitate?' Prețul e mai mic decât de obicei.':''}`;
   return ({ adauga:'Ar merita bani noi, dar luna asta au prioritate pozițiile mai departe de țintă.',
-    pastreaza:'Totul e în regulă. Păstrezi ce ai, nu e nimic de făcut.',
+    pastreaza: (()=>{ try { return ['nu','asteapta'].includes(verdictPentru(p.symbol)?.nivel); } catch { return false; } })() ? 'Păstrezi ce ai, nu e nimic de vândut. Nu cumpăra mai mult acum: vezi mai jos de ce.' : 'Totul e în regulă. Păstrezi ce ai, nu e nimic de făcut.',
     nu_adauga:p.atentie[0] || 'Are deja destul loc în portofoliu. Banii noi merg în altă parte.',
     asteapta:p.atentie[0] || 'Momentul nu e bun pentru cumpărat. Revino peste câteva săptămâni.' })[p.semnal] || '';
 }
@@ -965,7 +967,8 @@ const FISIERE_ANALIZA = { '0.30.0': ['runner/engine.js', 'runner/analiza.js', 'r
   '0.43.0': ['runner/analiza.js', 'runner/sources.js', 'runner/config.js'],
   '0.44.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/notificari.js', 'runner/paza.js', 'runner/tacute.js', 'runner/config.js'],
   '0.45.0': ['runner/analiza.js', 'runner/engine.js', 'runner/sources.js', 'runner/config.js'],
-  '0.45.1': ['runner/engine.js', 'runner/config.js'] };
+  '0.45.1': ['runner/engine.js', 'runner/config.js'],
+  '0.46.1': ['runner/engine.js', 'runner/config.js'] };
 const LUNI_RO = ['ianuarie','februarie','martie','aprilie','mai','iunie','iulie','august','septembrie','octombrie','noiembrie','decembrie'];
 const LUNI_SC = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','noi','dec'];
 const ziLunga = iso => new Date(iso+'T12:00:00').toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
@@ -3839,7 +3842,10 @@ function ghidWorkflowActualizare(){
     <button class="btn ghost" data-c="${A('closeSheet')}">Închide</button>`);
 }
 async function actualizeazaAnaliza(){
-  if (RULEAZA || doarCitire()) return;
+  if (doarCitire()) return;
+  // v0.48.1: dacă tocmai rulează actualizarea automată (la deschidere), așteaptă să se termine în loc să nu facă nimic
+  if (RULEAZA) { progres('Aștept să se termine actualizarea în curs…'); for (let i=0; i<60 && RULEAZA; i++) await new Promise(r=>setTimeout(r,1000)); progres(null);
+    if (RULEAZA) { toast('Încă rulează o actualizare. Încearcă din nou peste un minut.'); return; } }
   if (S.kill) { pasiOprire(); return; }
   const v = (await versiuneSite(true))?.versiune; if (!v) { toast('Nu găsesc versiunea nouă pe site. Încearcă peste câteva minute.'); return; }
   let wf = null; try { wf = await gh('/actions/workflows/actualizeaza.yml', {optional:true}); } catch(e) { toast(e.message); return; }

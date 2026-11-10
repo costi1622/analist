@@ -1,12 +1,12 @@
 {
- "versiune": "0.46.0",
+ "versiune": "0.46.1",
  "fisiere": {
   "runner/analiza.js": "c504c855237be4122a0b9f51736e807df678f789e8bcdc6698e2878fa68c69e8",
   "runner/anunta.js": "c81bac7922a7cf91a4b577957e7e8c3b6d17dae588a98d9acf6243980daacacb",
-  "runner/config.js": "2b3d09e559e4f800c8383ac3fea81642973551b4aab2b02cf9e16ad347c82e0f",
+  "runner/config.js": "458b354870cc8eed49d33c99ece369e9765d57840766e1f750f6cf7f5437689e",
   "runner/cripteaza-raport.js": "903cfbdc958decafc2effe53a4978a4df92a76932c85f1999fcb59e06c66d037",
   "runner/demo.js": "22b2f930d342dcbcf93aee5b1749b9bd5c2eb23f29a53bb1f15d6803b0ffb198",
-  "runner/engine.js": "15251569248af1463b04a5f62c93f0b92a8a3f3dd14634345948b1490c05bd40",
+  "runner/engine.js": "95135af18177bc0a14eb56ddb9b78b169edaadd67e4daeee45421c6f07422d33",
   "runner/fcm.js": "c8ebd286cc9a96ea62a793ad92b1f6c554b0f7070e5c2a7107adf9f792575ebb",
   "runner/notificari.js": "54b2f49c2c405adbef21fedeae0143ea0c2e4d2e6b2fd8e00bc4f1376eebedfd",
   "runner/paza.js": "814f6f4cdd42212a841f6750067c6cccad973be84fa34ade591a167ce643479a",

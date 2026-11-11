@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.51.0';
+const APP_VER = '0.52.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -3980,7 +3980,7 @@ let PROGRES_TEXT = '';
 // o linie subțire care se umple. Fără pastilă plutitoare, fără card mare (cardul apare doar dacă durează peste un minut).
 let PROGRES_PAS = 0, PROGRES_DIN = 0, PROGRES_LENT = null;
 // în antet încape un cuvânt; ecranul mare de la prima analiză și titlul (ținut apăsat) au fraza întreagă
-const PROGRES_LUNG = { Pornesc:'GitHub pornește analiza', 'La rând':'În așteptare la GitHub', Prețuri:'Citesc prețurile de acum', Brokeri:'Citesc brokerii și prețurile', Salvez:'Aduc rezultatele', Verific:'Verific și pun fișierele noi', Test:'Testez conexiunile', Aștept:'Aștept actualizarea în curs' };
+const PROGRES_LUNG = { Pornesc:'GitHub pornește analiza', 'La rând':'În așteptare la GitHub', Prețuri:'Citesc prețurile de acum', Brokeri:'Citesc brokerii și prețurile', Salvez:'Aduc rezultatele', Verific:'Verific și pun fișierele noi', Test:'Testez conexiunile', Reiau:'GitHub n-a pornit analiza, o reiau', Aștept:'Aștept actualizarea în curs' };
 const progresLung = () => PROGRES_LUNG[PROGRES_TEXT] || PROGRES_TEXT;
 function progres(t, pas, din){
   PROGRES_TEXT = t||''; const bt = $('bref'), lb = bt?.querySelector('small'), bar = $('rbar');
@@ -4064,6 +4064,12 @@ async function actualizeazaAnaliza(){
   finally { RULEAZA = false; logoRuleaza(false); }
   if (ok) { progresGata(v); verificaAmprente(true).catch(()=>{}); setTimeout(() => ruleaza(false), 1200); }
 }
+// v0.52: o rulare eșuată fără niciun pas pornit (sau fără pasul analizei) înseamnă că GitHub n-a pornit mașina.
+async function faraPasi(id){
+  try { const j = await gh('/actions/runs/'+id+'/jobs?filter=latest'), jb = j?.jobs || [];
+    return !jb.length || jb.every(x => !(x.steps||[]).some(p => p.name === 'Rulează analistul' && p.conclusion && p.conclusion !== 'skipped')); }
+  catch(e) { return false; }
+}
 async function ruleaza(test, scurta){
   if (RULEAZA || doarCitire()) return; test = test === true; scurta = scurta === true && !test;
   if (S.kill) { pasiOprire(); toast('Analiza e oprită de urgență. Repornește-o după ce urmezi pașii.'); return; } RULEAZA = true; logoRuleaza(true); if (!test && ['azi'].includes(VIEW) || !SNAP) render();
@@ -4071,14 +4077,27 @@ async function ruleaza(test, scurta){
   PROGRES_LENT = setTimeout(() => { PROGRES_LENT = true; if (RULEAZA && VIEW==='azi') render(); }, 60000);
   try { vib(); if (test) { go('setari'); }
     const inainte = new Date(Date.now()-120000).toISOString(); // marjă pentru ceasul telefonului
-    await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',inputs:test?{mod:'test',cheie:await encDate(V.pub)}:{mod:scurta?'intraday':'zi'}})});
+    // v0.52: GitHub spune direct care e rularea pornită (return_run_details): o urmărim pe ea, nu „ultima rulare”, care poate fi
+    // una pornită în același minut de cron-job.org. Dacă GitHub nu dă numărul, rămâne vechea căutare după oră.
+    const d = await gh('/actions/workflows/analiza.yml/dispatches',{method:'POST',body:JSON.stringify({ref:'main',return_run_details:true,inputs:test?{mod:'test',cheie:await encDate(V.pub)}:{mod:scurta?'intraday':'zi'}})});
+    const idRun = Number.isSafeInteger(d?.workflow_run_id) ? d.workflow_run_id : null;
     progres(test?'Test':'Pornesc', 1, 3);
-    let run = null;
-    for (let i=0;i<120;i++) {
+    let run = null, reluatDe = 0, asteaptaReluare = 0; const pasi = {};
+    for (let i=0;i<400;i++) {
       await new Promise(r=>setTimeout(r, i<3?2000:3000));
-      const j = await gh('/actions/workflows/analiza.yml/runs?event=workflow_dispatch&per_page=1');
-      run = j.workflow_runs?.[0]; if (!run || run.created_at < inainte.slice(0,19)) { progres('Pornesc', 1, 3); continue; }
-      if (run.status!=='completed') { progres(run.status==='in_progress'?(scurta?'Prețuri':'Brokeri'):'La rând', run.status==='in_progress'?2:1, 3); continue; }
+      if (idRun) run = await gh('/actions/runs/'+idRun);
+      else { const j = await gh('/actions/workflows/analiza.yml/runs?event=workflow_dispatch&per_page=1'); run = j.workflow_runs?.[0]; if (!run || run.created_at < inainte.slice(0,19)) { progres('Pornesc', 1, 3); continue; } }
+      if (!run) continue;
+      if (run.status!=='completed') { asteaptaReluare = 0; progres(reluatDe && run.status!=='in_progress' ? 'Reiau' : run.status==='in_progress'?(scurta?'Prețuri':'Brokeri'):'La rând', run.status==='in_progress'?2:1, 3); continue; }
+      // eșec înainte de primul pas = GitHub n-a pornit mașina („An unexpected error has occurred”), nu o problemă a analizei:
+      // workflow-ul reia.yml o reia singur; dacă nu se întâmplă în ~1 min, o reia aplicația. Cel mult 3 încercări în total.
+      if (run.conclusion==='failure' && run.id && (pasi[run.id+':'+run.run_attempt] ??= await faraPasi(run.id))) {
+        const inc = run.run_attempt || 1;
+        if (inc < 3) { reluatDe = inc; progres('Reiau', 1, 3);
+          if (++asteaptaReluare > 25) { asteaptaReluare = 0; try { await gh('/actions/runs/'+run.id+'/rerun-failed-jobs', {method:'POST'}); } catch(e) { const r2 = await gh('/actions/runs/'+run.id).catch(()=>null); if (r2 && (r2.status!=='completed' || (r2.run_attempt||1) > inc)) continue; progres(null); toast('GitHub n-a pornit analiza și nu pot s-o reiau eu ('+e.message+'). Încearcă din nou peste câteva minute.'); return; } }
+          continue; }
+        progres(null); toast('GitHub nu reușește acum să pornească analiza (o problemă la ei, nu la tine). Încearcă din nou peste câteva minute.'); return;
+      }
       progres('Salvez', 3, 3); const inainteCifre = cifreAcum(); await new Promise(r=>setTimeout(r,1200)); await reincarca(); progresGata(test ? 'Test gata' : 'Gata'); requestAnimationFrame(() => clipesteSchimbate(inainteCifre));
       if (test || run.conclusion!=='success') { go('setari'); if (live()) setTimeout(conexiuniFoaie, 350); toast(run.conclusion==='success'?`Testul s-a terminat în ${sec()} s.`:'O conexiune nu merge. Vezi ce trebuie reparat.'); return; }
       if (scurta) { render(); return; }

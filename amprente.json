@@ -19,6 +19,7 @@
   "package.json": "47c7df350ea09b291f5e2dc3033ea167486477abb678bf6524b1450bd156e07b",
   ".github/workflows/actualizeaza.yml": "f60af268f7426fb19855a573e7165182ec769c3b9684b7ad2241df034d39071f",
   ".github/workflows/analiza.yml": "c122f5d25f198d3748a6d7cf674fba2e16c927562ac393c91f53e310b66491a0",
-  ".github/workflows/raport.yml": "59e337c161867ab052c446105c0613758dded128881c21cdb5ecccec28317d38"
+  ".github/workflows/raport.yml": "59e337c161867ab052c446105c0613758dded128881c21cdb5ecccec28317d38",
+  ".github/workflows/reia.yml": "eb77475f6ae7a42cb06355824c9c8df4fbb07df0d1926ee11004e3253e5e855d"
  }
 }

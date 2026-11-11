@@ -1,0 +1,35 @@
+name: Reia analiza
+
+# v0.52: uneori GitHub nu reușește să pornească mașina pentru analiză („An unexpected error has occurred… githubstatus.com”):
+# rularea se termină cu X roșu fără ca vreun pas să fi rulat. Atunci o reia singur, de cel mult 2 ori, după o mică pauză.
+# Dacă analiza chiar a rulat și a dat eroare (de exemplu un broker căzut), NU o reia: altfel ar intra în buclă.
+# Nu ia cod din repo și nu vede niciun secret: doar citește starea rulării și cere reluarea ei.
+on:
+  workflow_run:
+    workflows: [Analiza]
+    types: [completed]
+
+permissions:
+  actions: write
+
+jobs:
+  reia:
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reia dacă GitHub n-a pornit analiza
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Număr de rulare nevalid"; exit 1; }
+          a_rulat=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?filter=latest" --jq '[.jobs[].steps[]? | select(.name == "Rulează analistul" and .conclusion != null and .conclusion != "skipped")] | length')
+          if [ "$a_rulat" != "0" ]; then echo "Analiza a rulat și a dat eroare: nu o reiau (vezi rularea $RUN_ID)."; exit 0; fi
+          echo "GitHub n-a pornit analiza (rularea $RUN_ID). O reiau peste 20 de secunde."
+          sleep 20
+          stare=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.status')
+          if [ "$stare" != "completed" ]; then echo "A fost deja reluată (din aplicație)."; exit 0; fi
+          gh api -X POST "repos/$REPO/actions/runs/$RUN_ID/rerun-failed-jobs" >/dev/null && echo "Reluată." || echo "::warning::GitHub n-a acceptat reluarea; o va porni rularea programată următoare."

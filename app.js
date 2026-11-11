@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.50.0';
+const APP_VER = '0.51.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -360,7 +360,7 @@ aplicaTema();
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
 const GLOS = {
   harta:['Harta zilei','Fiecare dreptunghi e o poziție. Mărimea arată cât din portofoliu ocupă, culoarea arată mișcarea zilei: verde crește, roșu scade, gri stă pe loc (sub 0,3%). Cu cât culoarea e mai intensă, cu atât mișcarea e mai mare. Atinge un dreptunghi ca să deschizi acțiunea.'],
-  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar, în mijlocul unei galaxii. Soarele e ETF-ul de bază: crește odată cu ponderea ETF-urilor și ajunge la cercul punctat când atingi ținta (cercul devine verde). Orbitele sunt sectoarele; o orbită roșie înseamnă că sectorul a trecut de plafonul tău. Planetele sunt acțiunile: cu cât e mai mare planeta, cu atât ocupă mai mult din bani. Un inel înseamnă că acțiunea trece de plafonul pe acțiune. Fiecare sector are o familie de planete (giganți gazoși, planete ca Saturn, Neptun, Pământul sau Marte), iar în sector fiecare acțiune arată altfel. Lunile sunt dividendele: câte una pentru fiecare plată pe an; luna aurie înseamnă plată luna asta sau luna viitoare. Aura roșie care pulsează înseamnă că prețul e sub nivelul de alertă; aura portocalie, RSI peste 70; albastră, RSI sub 30. În ziua în care investești, stele căzătoare zboară spre ce ai cumpărat. Trage ca s-o rotești și s-o înclini, atinge o planetă ca s-o vezi (orbita ei se aprinde) și încă o dată ca să-i deschizi fișa. „Ultimul an” arată cum s-au schimbat mărimile în ultimele 12 luni. Galaxia din spate e doar decor.','O acțiune cu 25% din portofoliu e o planetă mare, cu inel; una cu 2% e o planetă mică.','pondere tema rsi dividende'],
+  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar, în mijlocul unei galaxii. Soarele e ETF-ul de bază: crește odată cu ponderea ETF-urilor și ajunge la cercul punctat când atingi ținta (cercul devine verde). Orbitele sunt sectoarele; o orbită roșie înseamnă că sectorul a trecut de plafonul tău. Planetele sunt acțiunile, fiecare cu numele ei: suprafața planetei e proporțională cu banii din ea, deci când investești într-o acțiune, planeta ei crește. Un inel înseamnă că acțiunea trece de plafonul pe acțiune. Fiecare sector are o familie de planete (giganți gazoși, planete ca Saturn, Neptun, Pământul sau Marte), iar în sector fiecare acțiune arată altfel. Lunile sunt dividendele: câte una pentru fiecare plată pe an (luna aurie: plată luna asta sau luna viitoare). O acțiune cumpărată de curând, care încă nu ți-a plătit, primește lunile estimate după bursă (SUA: 4 pe an, Europa: 1). Companiile care nu plătesc dividende (de exemplu AMD sau Take-Two) n-au luni. RSI-ul îl vezi când atingi planeta, în rândul de sub galaxie; pe planetă apare o aură doar la extreme: portocalie peste 70 (a urcat repede), albastră sub 30 (a scăzut repede). Aura roșie care pulsează înseamnă că prețul e sub nivelul de alertă. În ziua în care investești, stele căzătoare zboară spre ce ai cumpărat. Trage ca s-o rotești și s-o înclini, atinge o planetă ca s-o vezi (orbita ei se aprinde) și încă o dată ca să-i deschizi fișa. „Ultimul an” arată cum s-au schimbat mărimile în ultimele 12 luni. Galaxia din spate e doar decor.','O acțiune cu 25% din portofoliu e o planetă mare, cu inel; una cu 2% e o planetă mică. Dacă pui încă o dată banii din ea, suprafața i se dublează.','pondere tema rsi dividende'],
   proiectie:['Unde poți ajunge','Trei scenarii pentru valoarea portofoliului la orizontul tău: 3%, 6% și 9% pe an, în lei, înainte de inflație. Linia punctată e doar ce depui. Diferența până la scenarii e dobânda compusă: câștigurile fac la rândul lor câștiguri. Anii reali vor fi neregulați, cu scăderi de 20–30% pe drum. Nu e o promisiune, e un ordin de mărime.'],
   agitatie:['Cât de mult se mișcă portofoliul','Agitația (volatilitatea) arată cât urcă și coboară valoarea într-un an obișnuit, calculată din prețurile ultimelor până la 12 luni, cu ponderile de azi. VWCE e reperul. Cea mai mare scădere e de la un vârf la minimul de după. O lună proastă apare cam o dată la 20 de luni. Testele de stres arată cât ai pierde în scenarii plauzibile. Scăderile de felul ăsta sunt normale pe termen lung. Întrebarea e dacă le-ai privi liniștit, fără să vinzi.'],
   castigAcum:['Câștig pe poziții','Cât au câștigat sau pierdut, în lei, pozițiile pe care le ai acum: valoarea de azi minus cât ai plătit pe ele. La eToro, ce ai plătit în dolari e socotit cu cursul BNR din ziua fiecărei cumpărări, deci intră și câștigul sau pierderea din curs. Nu intră dividendele încasate și câștigurile din ce ai vândut: pe acelea le vezi în Analiză → Randamentul tău, care le socotește pe toate.'],
@@ -3108,19 +3108,34 @@ function gxAlbedo(tip, fb, fb2, lon, lat, sd){
     default: { let c = mix([150,70,40],[214,120,72], fb(lon*1.8+sd,lat*1.8)); if (Math.abs(lat)>1.3) c = mix(c,[240,236,230],0.8); return c; }
   }
 }
+// harta suprafeței (longitudine × latitudine), calculată o singură dată pe planetă; randarea unei fețe doar o citește
+// și pune lumina, de ~20 de ori mai repede decât zgomotul fractal pe fiecare pixel
+function gxHarta(tip, sd){ return GX.harti?.get(tip+'|'+sd.toFixed(2)) || null; }
+// hărțile se construiesc în fundal, rând cu rând, în felii de ~5 ms (fără sacadări); până sunt gata, planeta e un disc umbrit
+function gxHartaCere(tip, sd){
+  const k = tip+'|'+sd.toFixed(2); GX.harti = GX.harti || new Map(); GX.hCoada = GX.hCoada || new Map(); if (GX.harti.has(k) || GX.hCoada.has(k)) return;
+  const MW = 320, MH = 160, d = new Uint8ClampedArray(MW*MH*3), fb = GX.zg1 || (GX.zg1 = gxZgomot(17)), fb2 = GX.zg2 || (GX.zg2 = gxZgomot(43)); let y = 0;
+  GX.hCoada.set(k, () => { const t0 = performance.now();
+    for (; y<MH && performance.now()-t0 < 5; y++) { const la = (0.5 - (y+0.5)/MH)*Math.PI; for (let x=0; x<MW; x++) { const lo = ((x+0.5)/MW)*2*Math.PI - Math.PI, a = gxAlbedo(tip, fb, fb2, lo, la, sd), det = 0.92+0.16*fb2(lo*9+sd, la*9, 3), i = (y*MW+x)*3;
+      d[i] = a[0]*det; d[i+1] = a[1]*det; d[i+2] = a[2]*det; } }
+    if (y >= MH) { GX.harti.set(k, { d, MW, MH }); GX.hCoada.delete(k); return true; } return false; });
+  if (!GX.hRuleaza) { GX.hRuleaza = true; const pas = () => { const [k0, f] = GX.hCoada.entries().next().value || []; if (!f) { GX.hRuleaza = false; return; } f(); setTimeout(pas, 0); }; setTimeout(pas, 0); }
+}
 // o planetă randată pixel cu pixel, cu lumina venind din unghiul „ung” (soarele)
-function gxSfera(tip, sd, r, ung){
-  const Z = Math.ceil(r*2*2)+2, o = document.createElement('canvas'); o.width = o.height = Z; const c = o.getContext('2d'), img = c.createImageData(Z,Z), R = Z/2-1;
-  const fb = GX.zg1 || (GX.zg1 = gxZgomot(17)), fb2 = GX.zg2 || (GX.zg2 = gxZgomot(43)), atm = GX_ATM[tip] || [255,255,255];
+function gxSfera(tip, sd, r, ung, px1 = 2){
+  // px1 = pixeli reali pe punct (densitatea ecranului × 1,25): planeta se randează la rezoluția telefonului, nu mărită
+  const Z = Math.ceil(r*2*px1)+2, o = document.createElement('canvas'); o.width = o.height = Z; const c = o.getContext('2d'), img = c.createImageData(Z,Z), R = Z/2-1;
+  const H = gxHarta(tip, sd); if (!H) return null; const atm = GX_ATM[tip] || [255,255,255], MW = H.MW, MH = H.MH, hd = H.d;
   let L = [Math.cos(ung)*0.92, Math.sin(ung)*0.92, 0.38]; const ln = Math.hypot(...L); L = L.map(v=>v/ln); const til = 0.15, ct = Math.cos(til), stl = Math.sin(til);
   for (let py=0; py<Z; py++) for (let px=0; px<Z; px++) { const nx=(px+0.5-Z/2)/R, ny=(py+0.5-Z/2)/R, d2=nx*nx+ny*ny; if (d2>1) continue; const i=(py*Z+px)*4;
-    const nz=Math.sqrt(1-d2), yy=ny*ct-nx*stl, xx=nx*ct+ny*stl, a=gxAlbedo(tip, fb, fb2, Math.atan2(xx,nz), Math.asin(-yy), sd);
+    const nz=Math.sqrt(1-d2), yy=ny*ct-nx*stl, xx=nx*ct+ny*stl, lo=Math.atan2(xx,nz), la=Math.asin(Math.max(-1,Math.min(1,-yy)));
+    const mx = Math.min(MW-1, ((lo+Math.PI)/(2*Math.PI)*MW)|0), my = Math.min(MH-1, ((0.5-la/Math.PI)*MH)|0), j = (my*MW+mx)*3;
     const dif=Math.max(0, nx*L[0]+ny*L[1]+nz*L[2]), lum=0.03+dif*1.05*(0.55+0.45*Math.sqrt(nz)), rim=Math.pow(1-nz,2.6)*Math.max(0,dif+0.25)*0.9;
-    img.data[i]=Math.min(255,a[0]*lum+atm[0]*rim); img.data[i+1]=Math.min(255,a[1]*lum+atm[1]*rim); img.data[i+2]=Math.min(255,a[2]*lum+atm[2]*rim); img.data[i+3]=d2>0.96?255*(1-d2)/0.04:255; }
+    img.data[i]=Math.min(255,hd[j]*lum+atm[0]*rim); img.data[i+1]=Math.min(255,hd[j+1]*lum+atm[1]*rim); img.data[i+2]=Math.min(255,hd[j+2]*lum+atm[2]*rim); const marg=(1-Math.sqrt(d2))*R; img.data[i+3]=marg<1?255*marg:255; }
   c.putImageData(img,0,0); return o;
 }
-function gxSoare(rs){
-  const Z = Math.ceil(rs*4)+2, o = document.createElement('canvas'); o.width = o.height = Z; const c = o.getContext('2d'), img = c.createImageData(Z,Z), R = Z/2-1, fb = GX.zg3 || (GX.zg3 = gxZgomot(77));
+function gxSoare(rs, px1 = 2){
+  const Z = Math.ceil(rs*2*px1)+2, o = document.createElement('canvas'); o.width = o.height = Z; const c = o.getContext('2d'), img = c.createImageData(Z,Z), R = Z/2-1, fb = GX.zg3 || (GX.zg3 = gxZgomot(77));
   for (let py=0; py<Z; py++) for (let px=0; px<Z; px++) { const nx=(px+0.5-Z/2)/R, ny=(py+0.5-Z/2)/R, d2=nx*nx+ny*ny; if (d2>1) continue; const i=(py*Z+px)*4;
     const nz=Math.sqrt(1-d2), ld=0.42+0.58*Math.pow(nz,0.6), gr=0.86+0.28*fb(nx*9,ny*9,4);
     img.data[i]=Math.min(255,255*ld*gr); img.data[i+1]=Math.min(255,(150+95*nz)*ld*gr); img.data[i+2]=Math.min(255,(60+120*nz*nz)*ld*gr); img.data[i+3]=d2>0.97?255*(1-d2)/0.03:255; }
@@ -3151,13 +3166,47 @@ function gxDate(){
   // orbitele: sectoarele cu mai puține acțiuni stau în interior, cele cu multe (unde e loc) în exterior
   const ord = [...sect].sort((a,b)=>cnt(a)-cnt(b) || (SNAP.teme[a.n]||0)-(SNAP.teme[b.n]||0));
   const fam = new Map([...sect].sort((a,b)=>(SNAP.teme[b.n]||0)-(SNAP.teme[a.n]||0)).map((b,k)=>[b.n, GX_FAM[k % GX_FAM.length]]));
-  const orb = ord.map((b,k)=>({ n:b.n, c:gxCul(b.c), plin:(SNAP.teme[b.n]||0)>pr.maxTema, R: 0.27 + 0.73*(ord.length<2 ? 0.6 : k/(ord.length-1)) }));
+  const orb = ord.map(b=>({ n:b.n, c:gxCul(b.c), plin:(SNAP.teme[b.n]||0)>pr.maxTema, R:0 }));
   const zi = ziua(SNAP.pozitii), tzi = SNAP.pozitii.reduce((a,p)=>a+p.valueRON*(miscare(p)?.f||1),0), ziP = tzi-zi ? zi/(tzi-zi)*100 : 0;
-  const lc = new Date().getMonth()+1, lu = lc%12+1, pl = [];
-  orb.forEach((o,k)=>{ const ps = SNAP.pozitii.filter(p=>!p.etf && p.tema===o.n).sort((a,b)=>b.pondere-a.pondere), F = fam.get(o.n);
-    ps.forEach((p,j)=>{ const luni = SNAP.dividende?.luni?.[p.symbol] || [];
-      pl.push({ p, o, R:o.R, a0:(j/ps.length)*Math.PI*2 + k*1.1, w:0.5/Math.pow((0.4+o.R)/0.7,1.5), tip:F[j % F.length], sd:p.symbol.charCodeAt(0)*0.37+p.symbol.length+j*1.3,
-        rsi:p.ind?.rsi, fisura:!!p.ind?.subProtectie, luni:Math.min(luni.length,12), luniAproape:luni.includes(lc)||luni.includes(lu), m:MISC(p) }); }); });
+  // dividendele: lunile plăților din ultimul an; pentru o acțiune care plătește dar n-a plătit încă la tine (cumpărată de curând),
+  // numărul de plăți pe an se estimează după bursă (SUA: trimestrial; Europa continentală: anual; Londra: de două ori)
+  const lc = new Date().getMonth()+1, lu = lc%12+1, cuDiv = new Set((SNAP.dividende?.peActiune||[]).filter(x=>x.randDiv>0).map(x=>x.symbol)), pl = [];
+  const plati = p => { const l = SNAP.dividende?.luni?.[p.symbol] || []; if (l.length) return { n:Math.min(l.length,12), aproape:l.includes(lc)||l.includes(lu), est:false };
+    if (!cuDiv.has(p.symbol) && !(p.fund?.randDiv > 0)) return { n:0 }; return { n: /\.(PA|DE|AS|MI|MC|BR|SW|VI|LS|HE|ST|CO|OL)$/.test(p.symbol) ? 1 : /\.L$/.test(p.symbol) ? 2 : 4, aproape:false, est:true }; };
+  // mărimea: suprafața planetei e proporțională cu banii din ea (raza ∝ √pondere), față de cea mai mare acțiune
+  const wMax = Math.max(1, ...SNAP.pozitii.filter(p=>!p.etf).map(p=>p.pondere));
+  orb.forEach(o=>{ const ps = SNAP.pozitii.filter(p=>!p.etf && p.tema===o.n).sort((a,b)=>b.pondere-a.pondere), F = fam.get(o.n);
+    ps.forEach((p,j)=>{ const d = plati(p);
+      pl.push({ p, o, tip:F[j % F.length], sd:p.symbol.charCodeAt(0)*0.37+p.symbol.length+j*1.3, rsi:p.ind?.rsi, fisura:!!p.ind?.subProtectie, luni:d.n, luniAproape:!!d.aproape, luniEst:!!d.est, m:MISC(p), rn: Math.max(0.032, 0.105*Math.sqrt(p.pondere/wMax)) }); }); });
+  // așezarea, în unități de „rază a sistemului” (1 = orbita exterioară): orbitele se depărtează după cât de mari sunt planetele lor,
+  // apoi fiecare planetă primește unghiul la care stă cel mai departe de celelalte, la orice rotire (sistemul se rotește rigid,
+  // deci o așezare fără suprapuneri rămâne fără suprapuneri). Dacă tot nu încape, planetele se micșorează puțin și se reîncearcă.
+  const etfW0 = etf.reduce((a,p)=>a+p.pondere,0), rsN = (9+17*Math.sqrt(Math.max(etfW0,0)/50))/170, inel = x => x.p.pondere > pr.maxActiune;
+  const ext = x => x.rn*(inel(x) ? 2.15 : 1.25) + 0.012;
+  for (let n = 0; n < 6; n++) {
+    const mx = o => Math.max(0.03, ...pl.filter(x=>x.o===o).map(ext));
+    let R = rsN*1.6 + mx(orb[0]); orb.forEach((o,k)=>{ if (k) R += mx(orb[k-1]) + mx(o) + 0.015; o.R = R; });
+    const f = R > 1 ? 1/R : R < 0.8 ? 0.8/R : 1; orb.forEach(o=>{ o.R *= f; });
+    if (R <= 1.05) break; pl.forEach(x=>{ x.rn *= 0.9; });
+  }
+  // așezarea se calculează doar când se schimbă pozițiile sau ponderile (rotunjite), nu la fiecare intrare pe pagină
+  const cheieA = pl.map(x=>x.p.symbol+':'+x.p.pondere.toFixed(1)+':'+x.o.n).join('|')+'|'+pr.maxActiune+'|'+etfW0.toFixed(1), cA = GX.asez?.cheie === cheieA ? GX.asez : null; // doar în memorie: cheia conține simbolurile și ponderile, care nu se scriu nicăieri necriptat
+  if (cA) pl.forEach((x,k)=>{ x.th = cA.th[k]; x.rn = cA.rn[k]; });
+  else {
+  const YAW = Array.from({length:16},(_,k)=>k*Math.PI/8), INC = 0.5, CY = YAW.map(Math.cos), SY = YAW.map(Math.sin);
+  for (let n = 0; n < 6; n++) { const pus = []; let cel = 9;
+    // pozițiile planetelor deja așezate, precalculate pentru fiecare rotire încercată
+    const libera = (x, th, ex) => { let m = 9; const c0 = Math.cos(th), s0 = Math.sin(th);
+      for (let yi = 0; yi < YAW.length; yi++) { const cc = c0*CY[yi]-s0*SY[yi], ss = s0*CY[yi]+c0*SY[yi], ax = x.o.R*cc, ay = x.o.R*ss*INC; // soarele nu intră în calcul: o planetă poate trece prin fața sau prin spatele lui, ca o eclipsă
+        for (const q of pus) { const d = Math.hypot(ax-q.px[yi], ay-q.py[yi]) - ex - q.ex; if (d < m) m = d; } } return m; };
+    [...pl].sort((a,b)=>b.rn-a.rn).forEach((x,k)=>{ const ex = ext(x) + 0.006; let best = { m:-9, th:0 };
+      for (let c = 0; c < 40; c++) { const th = c*Math.PI/20 + k*0.013, m = libera(x, th, ex); if (m > best.m + 1e-6) best = { m, th }; }
+      x.th = best.th; cel = Math.min(cel, best.m); pus.push({ o:x.o, th:best.th, ex, px:YAW.map(y=>x.o.R*Math.cos(best.th+y)), py:YAW.map(y=>x.o.R*Math.sin(best.th+y)*INC) }); });
+    // dacă tot se ating undeva, toate planetele se micșorează cu 8% și se reface așezarea
+    if (cel >= 0) break; pl.forEach(x=>{ x.rn *= 0.92; });
+  }
+  GX.asez = { cheie:cheieA, th:pl.map(x=>x.th), rn:pl.map(x=>x.rn) }; }
+  const reach = Math.max(1, ...pl.map(x=>x.o.R + x.rn*(inel(x) ? 2.15 : 1.25)));
   // reluarea: ponderea fiecărei zile, din prețurile istorice (cantitățile de azi)
   const zile = [...new Set(SNAP.pozitii.flatMap(p=>p.serie?.d||[]))].filter(Boolean).sort().slice(-252);
   const val = SNAP.pozitii.map(p=>{ const s=p.serie; if(!s?.c?.length) return zile.map(()=>p.valueRON); const m=new Map(s.d.map((d,i)=>[d,s.c[i]])), u=s.c.at(-1); let x=null; return zile.map(d=>{ x=m.get(d)??x; return x&&u ? p.valueRON*x/u : p.valueRON; }); });
@@ -3165,7 +3214,7 @@ function gxDate(){
   const istoric = { zile, tot, w: SNAP.pozitii.map((p,k)=>val[k].map((v,i)=>v/tot[i]*100)) };
   const cb = cumparari().filter(o=>o.data.slice(0,7)===LUNA()), ud = cb.map(o=>o.data).sort().at(-1);
   const dep = ud && (Date.now()-Date.parse(ud)) < 2*864e5 ? { cheie: ud+':'+cb.length, tinte: [...new Set(cb.filter(o=>o.data===ud).map(o=>o.symbol))] } : null;
-  return { pr, etf, etfP, ziP, orb, pl, istoric, dep, ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg') };
+  return { pr, etf, etfP, ziP, orb, pl, istoric, dep, reach, ink:gxCul('--ink'), pos:gxCul('--pos'), neg:gxCul('--neg') };
 }
 const GX_LIN = matchMedia('(pointer:fine)').matches && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const SHEET_ON = () => document.getElementById('sheet')?.classList.contains('on');
@@ -3182,15 +3231,19 @@ function galaxie(){
   const rS = gxRng(90001), stele = Array.from({length:220},()=>({ x:rS(), y:rS(), r:rS()*0.7+0.15, f:rS()*6.28, c: rS()<0.15?'#ffd9b8':rS()<0.2?'#c9dbff':'#ffffff' }));
   const deseneazaFond = () => { fond.width = cv.width; fond.height = cv.height; fc.setTransform(dpr,0,0,dpr,0,0); fc.fillStyle='#020207'; fc.fillRect(0,0,W,H);
     stele.forEach((s,i)=>{ if (i%5===0) return; fc.globalAlpha=0.15+0.3*s.r; fc.fillStyle=s.c; fc.beginPath(); fc.arc(s.x*W,s.y*H,s.r,0,6.283); fc.fill(); }); fc.globalAlpha=1; };
-  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 2); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
+  const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 3); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
   marime(); GX.marime = marime;
   // galaxia din spate: după primul cadru, ca să nu întârzie intrarea pe pagină
   if (!GX.gal && !GX.galPend) { GX.galPend = true; const it = gxFundalGalaxie();
     const felie = () => { const t0 = performance.now(); let r; do { r = it.next(); } while (!r.done && performance.now()-t0 < 6); if (r.done) { GX.gal = r.value; GX.galPend = false; if (!GX.on && $('gxc')) GX.cadruF?.(performance.now()); /* cu animațiile reduse, cadrul static primește și galaxia */ } else setTimeout(felie, 0); };
     setTimeout(felie, 60); }
-  const sfera = (x, r, ung, buget) => { const b = (Math.round((ung+Math.PI)/(Math.PI/12))%24), k = `${x.tip}|${x.sd.toFixed(2)}|${r.toFixed(1)}|${b}`;
-    let s = GX.sfere.get(k); if (s) return s; if (buget.n <= 0) { for (const [kk,v] of GX.sfere) if (kk.startsWith(`${x.tip}|${x.sd.toFixed(2)}|${r.toFixed(1)}|`)) return v; return null; }
-    buget.n--; s = gxSfera(x.tip, x.sd, r, b*Math.PI/12-Math.PI); if (GX.sfere.size > 600) GX.sfere.clear(); GX.sfere.set(k, s); return s; };
+  // planetele randate se păstrează (24 de unghiuri de lumină × mărime); pe cadru se randează noi doar cât încape în ~6 ms,
+  // restul folosesc între timp cel mai apropiat unghi deja randat (nu se vede diferența, iar animația nu sacadează)
+  const sfera = (x, r, ung, buget) => { const px1 = Math.min(dpr*1.25, 3.5), rr = Math.round(r*2)/2, b = (Math.round((ung+Math.PI)/(Math.PI/12))%24), baza = `${x.tip}|${x.sd.toFixed(2)}|${rr}|${px1}|`, k = baza+b;
+    let s = GX.sfere.get(k); if (s) return s;
+    if (performance.now() > buget.pana && buget.facute > 0) { let best = null, bd = 99; for (const [kk,v] of GX.sfere) if (kk.startsWith(baza)) { const d = Math.min(Math.abs(+kk.slice(baza.length)-b), 24-Math.abs(+kk.slice(baza.length)-b)); if (d < bd) { bd = d; best = v; } } return best; }
+    if (!gxHarta(x.tip, x.sd)) { gxHartaCere(x.tip, x.sd); return null; }
+    buget.facute++; s = gxSfera(x.tip, x.sd, rr, b*Math.PI/12-Math.PI, px1); if (GX.sfere.size > 900) GX.sfere.clear(); GX.sfere.set(k, s); return s; };
   function cadru(now){
     if (!cv.isConnected || VIEW!=='analiza') { GX.on=false; return; }
     if (GX.viz===false && !st.drag) { GX.on=false; return; }
@@ -3205,7 +3258,8 @@ function galaxie(){
     let zi = null; if (st.rel && D.istoric.zile.length) { const f = Math.max(0, Math.min((now-st.rel.t0)/9000, 1)); zi = Math.min(D.istoric.zile.length-1, Math.max(0, Math.round(f*(D.istoric.zile.length-1)))); if (f>=1) { st.rel=null; $('gxp')?.classList.remove('on'); setTimeout(()=>{ if($('gxd')) $('gxd').textContent=''; }, 1600); } }
     const pond = p => zi==null ? p.pondere : D.istoric.w[SNAP.pozitii.indexOf(p)][zi];
     if (zi!=null && $('gxd')) { const tz=D.istoric.tot, ch=(tz[zi]/tz[0]-1)*100; $('gxd').innerHTML = `${ziRo(D.istoric.zile[zi])} <b class="${ch>=0?'pos':'neg'}">${sg(ch,1)}%</b>`; }
-    const cx = W/2, cy = H/2, inc = st.tilt, S0 = Math.min(W*0.44, H*0.78), k0 = S0/170;
+    // mărimea sistemului: cât să încapă și planeta cea mai de margine, cu inelul ei, plus numele dedesubt
+    const cx = W/2, cy = H/2, inc = st.tilt, S0 = Math.min((W/2-6)/D.reach, (H/2-26)/(D.reach*inc+0.08)), k0 = S0/170;
     // fundalul (stele fixe + galaxia + vigneta) se compune la rezoluție 1x, pe un strat separat, și se reface doar
     // când galaxia s-a rotit vizibil: galaxia e difuză, iar desenarea ei mare la fiecare cadru era cea mai scumpă parte
     const ungG = st.yaw*0.6 + t*0.012;
@@ -3216,39 +3270,40 @@ function galaxie(){
         b.drawImage(GX.gal, -GX.gal.width/2*sc, -GX.gal.width/2*sc, GX.gal.width*sc, GX.gal.width*sc); b.restore(); b.globalAlpha=1; b.globalCompositeOperation='source-over'; }
       const vg = b.createRadialGradient(cx,cy,S0*0.7,cx,cy,Math.hypot(W,H)*0.6); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.45)'); b.fillStyle=vg; b.fillRect(0,0,W,H);
       Object.assign(GX, { bgW:W, bgH:H, bgU:ungG, bgI:inc, bgGal:!!GX.gal }); }
-    ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; ctx.drawImage(GX.bg, 0, 0, cv.width, cv.height);
+    ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; if (GX.bg.width && GX.bg.height) ctx.drawImage(GX.bg, 0, 0, cv.width, cv.height);
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.imageSmoothingQuality = 'high';
     // stelele care clipesc (o parte din ele)
     for (let i=0;i<stele.length;i+=5) { const s=stele[i]; ctx.fillStyle=s.c; ctx.globalAlpha=0.18+0.32*(0.5+0.5*Math.sin(t*0.6+s.f)); ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.r,0,6.283); ctx.fill(); } ctx.globalAlpha=1;
     const selT = st.sel && st.sel!=='ETF' ? SNAP.pozitii.find(q=>q.symbol===st.sel)?.tema : null;
     const orbita = (o, fata) => { const a = o.R*S0, ap = selT===o.n; ctx.beginPath(); ctx.ellipse(cx,cy,a,a*inc,0,fata?0:Math.PI,fata?Math.PI:6.283);
       ctx.strokeStyle = o.plin ? `rgba(255,120,95,${(fata?0.6:0.3)+(ap?0.3:0)})` : `rgba(225,232,248,${(fata?0.16:0.07)+(ap?0.4:0)})`; ctx.lineWidth = (o.plin?1.1:0.7)+(ap?0.8:0); ctx.stroke(); };
-    const P_ = D.pl.map(x=>{ const f = x.a0 + st.yaw + t*x.w*0.35, a = x.R*S0, r = Math.max(2.4, (3 + 12*Math.sqrt(Math.max(pond(x.p),0)/26))*k0);
-      return { ...x, f, r, q:{ x:cx+a*Math.cos(f), y:cy+a*Math.sin(f)*inc, z:Math.sin(f) } }; });
-    const buget = { n: 2 }; const ET = [];
+    // sistemul se rotește rigid (toate planetele cu aceeași viteză): așezarea fără suprapuneri din gxDate rămâne valabilă
+    const P_ = D.pl.map(x=>{ const f = x.th + st.yaw + t*0.05, a = x.o.R*S0, r = Math.max(4.5, x.rn*S0*(zi==null ? 1 : Math.sqrt(Math.max(pond(x.p),0)/Math.max(x.p.pondere,0.01))));
+      return { ...x, R:x.o.R, f, r, q:{ x:cx+a*Math.cos(f), y:cy+a*Math.sin(f)*inc, z:Math.sin(f) } }; });
+    const buget = { pana: performance.now()+6, facute: 0 }; const ET = [];
     const inel = (o, fata) => { for (let k=0;k<11;k++) { const f=1.3+k*0.09; if (f>1.84 && f<1.95) continue; const al=(0.3+0.35*Math.abs(Math.sin(k*1.7)))*(fata?1:0.8);
       ctx.beginPath(); ctx.ellipse(o.q.x,o.q.y,o.r*f,o.r*f*0.3,-0.22,fata?0:Math.PI,fata?Math.PI:6.283); ctx.strokeStyle=`rgba(${210+k*2},${190+k*2},${150+k*4},${al})`; ctx.lineWidth=o.r*0.09; ctx.stroke(); } };
     const planeta = o => { const { q, r } = o; if (!(isFinite(r) && r>0 && isFinite(q.x) && isFinite(q.y))) return;
       const atm = o.rsi>=70 ? '255,150,70' : o.rsi!=null && o.rsi<=30 ? '125,211,252' : null;
       if (atm) { const g=ctx.createRadialGradient(q.x,q.y,r*0.9,q.x,q.y,r*2.2); g.addColorStop(0,`rgba(${atm},.45)`); g.addColorStop(1,`rgba(${atm},0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.2,0,6.283); ctx.fill(); }
-      if (o.fisura) { const al=0.28+0.28*Math.sin(t*3+o.a0*5), g=ctx.createRadialGradient(q.x,q.y,r,q.x,q.y,r*2.3); g.addColorStop(0,`rgba(255,70,90,${al})`); g.addColorStop(1,'rgba(255,70,90,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.3,0,6.283); ctx.fill(); }
+      if (o.fisura) { const al=0.28+0.28*Math.sin(t*3+o.th*5), g=ctx.createRadialGradient(q.x,q.y,r,q.x,q.y,r*2.3); g.addColorStop(0,`rgba(255,70,90,${al})`); g.addColorStop(1,'rgba(255,70,90,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.3,0,6.283); ctx.fill(); }
       const ring = pond(o.p) > D.pr.maxActiune; if (ring) inel(o,false);
       const img = sfera(o, r, Math.atan2(cy-q.y, cx-q.x), buget);
-      if (img) ctx.drawImage(img, q.x-r-0.5, q.y-r-0.5, r*2+1, r*2+1); else { ctx.fillStyle='#8a8f99'; ctx.beginPath(); ctx.arc(q.x,q.y,r,0,6.283); ctx.fill(); }
+      if (img && img.width) ctx.drawImage(img, q.x-r-0.5, q.y-r-0.5, r*2+1, r*2+1); else { const a = GX_ATM[o.tip] || [180,180,180], ug = Math.atan2(cy-q.y, cx-q.x), g = ctx.createRadialGradient(q.x+Math.cos(ug)*r*0.4, q.y+Math.sin(ug)*r*0.4, r*0.1, q.x, q.y, r); g.addColorStop(0, `rgb(${a[0]*0.8|0},${a[1]*0.75|0},${a[2]*0.7|0})`); g.addColorStop(1, '#08080c'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x,q.y,r,0,6.283); ctx.fill(); }
       if (ring) inel(o,true);
-      for (let k=0;k<o.luni;k++) { const f=t*1.1+k*6.283/o.luni+o.a0, sn=Math.sin(f), mx=q.x+Math.cos(f)*(r+6), my=q.y+sn*(r+6)*0.42; if (sn<0 && Math.hypot(mx-q.x,my-q.y)<r) continue;
+      for (let k=0;k<o.luni;k++) { const f=t*1.1+k*6.283/o.luni+o.th, sn=Math.sin(f), mx=q.x+Math.cos(f)*(r+6), my=q.y+sn*(r+6)*0.42; if (sn<0 && Math.hypot(mx-q.x,my-q.y)<r) continue;
         ctx.fillStyle = k===0 && o.luniAproape ? '#fbbf24' : '#cfd3d8'; ctx.beginPath(); ctx.arc(mx,my,Math.max(1,r*0.11),0,6.283); ctx.fill(); }
       if (st.sel===o.p.symbol) { ctx.beginPath(); ctx.arc(q.x,q.y,r+7+Math.sin(t*4)*1.5,0,6.283); ctx.strokeStyle='#fff'; ctx.globalAlpha=0.85; ctx.lineWidth=1.2; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1; }
-      ET.push({ t:o.p.symbol.replace(/\..*$/,''), x:q.x, y:q.y+r+12, z:q.z, sym:o.p.symbol, mare: pond(o.p) >= 4 }); };
+      ET.push({ t:o.p.symbol.replace(/\..*$/,''), x:q.x, y:q.y, r, ri: ring ? r*2.15 : r, z:q.z, sym:o.p.symbol }); };
     D.orb.forEach(o=>orbita(o,false)); P_.filter(x=>x.q.z<0).sort((a,b)=>a.q.z-b.q.z).forEach(planeta);
     // soarele: ETF-urile; în reluare, mărimea lor din ziua aceea
-    const etfW = zi==null ? D.etfP : D.etf.reduce((a,p)=>a+pond(p),0), rs = Math.max(6, (9 + 17*Math.sqrt(Math.max(etfW,0)/50))*k0);
+    const etfW = zi==null ? D.etfP : D.etf.reduce((a,p)=>a+pond(p),0), rs = Math.max(6, (9 + 17*Math.sqrt(Math.max(etfW,0)/50))/170*S0);
     ctx.globalCompositeOperation = 'lighter';
     { const R2 = rs*(4+0.15*Math.sin(t*1.2)), g=ctx.createRadialGradient(cx,cy,rs*0.8,cx,cy,R2); g.addColorStop(0,'rgba(255,214,150,.42)'); g.addColorStop(0.35,'rgba(255,190,120,.12)'); g.addColorStop(1,'rgba(255,160,80,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R2,0,6.283); ctx.fill(); }
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.05); for (let k=0;k<6;k++) { ctx.rotate(Math.PI/3); const L=rs*(2.2+0.3*Math.sin(t*1.5+k)), g=ctx.createLinearGradient(0,0,L,0); g.addColorStop(0,'rgba(255,236,200,.22)'); g.addColorStop(1,'rgba(255,236,200,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-rs*0.06); ctx.lineTo(L,0); ctx.lineTo(0,rs*0.06); ctx.fill(); } ctx.restore();
     ctx.globalCompositeOperation = 'source-over';
-    const kS = (Math.round(rs*2)/2).toFixed(1); if (GX.soareK !== kS) { GX.soareImg = gxSoare(+kS); GX.soareK = kS; }
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.03); ctx.drawImage(GX.soareImg, -rs, -rs, rs*2, rs*2); ctx.restore();
+    const kS = (Math.round(rs*2)/2).toFixed(1); if (GX.soareK !== kS+dpr) { GX.soareImg = gxSoare(+kS, Math.min(dpr*1.25, 3.5)); GX.soareK = kS+dpr; }
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.03); if (GX.soareImg.width) ctx.drawImage(GX.soareImg, -rs, -rs, rs*2, rs*2); ctx.restore();
     const rT = (9+17)*k0; ctx.beginPath(); ctx.arc(cx,cy,rT+1,0,6.283); ctx.setLineDash([2,4]); ctx.strokeStyle = etfW >= D.pr.tintaETF-0.1 ? 'rgba(126,226,200,.95)' : 'rgba(255,235,200,.4)'; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
     if (st.sel==='ETF') { ctx.beginPath(); ctx.arc(cx,cy,rT+8,0,6.283); ctx.strokeStyle='#fff'; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]); }
     GX.stea = { x:cx, y:cy };
@@ -3264,17 +3319,25 @@ function galaxie(){
         ctx.globalAlpha=1; });
       if ($('gxd') && !st.rel) $('gxd').innerHTML = viu ? `Investiția de azi: <b>${esc(st.met.tinte.map(s=>s.replace(/\..*$/,'')).join(', '))}</b>` : '';
       if (!viu) { st.met = null; setTimeout(()=>{ if ($('gxd') && !GX.st?.rel) $('gxd').textContent=''; }, 1800); } }
-    // numele: cele din față au prioritate; un nume care s-ar suprapune nu se scrie în cadrul acesta
-    const puse = [], MT = GX.mt || (GX.mt = new Map()); ctx.font = '600 10px system-ui,sans-serif'; ctx.textAlign = 'center';
-    for (const e of ET.sort((a,b)=>b.z-a.z)) { if (!e.mare && st.sel!==e.sym) continue; if (!MT.has(e.t)) MT.set(e.t, ctx.measureText(e.t).width);
-      const w = MT.get(e.t)/2+3, h = 7, y0 = e.y-4; if (puse.some(b=>Math.abs(b.x-e.x)<w+b.w && Math.abs(b.y-y0)<h+b.h) || (Math.abs(cx-e.x)<w+rs && Math.abs(cy-y0)<h+rs)) continue;
-      puse.push({ x:e.x, y:y0, w, h }); ctx.globalAlpha = e.z<0 ? 0.7 : 0.95; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(2,3,10,.85)'; ctx.strokeText(e.t, e.x, e.y); ctx.fillStyle = '#eef2fa'; ctx.fillText(e.t, e.x, e.y); }
+    // numele: fiecare planetă își are numele. Se încearcă sub ea, deasupra, în dreapta, în stânga; se alege primul loc care nu
+    // acoperă alt nume, altă planetă sau soarele (dacă niciunul nu e liber, cel cu cea mai mică suprapunere)
+    const puse = [], MT = GX.mt || (GX.mt = new Map()); ctx.font = '600 10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const corpuri = ET.map(e=>({ x:e.x, y:e.y, r:e.r+1 })).concat([{ x:cx, y:cy, r:rs*1.1 }]);
+    const supra = (x, y, w, h) => { let s = 0; for (const b of puse) { const ox = Math.min(x+w, b.x+b.w) - Math.max(x-w, b.x-b.w), oy = Math.min(y+h, b.y+b.h) - Math.max(y-h, b.y-b.h); if (ox>0 && oy>0) s += ox*oy*3; }
+      for (const c of corpuri) { const dx = Math.max(Math.abs(c.x-x)-w, 0), dy = Math.max(Math.abs(c.y-y)-h, 0); const d = c.r - Math.hypot(dx,dy); if (d > 0) s += d*d*2; }
+      if (x-w < 2 || x+w > W-2 || y-h < 2 || y+h > H-2) s += 400; return s; };
+    for (const e of ET.sort((a,b)=>(b.sym===st.sel)-(a.sym===st.sel) || b.r-a.r)) { if (!MT.has(e.t)) MT.set(e.t, ctx.measureText(e.t).width);
+      const w = MT.get(e.t)/2+3, h = 6.5, cand = [[e.x, e.y+e.ri*0.42+e.r*0.62+9], [e.x, e.y-e.ri*0.42-e.r*0.62-9], [e.x+e.ri+w+2, e.y], [e.x-e.ri-w-2, e.y], [e.x, e.y+e.ri*0.42+e.r*0.62+21]];
+      let best = null; for (const [x,y] of cand) { const v = supra(x, y, w, h); if (!best || v < best.v) best = { x, y, v }; if (v === 0) break; }
+      puse.push({ x:best.x, y:best.y, w, h }); ctx.globalAlpha = e.z<0 ? 0.78 : 1; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(2,3,10,.85)'; ctx.strokeText(e.t, best.x, best.y);
+      ctx.fillStyle = e.sym===st.sel ? '#ffffff' : '#e6ebf5'; ctx.fillText(e.t, best.x, best.y); }
+    ctx.textBaseline = 'alphabetic';
     ctx.globalAlpha = 1;
     GX.cadru = P_;
     if (!calm && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
   }
   cv.onpointerdown = e => { GX.atins = performance.now(); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(cadru); } st.drag = {x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, tm:performance.now()}; cv.setPointerCapture(e.pointerId); };
-  cv.onpointermove = e => { const d=st.drag; if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; st.yaw += dx*0.012; st.vy = dx*0.012*0.6; st.tilt = Math.min(Math.max(st.tilt - dy*0.004, 0.22), 0.9); d.x=e.clientX; d.y=e.clientY; if (calm) cadru(performance.now()); };
+  cv.onpointermove = e => { const d=st.drag; if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; st.yaw += dx*0.012; st.vy = dx*0.012*0.6; st.tilt = Math.min(Math.max(st.tilt - dy*0.004, 0.5), 0.9); d.x=e.clientX; d.y=e.clientY; if (calm) cadru(performance.now()); };
   cv.onpointerup = e => { const d=st.drag; st.drag=null; if (!d) return; if (Math.hypot(e.clientX-d.x0, e.clientY-d.y0) < 8) gxAtinge(e); };
   cv.onpointercancel = () => { st.drag=null; };
   GX.cadruF = cadru;
@@ -3299,7 +3362,9 @@ function gxInfo(){
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
   const rsi = p.ind?.rsi, nl = SNAP.dividende?.luni?.[p.symbol]?.length || 0, sp = p.etf ? null : SNAP.teme?.[p.tema];
-  const extra = [rsi >= 70 ? `RSI ${nf(rsi,0)}, supraîncălzită` : rsi != null && rsi <= 30 ? `RSI ${nf(rsi,0)}, răcită` : '', p.ind?.subProtectie ? '<span class="neg">sub nivelul de alertă</span>' : '', nl ? `${nl} ${nl===1?'dividend':'dividende'} pe an` : ''].filter(Boolean).join(' · ');
+  const gp = GX.D?.pl.find(x=>x.p.symbol===p.symbol), nd = gp ? gp.luni : nl;
+  // RSI-ul se vede mereu aici, la planeta atinsă; aura apare pe planetă doar la extreme (peste 70 sau sub 30)
+  const extra = [rsi != null ? `RSI ${nf(rsi,0)}${rsi >= 70 ? ', supraîncălzită' : rsi <= 30 ? ', răcită' : ', normal'}` : '', p.ind?.subProtectie ? '<span class="neg">sub nivelul de alertă</span>' : '', nd ? `${nd} ${nd===1?'dividend':'dividende'} pe an${gp?.luniEst?' (estimat)':''}` : (p.etf ? '' : 'fără dividende')].filter(Boolean).join(' · ');
   el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)}${sp!=null?` <span class="${sp>P().maxTema?'neg':''}">${nf(sp,0)}%</span>`:''} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div>${extra?`<div class="sub">${extra}</div>`:''}</div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
 }
 // v0.50: ce spune sistemul dintr-o privire: orbitele roșii (sectoare peste plafon) și cât din țintă are soarele (ETF-urile)
@@ -3319,12 +3384,15 @@ function vAnaliza(){
   if (incepator()) h += indiciu('Aici vezi cum merg banii, cât risc ai și ce plătești. Atinge orice cartonaș pentru explicații.');
   else h += `<div class="sec" style="margin-top:8px"><h2>Galaxia ta ${q('orbita')}</h2><span class="sub">trage, atinge</span></div>
   <div class="card gxc">${galaxieHTML()}
-    <div class="leg gxleg" data-c="${A('termen','orbita')}">${(()=>{ const ps = SNAP.pozitii, pr = P(), h = ['<span><i class="gxa soare"></i>Soarele: ETF-ul de bază</span>', '<span><i class="gxa planeta"></i>Mărimea: cât ocupă</span>'];
-      if (ps.some(p=>!p.etf && p.pondere>pr.maxActiune)) h.push(`<span><i class="gxa inel"></i>Inel: peste ${pr.maxActiune}%</span>`);
-      if (Object.entries(SNAP.teme||{}).some(([k,v])=>!/^ETF/.test(k) && v>pr.maxTema)) h.push('<span><i class="gxa orb"></i>Orbită roșie: sector peste plafon</span>');
-      if (ps.some(p=>SNAP.dividende?.luni?.[p.symbol]?.length)) h.push('<span><i class="gxa luna"></i>Lunile: dividende pe an</span>');
-      if (ps.some(p=>p.ind?.subProtectie)) h.push('<span><i class="gxa fis"></i>Aură roșie: sub nivelul de alertă</span>');
-      if (ps.some(p=>p.ind?.rsi>=70)) h.push('<span><i class="gxa cald"></i>RSI peste 70</span>'); if (ps.some(p=>p.ind?.rsi!=null && p.ind.rsi<=30)) h.push('<span><i class="gxa rece"></i>RSI sub 30</span>');
+    <div class="gxleg" data-c="${A('termen','orbita')}">${(()=>{ const ps = SNAP.pozitii, pr = P(), it = (svg, t) => `<span class="gxl">${svg}<span>${t}</span></span>`, h = [];
+      const pl = (c1, c2, extra = '') => `<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="g${c1.slice(1)}" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient></defs>${extra}<circle cx="14" cy="14" r="7" fill="url(#g${c1.slice(1)})"/></svg>`;
+      h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gS" cx="40%" cy="40%" r="60%"><stop offset="0" stop-color="#fffbe8"/><stop offset=".55" stop-color="#ffd36b"/><stop offset="1" stop-color="#ff8f30"/></radialGradient><radialGradient id="gC"><stop offset=".45" stop-color="#ffcf80" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf80" stop-opacity="0"/></radialGradient></defs><circle cx="14" cy="14" r="13" fill="url(#gC)"/><circle cx="14" cy="14" r="7" fill="url(#gS)"/></svg>`, 'Soarele: ETF-ul de bază'));
+      h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gM" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#e8d6b4"/><stop offset="1" stop-color="#6b4a30"/></radialGradient></defs><circle cx="7" cy="18" r="3.5" fill="url(#gM)"/><circle cx="18" cy="12" r="8" fill="url(#gM)"/></svg>`, 'Mărimea: câți bani are'));
+      if (ps.some(p=>!p.etf && p.pondere>pr.maxActiune)) h.push(it(pl('#efe2c4','#7a5a34', '<ellipse cx="14" cy="14" rx="13" ry="4" fill="none" stroke="#e3cfa6" stroke-width="2" transform="rotate(-14 14 14)"/>'), `Inel: peste ${pr.maxActiune}% din bani`));
+      if (Object.entries(SNAP.teme||{}).some(([k,v])=>!/^ETF/.test(k) && v>pr.maxTema)) h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><ellipse cx="14" cy="14" rx="12.5" ry="6" fill="none" stroke="#ff7a5f" stroke-width="1.8"/><circle cx="25" cy="15" r="2.6" fill="#c9a47c"/><circle cx="14" cy="14" r="2.6" fill="#ffd36b"/></svg>`, 'Orbită roșie: sector peste plafon'));
+      h.push(it(pl('#9ec4ff','#2a4a8c', '<circle cx="24" cy="10" r="2" fill="#dfe3ea"/><circle cx="5" cy="19" r="2" fill="#fbbf24"/>'), 'Lunile: plăți de dividend pe an'));
+      h.push(it(pl('#d9c6a6','#5e4630', '<circle cx="14" cy="14" r="12.5" fill="#ff8a3d" opacity=".35"/><path d="M14 1.5a12.5 12.5 0 0 0 0 25z" fill="#7dd3fc" opacity=".55"/>'), 'Aura: RSI peste 70 / sub 30'));
+      if (ps.some(p=>p.ind?.subProtectie)) h.push(it(pl('#d9c6a6','#5e4630', '<circle cx="14" cy="14" r="12.5" fill="#ff4664" opacity=".4"/>'), 'Aură roșie: sub nivelul de alertă'));
       return h.join(''); })()}</div></div>`;
   // 2) Sănătatea, pe scurt
   h += `<button class="card sanc" data-c="${A('deschideSect','sanatate')}">${inel(sn.sc, sn.et[1])}<div style="flex:1;min-width:0;text-align:left"><div class="lbl">Sănătatea portofoliului</div><div class="fd" style="font-size:var(--t4);font-weight:700;color:var(${sn.et[1]})">${sn.et[0]}</div>

@@ -967,6 +967,52 @@ header.compact #stare[data-pas^="✓"]::after{color:var(--pos)}
 .gxa.inel{background:radial-gradient(circle at 35% 35%,#eadcc0,#b89a6a 60%,#3a2a18);box-shadow:0 0 0 1.5px var(--panel),0 0 0 3px #d9c49c}
 .gxa.orb{border:1.5px solid #ff7a5f;background:transparent}
 .rp-foot{color:var(--mut);font-size:var(--t1);text-align:center;margin-top:12px}
+/* ===== v0.53: finisaj vizual după revizuirea de design ===== */
+/* 1) pozițiile fără nimic de spus: un singur rând */
+.pr.p2 .av{width:2.75rem;height:2.75rem}.pr.p2{grid-template-columns:2.75rem minmax(0,1fr) auto}
+.pr.p2.cmp{grid-template-columns:2.75rem minmax(0,1fr) auto;grid-template-areas:"av m r";padding:12px 16px;row-gap:0}
+.pr.p2.cmp .n{margin-top:2px}
+.pr.p2.cmp .pmeta{margin-top:4px;font-size:var(--t1)}.pr.p2.cmp .pmeta .pt{color:var(--mut)}
+.pr.p2.cmp::before{display:none}.pr.p2.cmp .pfund{height:70%}
+/* 2) siglele: aceeași familie; inițialele pe nuanța sectorului, nu pe gradient plin */
+.av:not(.img):not(.vt){color:color-mix(in srgb,var(--c) 70%,var(--ink));background:color-mix(in srgb,var(--c) 18%,var(--panel2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 42%,transparent)}
+.av.img{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 42%,transparent)}
+/* 3) paleta: titlurile de secțiune neutre, butoanele brokerilor neutre (doar marca are culoarea brokerului), semnalul „prea mare” = atenție */
+:root{--reechilibreaza:var(--warn)!important}
+.sec h2{background:none!important;-webkit-text-fill-color:currentColor!important;color:var(--ink2)}
+.brk{color:var(--ink);background:color-mix(in srgb,var(--panel2) 92%,transparent)!important;border:1px solid color-mix(in srgb,var(--ink) 12%,transparent);box-shadow:none}
+.brk.t212 .bm{background:#1b73e8;color:#fff}.brk.etoro .bm{background:#13b23a;color:#fff}.brk .ex{stroke:var(--mut)}.brk::after{display:none}
+/* 4) avertismentele: un singur sistem, 3 niveluri (atenție, problemă, bine) + informare; iconiță în cerc, fundal în nuanța nivelului */
+.al{--k:var(--warn);position:relative;padding:12px 16px 12px 44px;border:1px solid color-mix(in srgb,var(--k) 30%,transparent);border-left:1px solid color-mix(in srgb,var(--k) 30%,transparent);background:color-mix(in srgb,var(--k) 9%,var(--panel2));color:var(--ink)}
+.al::before{content:"!";position:absolute;left:12px;top:12px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font:800 12px/1 system-ui,sans-serif;color:var(--bg);background:var(--k)}
+.al.err{--k:var(--neg)}.al.good{--k:var(--pos)}.al.good::before{content:"✓"}.al.info{--k:var(--acc)}.al.info::before{content:"i"}
+.vps{border:1px solid color-mix(in srgb,currentColor 30%,transparent)}.vps.ok{background:color-mix(in srgb,var(--pos) 9%,var(--panel2))}.vps.nu{background:color-mix(in srgb,var(--neg) 9%,var(--panel2))}.vps.atentie{background:color-mix(in srgb,var(--warn) 9%,var(--panel2))}
+/* 5) conținutul care trece pe sub bara de jos se estompează, nu se vede tăiat */
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh,84px) + 16px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 35%,transparent);pointer-events:none;z-index:9}
+body.nolive::after,html.blocat body::after{display:none}
+/* 6) antetul: doar iconițe, Actualizează evidențiat */
+header.compact .ib.ha{min-width:44px;min-height:44px}
+header #bref.ha{background:color-mix(in srgb,var(--acc) 16%,transparent)!important}
+header.compact .ib.ha+.ib.ha::before{display:none}.hact{gap:2px}
+/* 7) secțiunile: fără linia cu punct între ele, doar spațiu */
+.sec::before,.sec::after{display:none!important}.sec{margin-top:32px!important;padding-top:0}
+/* 8) casetele din Analiză: titlurile pe un rând, liniuța goală devine text, casetă singură se lățește */
+.tile.lat2{grid-column:span 2}
+.tile .tgol{font:600 var(--t3)/1.3 system-ui,sans-serif;color:var(--mut)}
+/* 10) verdictul din fișă: mărime de titlu normal, culoarea doar pe punct */
+.vdt{display:flex;align-items:flex-start;gap:8px;font-size:var(--t4);font-weight:750;color:var(--ink);margin-top:4px;line-height:1.25}.vdt i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--k);box-shadow:0 0 0 4px color-mix(in srgb,var(--k) 22%,transparent);margin-top:.42em}
+/* 11) text secundar mai lizibil pe întunecat */
+:root:not([data-theme="light"]){--mut:#8a98a8}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--mut:#616e80}}
+/* 12) comutatoarele în culoarea aplicației */
+.sw.on{background:var(--acc);border-color:var(--acc)}
+/* 13) Setări: cardul de sus e o bandă de stare, copyright-ul e text, nu link */
+.sethero{display:flex;gap:12px;align-items:center;margin-top:8px;padding:12px 16px!important}.sethero .lv{--lvs:36px}
+.link.copy{display:block;margin:12px auto 4px;text-align:center;color:var(--mut);font-weight:500;font-size:var(--t1)}
+/* 14) perioadele: fără separatoare, ca la celelalte comutatoare */
+.pseg button+button::before{display:none}
+/* 15) bara de jos: punctul decorativ al iconițelor e colorat doar pe tabul activ, ca să nu pară notificare */
+nav button:not(.on) .ico .s{fill:currentColor;opacity:.5}
 </style>
 </head>
 <body>

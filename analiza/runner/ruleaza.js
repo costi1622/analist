@@ -67,7 +67,8 @@ if (env.PROFIL_NOU) {
     const { ETF_CATALOG, ACTIUNI_CATALOG } = await import('./config.js');
     const tintaETF = Number.isInteger(p.tintaETF) && p.tintaETF >= 0 && p.tintaETF <= 100 ? p.tintaETF : null;
     const alese = (Array.isArray(p.alese) ? p.alese : []).filter(k => ETF_CATALOG[k] || ACTIUNI_CATALOG[k]).slice(0, 10);
-    cache.profil = JSON.stringify({ anTinta: p.anTinta, suma: Math.round(p.suma), alerte, ...(tintaETF != null ? { tintaETF } : {}), alese });
+    const impartire = p.impartire === 'tinte' ? 'tinte' : 'echilibrat';
+    cache.profil = JSON.stringify({ anTinta: p.anTinta, suma: Math.round(p.suma), alerte, ...(tintaETF != null ? { tintaETF } : {}), alese, impartire });
     console.log('Profil actualizat din aplicație.');
   } catch (e) { console.log(`::warning::Profilul primit din aplicație a fost ignorat: ${e.message}`); }
 }

@@ -9,8 +9,8 @@
 <script src="garda.js"></script>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#0b0f14" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f3f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#05060f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f2ea" media="(prefers-color-scheme: light)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <title>Analist</title>
@@ -384,12 +384,12 @@ input[type=range]{padding:0;margin:8px 0 0;height:36px;accent-color:var(--acc);b
 .mod .ch,.mod .pill2{position:absolute;right:24px}.mod.incurs .tx{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
 .lpas{margin-top:12px;font-size:var(--t1);color:var(--mut);text-align:center}
 /* sigla și ecranul de pornire */
-#splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(90% 60% at 50% 42%,#13233d 0%,#070b11 62%);overflow:hidden;transition:opacity .6s ease,transform .7s cubic-bezier(.6,0,.4,1)}
+#splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(90% 60% at 50% 42%,#1b1840 0%,#05060f 62%);overflow:hidden;transition:opacity .6s ease,transform .7s cubic-bezier(.6,0,.4,1)}
 #splash::before,#splash::after{content:'';position:absolute;inset:-50%;background-image:radial-gradient(1.2px 1.2px at 20% 30%,#cfe3ff,transparent),radial-gradient(1px 1px at 70% 20%,#cfe3ff,transparent),radial-gradient(1.4px 1.4px at 40% 75%,#cfe3ff,transparent),radial-gradient(1px 1px at 85% 65%,#cfe3ff,transparent),radial-gradient(1.1px 1.1px at 10% 85%,#cfe3ff,transparent),radial-gradient(.9px .9px at 55% 45%,#cfe3ff,transparent);background-size:260px 260px;opacity:.55;animation:spStele 14s linear infinite}
 #splash::after{background-size:420px 420px;opacity:.3;animation-duration:22s}
 @keyframes spStele{to{transform:translate(260px,130px)}}
 #splash .spc{position:relative;display:flex;flex-direction:column;align-items:center}
-#splash .spl{width:190px;height:190px;animation:spIntra .8s cubic-bezier(.2,.9,.25,1.2) both}#splash .spl svg{width:100%;height:100%;filter:drop-shadow(0 18px 50px rgba(90,162,255,.45))}
+#splash .spl{width:190px;height:190px;animation:spIntra .8s cubic-bezier(.2,.9,.25,1.2) both}#splash .spl svg{width:100%;height:100%;filter:drop-shadow(0 18px 50px rgba(124,108,255,.5))}
 #splash .spw{margin-top:4px;font:700 var(--t6) SG,system-ui,sans-serif;letter-spacing:-.6px;background:linear-gradient(90deg,#eef3f8,#9fd0ff 50%,#eef3f8);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:spText .6s .2s cubic-bezier(.2,.8,.2,1) both,spLuciu 2.4s .8s ease-in-out infinite}
 #splash .spt{margin-top:8px;font-size:var(--t2);color:#8fa1b6;letter-spacing:.3px;animation:spText .6s .35s cubic-bezier(.2,.8,.2,1) both}
 @keyframes spIntra{from{opacity:0;transform:scale(.4) rotate(-40deg)}to{opacity:1;transform:none}}
@@ -1002,7 +1002,7 @@ header.compact .ib.ha+.ib.ha::before{display:none}.hact{gap:2px}
 /* 10) verdictul din fișă: mărime de titlu normal, culoarea doar pe punct */
 .vdt{display:flex;align-items:flex-start;gap:8px;font-size:var(--t4);font-weight:750;color:var(--ink);margin-top:4px;line-height:1.25}.vdt i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--k);box-shadow:0 0 0 4px color-mix(in srgb,var(--k) 22%,transparent);margin-top:.42em}
 /* 11) text secundar mai lizibil pe întunecat */
-:root:not([data-theme="light"]){--mut:#8a98a8}
+:root:not([data-theme="light"]){--mut:#8c92b8}
 @media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--mut:#616e80}}
 /* 12) comutatoarele în culoarea aplicației */
 .sw.on{background:var(--acc);border-color:var(--acc)}
@@ -1013,6 +1013,81 @@ header.compact .ib.ha+.ib.ha::before{display:none}.hact{gap:2px}
 .pseg button+button::before{display:none}
 /* 15) bara de jos: punctul decorativ al iconițelor e colorat doar pe tabul activ, ca să nu pară notificare */
 nav button:not(.on) .ico .s{fill:currentColor;opacity:.5}
+/* ===================== v0.54: identitatea „Galaxie” ===================== */
+/* 1) culorile: noapte adâncă, accent indigo, semnătura în gradient (indigo → albastru → turcoaz), folosită rar */
+:root{--g1:#8b6cff;--g2:#5b7cff;--g3:#2fd4c6;--grad:linear-gradient(135deg,var(--g1),var(--g2) 55%,var(--g3));
+--bg:#05060f;--bg2:#090b1a;--panel:#0d1024;--panel2:#151a38;--line:#1f2547;--ink:#eef0ff;--ink2:#b4b9dc;--mut:#8c92b8;--acc:#8a96ff;--acc2:#2fd4c6;--accInk:#ffffff;
+--pos:#4ade80;--neg:#fb7185;--flat:#9aa0c4;--warn:#f5b544;--adauga:#4ade80;--verifica:#fb7185;--asteapta:#7fa8ff;--opor:#fcd34d;--nu_adauga:#f5b544;
+--s1:#8a96ff;--s2:#f5a65b;--grid:#161b36;--glow:rgba(124,92,255,.20);--m1:#7c6cff;--m2:#2fd4c6;--m3:#8b6cff;
+--stele:radial-gradient(1px 1px at 22px 34px,rgba(255,255,255,.55),transparent 70%),radial-gradient(1px 1px at 140px 90px,rgba(255,255,255,.35),transparent 70%),radial-gradient(1.4px 1.4px at 210px 220px,rgba(200,210,255,.5),transparent 70%),radial-gradient(1px 1px at 70px 260px,rgba(255,255,255,.3),transparent 70%),radial-gradient(1px 1px at 260px 150px,rgba(255,255,255,.25),transparent 70%)}
+:root[data-mood="sus"]{--m1:#7c6cff;--m2:#4ade80}:root[data-mood="jos"]{--m1:#7c6cff;--m2:#fb7185}
+/* 13) tema luminoasă cu caracter: hârtie caldă, cerneală indigo */
+:root[data-theme="light"]{--bg:#f6f2ea;--bg2:#efe9de;--panel:#fffdf8;--panel2:#f3eee4;--line:#e6dfd2;--ink:#1a1630;--ink2:#463f5c;--mut:#6b6480;--acc:#4f46e5;--acc2:#0a6d64;--accInk:#ffffff;
+--pos:#136c37;--neg:#be123c;--flat:#6b6480;--warn:#8a5306;--adauga:#136c37;--verifica:#be123c;--asteapta:#3b5bdb;--opor:#8a5306;--nu_adauga:#8a5306;--s1:#4f46e5;--s2:#c2410c;--grid:#ece5d8;--glow:rgba(79,70,229,.10);--stele:none;--g1:#6d4ef0;--g2:#4f46e5;--g3:#0a6d64}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f6f2ea;--bg2:#efe9de;--panel:#fffdf8;--panel2:#f3eee4;--line:#e6dfd2;--ink:#1a1630;--ink2:#463f5c;--mut:#6b6480;--acc:#4f46e5;--acc2:#0a6d64;--accInk:#ffffff;
+--pos:#136c37;--neg:#be123c;--flat:#6b6480;--warn:#8a5306;--adauga:#136c37;--verifica:#be123c;--asteapta:#3b5bdb;--opor:#8a5306;--nu_adauga:#8a5306;--s1:#4f46e5;--s2:#c2410c;--grid:#ece5d8;--glow:rgba(79,70,229,.10);--stele:none;--g1:#6d4ef0;--g2:#4f46e5;--g3:#0a6d64}}
+html,body{background:var(--stele),radial-gradient(120% 55% at 85% -10%,var(--glow),transparent 60%),var(--bg);background-size:300px 300px,100% 100%,auto;background-repeat:repeat,no-repeat,no-repeat;background-attachment:fixed}
+/* gradientul de semnătură: butonul principal, actualizarea, tabul activ, bara de progres */
+.btn:not(.ghost):not(.red){background:var(--grad);color:#fff;box-shadow:0 10px 24px -12px var(--g2)}
+header #bref.ha{background:var(--grad)!important;box-shadow:0 8px 20px -10px var(--g2)!important}header #bref.ha .ico{stroke:#fff!important}header #bref.ha .ico .s{fill:#fff}
+#rbar i,#rbar::before{background:var(--grad)!important}
+/* 2) cardul de sus: un singur erou, chenar în gradient și lumina zilei (verde sau roșie) */
+.card.hcard.erou{border-radius:var(--r4) !important;border:1px solid transparent!important;background:radial-gradient(90% 70% at 100% 0%,color-mix(in srgb,var(--zi,var(--g1)) 16%,transparent),transparent 60%) padding-box,linear-gradient(180deg,var(--panel2),var(--panel)) padding-box,linear-gradient(140deg,var(--g1),color-mix(in srgb,var(--ink) 6%,transparent) 40%,color-mix(in srgb,var(--ink) 4%,transparent) 60%,var(--g3)) border-box!important;box-shadow:0 24px 60px -28px var(--zi,var(--g2))!important}
+.card.hcard.erou.up{--zi:var(--pos)}.card.hcard.erou.down{--zi:var(--neg)}
+.hcard.erou .hero.big{font-size:var(--t6);letter-spacing:-1.5px}
+.hcard.erou .kpi3{grid-template-columns:repeat(auto-fit,minmax(5.75rem,1fr));gap:8px 0;margin-top:16px;padding-top:16px;border-top:1px solid color-mix(in srgb,var(--ink) 9%,transparent)}
+.hcard.erou .kpi3>div{background:none!important;border:0!important;box-shadow:none!important;border-radius:0px;padding:0 12px;border-left:1px solid color-mix(in srgb,var(--ink) 9%,transparent)!important}
+.hcard.erou .kpi3>div:first-child{padding-left:0;border-left:0!important}
+.hcard.erou .kpi3 span{letter-spacing:.2px;font-size:var(--t1)}
+/* 3) simbolurile desenate: săgeata mișcării, chevronul, steaua */
+.mv .tri{width:.7em;height:.7em;fill:currentColor;flex:none}.mv .pct{display:inline-block;width:.45em;height:.45em;border-radius:50%;background:currentColor;margin-right:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sec .tri{width:.75em;height:.75em;fill:currentColor;vertical-align:-1px}
+.ch .ico{width:18px;height:18px;stroke:var(--mut)}.ch{display:inline-grid;place-items:center}
+.pr .star .ico{width:15px;height:15px;stroke:var(--opor);vertical-align:-2px}.pr .star .ico .f{fill:var(--opor);opacity:.35}
+.pv .ico{width:14px;height:14px;stroke:currentColor;vertical-align:-2px}
+svg.tri{width:.72em;height:.72em;fill:currentColor;flex:none}.mot .pct{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor}
+/* 5) culoarea mișcării după mărime */
+.mv.i0{color:var(--ink2)!important;background:color-mix(in srgb,var(--ink) 7%,transparent)!important}
+.mv.i1{background:color-mix(in srgb,currentColor 11%,transparent)}
+.mv.i2{background:color-mix(in srgb,currentColor 20%,transparent);box-shadow:0 0 16px -3px color-mix(in srgb,currentColor 60%,transparent)}
+.kpi3 .mv.i2{box-shadow:none}
+/* 4) avatarele: iconița sectorului în culoarea lui */
+.av.sic2{color:var(--c);background:linear-gradient(145deg,color-mix(in srgb,var(--c) 24%,var(--panel2)),color-mix(in srgb,var(--c) 8%,var(--panel)))!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent)!important}
+.av.sic2 .ico{width:52%;height:52%;stroke:var(--c)}.av.sic2 .ico .f{fill:var(--c);opacity:.22}
+/* 6) adâncimea: fundalul cardurilor puțin mai deschis decât noaptea, chenar fin; cardul erou iese în față */
+.card,.tile{border-radius:var(--r3)}
+/* 7) tipografia: titlurile în Space Grotesk, ierarhie mai clară */
+.sec h2{font-family:var(--fd);letter-spacing:1px}
+.card h3,.todo h3{font-size:var(--t3);letter-spacing:-.2px}
+/* 8) graficele: zona de sub linie mai prezentă, capătul liniei mai luminos */
+.chart svg .cap{opacity:.28}
+/* 9 + 15) orbita lunii închisă: planeta stă pe inel; prima dată face o tură */
+.hfoot.inchisa .orb{filter:drop-shadow(0 0 4px var(--pos))}
+.hfoot.prima .orbg{animation:orbTura 1.4s cubic-bezier(.3,.8,.3,1) .4s both}
+@keyframes orbTura{from{transform:rotate(-360deg)}to{transform:none}}
+@media (prefers-reduced-motion: reduce){.hfoot.prima .orbg{animation:none}}
+/* 10) „Ce cumperi luna asta” ca un bon: bandă în gradient sus și linie perforată înainte de detalii */
+.card.bon{position:relative;border-top:3px solid transparent!important;background:linear-gradient(var(--panel),var(--panel)) padding-box,var(--grad) border-box!important;overflow:visible}
+.card.bon .kvp{position:relative;padding-top:16px;border-top:2px dashed color-mix(in srgb,var(--ink) 16%,transparent)}
+.card.bon .kvp::before,.card.bon .kvp::after{content:"";position:absolute;top:-10px;width:18px;height:18px;border-radius:50%;background:var(--bg)}
+.card.bon .kvp::before{left:-26px}.card.bon .kvp::after{right:-26px}
+/* 11) Învață: nivelurile sunt planete, modulele terminate primesc o insignă */
+.nivn{border-radius:50%;width:34px;height:34px;color:#fff;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,#fff 35%,var(--g1)),var(--g1) 45%,color-mix(in srgb,var(--g1) 50%,#000));box-shadow:0 0 0 4px color-mix(in srgb,var(--g1) 18%,transparent),0 6px 18px -6px var(--g1)}
+.niv:nth-of-type(3n+2) .nivn,.drum .niv~.niv .nivn{background:radial-gradient(circle at 35% 30%,color-mix(in srgb,#fff 35%,var(--g3)),var(--g3) 45%,color-mix(in srgb,var(--g3) 50%,#000));box-shadow:0 0 0 4px color-mix(in srgb,var(--g3) 18%,transparent)}
+.drum .niv~.niv~.niv .nivn{background:radial-gradient(circle at 35% 30%,#ffe7b0,#f5a65b 45%,#8a4a14);box-shadow:0 0 0 4px rgba(245,166,91,.18)}
+.drum::before{background:linear-gradient(var(--g1),var(--g3),#f5a65b)!important;opacity:.45!important;width:2px}
+.acp i{background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--ink) 18%,var(--panel2)),var(--panel2))}
+.acp.aici i,.acp.gata i{color:#fff;border-color:transparent;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,#fff 35%,var(--g2)),var(--g2) 50%,color-mix(in srgb,var(--g2) 50%,#000));box-shadow:0 0 0 4px color-mix(in srgb,var(--g2) 18%,transparent)}
+.mod.gata .pill2{background:var(--grad)!important;color:#fff!important;border:0!important}
+/* 12) bara de jos: doar iconițe; tabul activ își arată numele într-o pastilă în gradient, care se mută elastic */
+@media (max-width:1099.98px){
+  nav button{font-size:0;gap:0;flex:1 1 0;transition:color .25s}
+  nav button.on{flex:2.1 1 0;flex-direction:row;gap:8px;font-size:var(--t2);color:#fff}
+  nav button.on .ico{stroke:#fff!important;color:#fff}nav button.on .ico .s{fill:#fff!important}
+  nav .ind{background:var(--grad)!important;border:0!important;box-shadow:0 10px 24px -10px var(--g2)!important;transition:transform .45s cubic-bezier(.3,1.4,.5,1),width .45s cubic-bezier(.3,1.4,.5,1)!important}
+  nav .ni .nb{font-size:var(--t1)}
+}
 </style>
 </head>
 <body>

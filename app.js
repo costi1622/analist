@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.56.0';
+const APP_VER = '0.57.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -652,11 +652,63 @@ function zborAvatar(din, spre, catre, dur){
     prev = r; requestAnimationFrame(pas); };
   requestAnimationFrame(pas); setTimeout(fin, dur + 900);
 }
+// v0.57: fișa crește din rândul atins: un panou pornește de pe rând și se întinde până la locul foii, apoi apare conținutul
+function crestePanou(r0, sh){
+  if (miscareRedusa() || !r0.width || r0.bottom < 0 || r0.top > innerHeight) return;
+  sh.classList.add('morf'); const r1 = { top: innerHeight - sh.offsetHeight + (parseFloat(sh.style.getPropertyValue('--jum'))||0) * sh.classList.contains('jum') };
+  const m = document.createElement('div'); m.className = 'morf'; m.setAttribute('aria-hidden','true'); $('veil').after(m);
+  const ins = (t,r,b,l,k) => `inset(${t}px ${r}px ${b}px ${l}px round ${k}px)`;
+  const a = m.animate([{ clipPath: ins(r0.top, innerWidth-r0.right, innerHeight-r0.bottom, r0.left, 16), opacity: .9 },
+    { clipPath: ins(Math.max(r1.top,0), 0, 0, 0, 24), opacity: 1 }], { duration: 360, easing: 'cubic-bezier(.2,.85,.25,1)', fill: 'forwards' });
+  const fin = () => { m.remove(); sh.classList.remove('morf'); };
+  a.onfinish = () => { m.animate([{opacity:1},{opacity:0}], {duration:160, fill:'forwards'}).onfinish = fin; }; setTimeout(fin, 900);
+}
+// v0.57: atingi o planetă din galaxie: un cerc în culoarea ei se mărește peste ecran, iar fișa urcă din el
+function zoomPlaneta(x, y, r, col, sym){
+  if (miscareRedusa()) { detaliu(sym); return; }
+  const z = document.createElement('div'); z.className = 'zoomp'; z.setAttribute('aria-hidden','true');
+  Object.assign(z.style, { left:(x-r)+'px', top:(y-r)+'px', width:2*r+'px', height:2*r+'px', background:`radial-gradient(circle at 35% 30%, #fff8, ${col} 45%, color-mix(in srgb, ${col} 40%, #000) 100%)` });
+  document.body.appendChild(z); const k = Math.hypot(innerWidth, innerHeight) / r;
+  z.animate([{ transform:'scale(1)', opacity:1 }, { transform:`scale(${k*0.35})`, opacity:.85, offset:.55 }, { transform:`scale(${k})`, opacity:0 }], { duration:520, easing:'cubic-bezier(.5,0,.3,1)', fill:'forwards' }).onfinish = () => z.remove();
+  setTimeout(()=>{ z.remove(); }, 1200); vib(); setTimeout(()=>detaliu(sym), 170);
+}
+// v0.57: căutare rapidă — scrii „nv” și apare NVDA; caută în pozițiile tale și în ideile noi din catalog
+function cautare(){
+  openSheet(`<div class="fisa cautf" data-plin><div class="dh"><div class="grab"></div><h2 style="margin:0 0 12px">Caută o acțiune</h2>
+    <label class="qbox">${ic('lupa')}<input id="qcauta" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Simbol sau nume, de exemplu nv" aria-label="Simbol sau nume"></label></div>
+    <div id="qrez" role="list" aria-live="polite"></div></div>`);
+  const q = $('qcauta'); q.addEventListener('input', cautaFiltru); q.addEventListener('keydown', e=>{ if (e.key==='Enter') { e.preventDefault(); $('qrez').querySelector('button')?.click(); } });
+  cautaFiltru(); setTimeout(()=>{ try { q.focus({preventScroll:true}); } catch(e){} }, 60);
+}
+function cautaFiltru(){
+  const el = $('qrez'), q = ($('qcauta')?.value||'').trim().toLowerCase(); if (!el) return;
+  const potr = (sym, nume) => { if (!q) return 1; const a = sym.toLowerCase(), b = String(nume||'').toLowerCase(); return a.startsWith(q) ? 3 : b.split(/[\s.,-]+/).some(w=>w.startsWith(q)) ? 2 : (a.includes(q) || b.includes(q)) ? 1 : 0; };
+  const tale = (SNAP?.pozitii||[]).filter(p=>!p.virtual).map(p=>({p, s:potr(p.symbol, p.name)})).filter(x=>x.s).sort((a,b)=>b.s-a.s || b.p.pondere-a.p.pondere).slice(0, q?8:6);
+  const idei = q ? recomandariActiuni().map(r=>({r, s:potr(r.ticker, r.nume)})).filter(x=>x.s && !tale.some(t=>t.p.symbol===x.r.ticker)).sort((a,b)=>b.s-a.s).slice(0,6) : [];
+  el.innerHTML = (tale.length ? `<div class="lbl" style="margin:16px 2px 8px">${q?'În portofoliul tău':'Cele mai mari poziții'}</div>` + tale.map(({p})=>`<button class="qr" role="listitem" data-c="${A('cautaAlege',p.symbol)}">${avatar(p,'mic')}<span class="tx"><b>${esc(p.symbol)}</b><small>${esc(p.name||p.tema||'')}</small></span>${mv(MISC(p),1)}</button>`).join('') : '')
+    + (idei.length ? `<div class="lbl" style="margin:16px 2px 8px">Idei noi din catalog</div>` + idei.map(({r})=>`<button class="qr" role="listitem" data-c="${A('ideeDeschide',r.ticker)}">${avatar({symbol:r.ticker, tema:r.sector, logo:r.logo},'mic')}<span class="tx"><b>${esc(r.ticker)}</b><small>${esc(r.nume||'')} · ${esc(r.sector||'')}</small></span><span class="eti">idee</span></button>`).join('') : '')
+    + (q && !tale.length && !idei.length ? `<div class="sub" style="padding:16px 2px">Nimic pentru „${esc(q)}”. Caută după simbol (NVDA) sau după nume (Nvidia).</div>` : '');
+}
+function cautaAlege(sym){ vib(); inchideFoaia(true); FOAIE_INLOC = true; detaliu(sym); if (FOAIE_INLOC) { FOAIE_INLOC = false; } }
+function ideeDeschide(t){ const r = recomandariActiuni().find(x=>x.ticker===t); if (!r) return; vib(); inchideFoaia(true); FOAIE_INLOC = true;
+  openSheet(`<div class="fisa"><div class="dh"><div class="grab"></div><div class="lbl">Idee nouă, nu o ai în portofoliu</div></div>${cardActiune(r)}</div>`); }
+// v0.57: apeși lung pe cifra mare și sumele se ascund (sau reapar), cu o estompare scurtă
+function privatAnimat(h){ if (!h) { comutaPrivat(); return; } h.classList.add('vel'); setTimeout(()=>{ comutaPrivat(); document.querySelector('.hero.big')?.classList.add('rev'); toast(S.privat ? 'Sume ascunse. Apasă lung din nou ca să le vezi.' : 'Sumele se văd din nou.'); }, miscareRedusa() ? 0 : 180); }
+(()=>{ let t=null, x0=0, y0=0, el=null;
+  const stop = () => { clearTimeout(t); t=null; el?.classList.remove('apas'); el=null; };
+  addEventListener('pointerdown', e => { const h = e.target.closest?.('.hero.big'); if (!h) return; el=h; x0=e.clientX; y0=e.clientY; h.classList.add('apas');
+    t = setTimeout(()=>{ const hh=el; stop(); try { navigator.vibrate?.([10,40,18]); } catch(e){} privatAnimat(hh); }, 520); });
+  addEventListener('pointermove', e => { if (t && Math.hypot(e.clientX-x0, e.clientY-y0) > 8) stop(); }, {passive:true});
+  ['pointerup','pointercancel','scroll'].forEach(n=>addEventListener(n, ()=>{ if (t) stop(); }, {passive:true}));
+  addEventListener('contextmenu', e => { if (e.target.closest?.('.hero.big')) e.preventDefault(); });
+})();
 const tyFoaie = sh => { try { return new DOMMatrixReadOnly(getComputedStyle(sh).transform).m42 || 0; } catch(e) { return 0; } };
 function deschideDetaliu(sym, el){
   if (!el || $('sheet').classList.contains('on')) { detaliu(sym); return; }
+  const rand = el.closest?.('.pr,.pf,.card');
   detaliu(sym);
   const sh = $('sheet'), a = sh.querySelector('.dh .av'); if (!a) return;
+  if (rand) crestePanou(rand.getBoundingClientRect(), sh);
   zborAvatar(el, a, () => { const r = a.getBoundingClientRect(), ty = tyFoaie(sh); return { left:r.left, top:r.top-ty, width:r.width, height:r.height }; }, 420);
 }
 function spatiuJos(){ const n=document.querySelector('nav .in'), hd=document.querySelector('header'); if(n) document.documentElement.style.setProperty('--navh', (n.getBoundingClientRect().height+12)+'px'); if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight+'px'); }
@@ -707,7 +759,11 @@ function render(){
   if (VIEW === 'noutati') { intraNoutati(); if (intra) filtreVizibile(); } else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }
 }
-const skeleton = () => `<div class="sk" style="height:150px;margin-bottom:12px"></div><div class="sk" style="height:110px;margin-bottom:12px"></div>${'<div class="sk" style="height:58px;margin-bottom:8px"></div>'.repeat(5)}`;
+// v0.57: încărcarea arată conturul paginii (cartonașul mare, „ce ai de făcut”, rândurile), cu o lumină care trece peste ele;
+// planetele apar pe rând, ca la galaxie
+const skeleton = () => `<div class="skg" role="status" aria-label="Se încarcă datele"><div class="skc skh"><i class="skl" style="width:40%"></i><i class="skl big" style="width:62%"></i><i class="skl" style="width:100%;height:72px"></i><span class="skp" style="--d:0ms;--x:78%;--y:22%;--s:18px"></span><span class="skp" style="--d:220ms;--x:90%;--y:46%;--s:10px"></span><span class="skp" style="--d:420ms;--x:66%;--y:12%;--s:7px"></span></div>
+  <div class="skc"><i class="skl" style="width:30%"></i><i class="skl" style="width:84%"></i></div>
+  ${[0,1,2,3,4].map(k=>`<div class="skc skr"><span class="skp in" style="--d:${300+k*140}ms"></span><div style="flex:1"><i class="skl" style="width:${[46,38,52,34,44][k]}%"></i><i class="skl" style="width:${[28,34,24,30,26][k]}%"></i></div></div>`).join('')}</div>`;
 const intraValid = () => INTRA && SNAP && INTRA.generat > SNAP.generat && INTRA.generat.slice(0,10) === new Date().toISOString().slice(0,10);
 function countUp(){
   document.querySelectorAll('[data-count]').forEach(el=>{
@@ -812,11 +868,11 @@ function evolutieCont(C){
 }
 function graficCont(C, ist){
   const ev = evolutieCont(C);
-  if (!ev) return C==='toate'&&ist.length>5 ? `<div style="margin-top:16px">${lineChart({series:[SERIE_TU(ist.map(x=>x.totalRON),'Valoarea ta'),SERIE_VWCE(ist.map(x=>x.bench),'Totul în VWCE')],x:ist.map(x=>x.azi),area:1,privat:1,fmt:x=>nf(x,0)+' lei',aria:'Valoarea ta față de VWCE'})}</div>` : '';
+  if (!ev) return C==='toate'&&ist.length>5 ? `<div style="margin-top:16px">${lineChart({series:[SERIE_TU(ist.map(x=>x.totalRON),'Valoarea ta'),SERIE_VWCE(ist.map(x=>x.bench),'Totul în VWCE')],x:ist.map(x=>x.azi),area:1,privat:1,erou:1,fmt:x=>nf(x,0)+' lei',aria:'Valoarea ta față de VWCE'})}</div>` : '';
   const nume = C==='toate' ? 'ambele conturi' : C, dif = ev.b?.at(-1)!=null ? ev.v.at(-1)-ev.b.at(-1) : null;
   return `<div class="perioade" data-noswipe>${incepator()?`<span class="sub">${esc(ev.per[2]||'')}</span>`:`<div class="pseg" role="group" aria-label="Perioada graficului">${PERIOADE.map(([k,,t])=>`<button class="${ev.per[0]===k?'on':''}" aria-label="${t}" data-c="${A('setPerioada',k)}">${k}</button>`).join('')}</div>`}
       ${dif!=null&&!S.privat?`<span class="sub num pdif">față de VWCE <b class="${cls(dif)}">${sgL(dif,0)} lei</b></span>`:''}</div>
-    <div style="margin-top:8px">${lineChart({series:[SERIE_TU(ev.v,'Valoarea ta'),...(ev.b?[SERIE_VWCE(ev.b,'Aceiași bani în VWCE')]:[])],x:ev.x,area:1,privat:1,anim:'acasa',fmt:x=>nf(x,0)+' lei',aria:`Valoarea din ${nume} față de VWCE, ${ev.per[2]}`})}</div>`;
+    <div style="margin-top:8px">${lineChart({series:[SERIE_TU(ev.v,'Valoarea ta'),...(ev.b?[SERIE_VWCE(ev.b,'Aceiași bani în VWCE')]:[])],x:ev.x,area:1,privat:1,erou:1,anim:'acasa',fmt:x=>nf(x,0)+' lei',aria:`Valoarea din ${nume} față de VWCE, ${ev.per[2]}`})}</div>`;
 }
 // ===== Paza conturilor și oprirea de urgență =====
 // Ce vede analiza (alarmele, activitatea nouă din conturi) + ce verifică telefonul singur (codul din GitHub). Dacă apare
@@ -1693,11 +1749,20 @@ function montaGrafice(){
       const i=Math.max(0,Math.min(n-1,Math.round((cx-pl)/(W-pl-pr)*(n-1)))), x=X(i);
       svg.querySelector('.xh').setAttribute('x1',x); svg.querySelector('.xh').setAttribute('x2',x); svg.querySelector('.xh').setAttribute('opacity','.45');
       o.series.forEach((se,k)=>{ const c=svg.querySelector('.xd'+k); if(se.v[i]==null){c.setAttribute('opacity','0');return;} c.setAttribute('cx',x); c.setAttribute('cy',Y(se.v[i])); c.setAttribute('opacity','1'); });
-      citire(i); ro.classList.add('act');
+      citire(i); ro.classList.add('act'); eroulCiteste(i);
     };
-    const hide=()=>{ citire(n-1); ro.classList.remove('act'); svg.querySelector('.xh').setAttribute('opacity','0'); o.series.forEach((_,k)=>svg.querySelector('.xd'+k).setAttribute('opacity','0')); };
+    // v0.57: cât tragi pe grafic, cifra mare din cartonaș arată ziua de sub deget (cu un tic scurt la fiecare zi); la ridicarea degetului revine la azi
+    const hero = o.erou && el.closest('.erou')?.querySelector('.hero'); let hOrig = null, hI = -1;
+    const eroulCiteste = i => { if (!hero || i===hI) return; const v=o.series[0].v[i]; if (v==null) return;
+      if (hOrig==null) { hOrig = hero.innerHTML; hero.classList.add('scrub'); }
+      const u = hero.querySelector(':scope>small')?.textContent || '';
+      hero.innerHTML = `${S.privat&&o.privat?'•••••':nf(v)}<small>${esc(u)}</small><small class="hzi">${o.x?esc(fX(o.x[i])):''}</small>`;
+      if (hI>=0) { try { navigator.vibrate?.(3); } catch(e){} } hI=i; };
+    const eroulRevine = () => { if (hOrig==null || !hero) return; hero.innerHTML = hOrig; hero.classList.remove('scrub'); hOrig=null; hI=-1; };
+    const hide=()=>{ citire(n-1); ro.classList.remove('act'); svg.querySelector('.xh').setAttribute('opacity','0'); o.series.forEach((_,k)=>svg.querySelector('.xd'+k).setAttribute('opacity','0')); eroulRevine(); };
     svg.addEventListener('pointermove',show); svg.addEventListener('pointerdown',show); svg.addEventListener('pointerleave',hide);
-    svg.addEventListener('touchmove',show,{passive:true}); svg.addEventListener('touchend',()=>setTimeout(hide,1400));
+    svg.addEventListener('pointerup',eroulRevine); svg.addEventListener('pointercancel',eroulRevine);
+    svg.addEventListener('touchmove',show,{passive:true}); svg.addEventListener('touchend',()=>{ eroulRevine(); setTimeout(hide,1400); });
     delete GR[id];
   }
 }
@@ -1754,11 +1819,14 @@ function ceFac(){
   if (rez.length) return {k:'--asteapta', tag:'Atenție', titlu:`Rezultate trimestriale: ${rez.map(p=>p.symbol).join(', ')}`, text:'Sunt posibile mișcări mari. Nu cumpăra înainte de rezultate.', acts:[]};
   return {k:'--pos', tag:'Totul e pe plan', titlu:'Nimic de făcut azi', text:'Ai investit luna asta și nu există semnale noi. Următorul pas e depunerea de luna viitoare.', acts:[]};
 }
+// v0.57: „Am cumpărat” ștampilează bonurile și închide orbita lunii pe loc; confirmarea reală vine din cont a doua zi.
+// Bifa ține doar luna (nu simbolurile), ca înainte.
+let STAMPILA = false;
 function planFacut(){ vib();
   const luna = new Date().toISOString().slice(0,7), s = sumaPlan();
   for (const l of SNAP.planuri[s]) { const p=SNAP.pozitii.find(x=>x.symbol===l.symbol), e=SNAP.pozitii.find(x=>x.etf);
     J.unshift({id:Date.now()+Math.random(),data:new Date().toISOString().slice(0,10),symbol:l.symbol,actiune:'cumparat',semnal:p?.semnal||'adauga',pret:p?.ind?.pret??null,pretETF:e?.ind?.pret??null,nota:`Planul lunii: ${l.suma} lei`}); }
-  saveJ(); S.planFacut=luna; S.luniFacute=[...new Set([...(S.luniFacute||[]),luna])].slice(-120); save(); render(); toast('Notat. Confirmarea din cont apare a doua zi.');
+  saveJ(); S.planFacut=luna; S.luniFacute=[...new Set([...(S.luniFacute||[]),luna])].slice(-120); save(); STAMPILA = true; render(); STAMPILA = false; toast('Notat. Confirmarea din cont apare a doua zi.');
 }
 
 // ===== Ora surselor + verificarea sumelor =====
@@ -1848,6 +1916,7 @@ const ICO = {
   mana:'<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5M14 10.5V5.5a1.5 1.5 0 0 1 3 0v8c0 4-2.5 7-6.5 7-2.4 0-4-1.2-5.2-3l-2.3-3.7a1.5 1.5 0 0 1 2.5-1.6L8 14"/><circle class="s" cx="20" cy="4" r="1.4"/>',
   racheta:'<path d="M14 4c3.5 0 6 2.5 6 6-1.5 3-4.5 6-8 7.5L6.5 12C8 8.5 11 5.5 14 4z"/><path d="M6.5 12 4 11.5 6 8.5h3.5M12 17.5l.5 2.5 3-2V14.5M5.5 15.5c-1.5 1-2 3-2 5 2 0 4-.5 5-2"/><circle class="s" cx="14.5" cy="9.5" r="1.7"/>',
   nucleu:'<circle cx="12" cy="12" r="3.6"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(60 12 12)"/><circle class="s" cx="21.3" cy="12" r="1.5"/>',
+  lupa:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/>',
   portofel:'<path d="M3.5 7.5h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2zM3.5 7.5 15 3.5l1.5 4"/><circle class="s" cx="16.5" cy="14" r="1.6"/>',
   profil:'<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1-3.8 4-5.5 7.5-5.5s6.5 1.7 7.5 5.5"/><circle class="s" cx="18.5" cy="5" r="1.5"/>',
   alerta:'<path d="M12 3.5 21 19.5H3z"/><path d="M12 10v4.5"/><circle class="s" cx="12" cy="17" r="1.3"/>',
@@ -2156,7 +2225,7 @@ function inelLuna(mic){
   if (prima) { S.orbitaLuna = luna; save(); setTimeout(()=>{ try { navigator.vibrate?.([12,60,24]); } catch(e){} }, 900); }
   const txt = `<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--t2)">${facut?'Ai investit luna asta':'De investit luna asta'}</div>
       <div class="sub num">${inv>0?`Confirmat din cont: ${S.privat?'•••':nf(inv,0)} lei`:facut?'Bifat manual':`Planul lunii: ${tinta} lei`}${n>1?` · <b class="ink2">${n} ${de(n)}luni la rând</b>`:''}</div></div>`;
-  return mic ? `<div class="hfoot ${facut?'inchisa':''} ${prima?'prima':''}" data-c="${A('go','plan')}">${ring}${txt}<span class="ch">${ic('chev')}</span></div>` : `<div class="card" style="display:flex;align-items:center;gap:16px;padding:12px 16px">${ring}${txt}</div>`;
+  return mic ? `<div class="hfoot ${facut?'inchisa':''} ${prima?'prima':''}" data-c="${A('go','plan')}">${ring}${txt}<span class="ch">${ic('chev')}</span></div>` : `<div class="card inel ${prima||STAMPILA?'prima':''}" style="display:flex;align-items:center;gap:16px;padding:12px 16px">${ring}${txt}</div>`;
 }
 const TODO_IC = {'--opor':'stea','--verifica':'alerta','--pos':'scut','--acc':'portofel','--asteapta':'calendar'};
 function vAzi(){
@@ -2202,7 +2271,7 @@ function vAzi(){
   const viz = S.vizAzi==='harta' && !incepator() ? 'harta' : 'lista';
   const sus = VC.poz.filter(p=>tr(MISC(p))==='up').length, jos = VC.poz.filter(p=>tr(MISC(p))==='down').length;
   h += `<div class="sec"><h2>${C==='toate'?'Pozițiile tale':'Pozițiile din '+esc(C)} ${q(viz==='harta'?'harta':'pondere')}</h2><span class="sub num"><span class="up">${TRI(true)} ${sus}</span> · <span class="down">${TRI(false)} ${jos}</span> · ${poz.length}</span></div>
-  ${incepator()?indiciu('Eticheta colorată de lângă fiecare acțiune îți spune ce faci cu ea luna aceasta. Atinge o poziție ca să vezi de ce.'):`<div class="vbar" data-noswipe><div class="seg vis">${[['lista','Listă'],['harta','Hartă']].map(([k,t])=>`<button class="${viz===k?'on':''}" data-c="${A('setViz',k)}">${ic(k==='lista'?'lista':'harta')}${t}</button>`).join('')}</div></div>`}
+  ${incepator()?indiciu('Eticheta colorată de lângă fiecare acțiune îți spune ce faci cu ea luna aceasta. Atinge o poziție ca să vezi de ce.')+`<div class="cbar" data-noswipe><button class="cauta" data-c="${A('cautare')}" aria-label="Caută o acțiune, inclusiv idei noi">${ic('lupa')}<span>Caută</span></button></div>`:`<div class="vbar" data-noswipe><div class="seg vis">${[['lista','Listă'],['harta','Hartă']].map(([k,t])=>`<button class="${viz===k?'on':''}" data-c="${A('setViz',k)}">${ic(k==='lista'?'lista':'harta')}${t}</button>`).join('')}</div><button class="cauta" data-c="${A('cautare')}" aria-label="Caută o acțiune, inclusiv idei noi">${ic('lupa')}<span>Caută</span></button></div>`}
   ${viz==='lista'&&!incepator()?`<div class="sortr" data-noswipe role="group" aria-label="Ordonează pozițiile după"><div class="chips">${[['semnal','Semnal'],['pondere','Pondere'],['castig','Câștig'],['azi',iv?'Azi':'Ziua']].map(([k,t])=>`<button class="${(S.sort||'semnal')===k?'on':''}" data-c="${A('setSort',k)}">${t}</button>`).join('')}</div></div>`:''}
   ${viz==='harta'?`<div class="card" style="padding:8px">${harta(VC.poz)}</div>`:''}
   ${viz==='lista'?`<div class="list2">` + poz.map((p,k)=>pozitieRand(p,k,iv)).join('') + `</div>`:''}`;
@@ -2280,7 +2349,7 @@ function detaliu(sym, zile){
     const prot = !p.etf && i.protectie;
     graf = `<div class="fgraf"><div class="seg" style="margin:12px 0">${PER.map(([z,t])=>`<button class="${DET.zile===z?'on':''}" data-c="${A('detaliu',sym,z)}">${t}</button>`).join('')}</div>
       <div class="row" id="rper" style="margin-bottom:8px"><span class="sub">În ultimele ${esc(PER.find(([z])=>z===DET.zile)[1])}</span>${mv(rp,0,0.5)}</div>`
-      + lineChart({series:[{name:'Preț',short:'Preț',v:c,color:lc},{name:'Media de 50 de zile',short:'Media 50 de zile',v:se.m50.slice(k),color:'--mut',w:1.4}], x:se.d.slice(k), fmt:x=>nf(x)+' '+(p.moneda||''),
+      + lineChart({series:[{name:'Preț',short:'Preț',v:c,color:lc},{name:'Media de 50 de zile',short:'Media 50 de zile',v:se.m50.slice(k),color:'--mut',w:1.4}], x:se.d.slice(k), erou:1, fmt:x=>nf(x)+' '+(p.moneda||''),
           h: prot?[{v:i.protectie,color:'--warn',eticheta:''}]:[], area:1, aria:`Prețul ${p.symbol}`})
       + `<div class="leg"><span><i style="background:var(${lc})"></i>Preț</span><span><i style="background:var(--mut)"></i>Media de 50 de zile</span>${prot?`<span style="color:var(--warn)"><i class="d" style="background:var(--warn)"></i><button class="term" data-c="${A('termen','prot')}">Nivel de alertă</button>&nbsp;<b class="num">${nf(i.protectie)}</b></span>`:''}</div></div>`;
   }
@@ -2336,9 +2405,26 @@ function notaJurnal(sym){ vib();
   if (saveJ()) { DET.nota=false; detaliu(sym, DET.zile); toast('Notat. O găsești în Analiză → Deciziile tale.'); }
 }
 // Foi pe două niveluri: o explicație se deschide peste detaliu fără să-l închidă.
-function openSheet(html){
+// v0.57: o foaie lungă se deschide pe jumătate (vezi pagina de dedesubt); tragi în sus ca s-o mărești, în jos ca s-o închizi.
+let FOAIE_INLOC = false;
+const FOAIE_JUM = 0.62;
+function jumFoaie(sh, da){
+  sh.classList.remove('jum'); if (!da || miscareRedusa()) return;
+  const h = sh.offsetHeight, off = Math.round(h - innerHeight*FOAIE_JUM);
+  if (sh.scrollHeight > innerHeight*0.8 && off > 48) { sh.style.setProperty('--jum', off+'px'); sh.classList.add('jum'); }
+}
+function foaiePlina(sh){
+  if (!sh.classList.contains('jum')) return; const off = parseFloat(sh.style.getPropertyValue('--jum'))||0;
+  sh.style.transition='none'; sh.style.transform=`translateY(${off}px)`; sh.classList.remove('jum'); sh.offsetHeight;
+  sh.style.transition = `transform .42s cubic-bezier(.2,1.15,.35,1)`; sh.style.transform='';
+  setTimeout(()=>{ sh.style.transition=''; }, 460);
+}
+function openSheet(html, opt={}){
   const lvl2 = $('sheet').classList.contains('on'), sh = $(lvl2?'sheet2':'sheet'), vl = $(lvl2?'veil2':'veil');
-  sh.innerHTML = html; iconiteSectiuni(sh); esalon(sh.querySelector(":scope>.fisa")||sh); sh.scrollTop = 0; vl.classList.add('on'); sh.classList.add('on'); document.documentElement.classList.add('blocat'); history.pushState({s:lvl2?2:1},''); graficeDupaCadru();
+  sh.innerHTML = html; iconiteSectiuni(sh); esalon(sh.querySelector(":scope>.fisa")||sh); sh.scrollTop = 0;
+  jumFoaie(sh, !lvl2 && !opt.plin && !sh.querySelector('[data-plin]'));
+  vl.classList.add('on'); sh.classList.add('on'); document.documentElement.classList.add('blocat');
+  if (FOAIE_INLOC) { FOAIE_INLOC = false; history.replaceState({s:lvl2?2:1},''); } else history.pushState({s:lvl2?2:1},''); graficeDupaCadru();
 }
 function closeSheet(fromPop){
   if (!$('sheet').classList.contains('on') && !$('sheet2').classList.contains('on')) return;
@@ -2350,7 +2436,7 @@ function closeSheet(fromPop){
 function inchideFoaia(fromPop){
   const lvl2 = $('sheet2').classList.contains('on'), sh = $(lvl2?'sheet2':'sheet'), vl = $(lvl2?'veil2':'veil');
   if (!sh.classList.contains('on')) return; // deja închisă (de exemplu, două închideri la rând în timpul tranziției)
-  sh.classList.remove('on'); vl.classList.remove('on');
+  sh.classList.remove('on'); vl.classList.remove('on'); setTimeout(()=>{ if (!sh.classList.contains('on')) sh.classList.remove('jum'); }, 450);
   if (!$('sheet').classList.contains('on')) document.documentElement.classList.remove('blocat');
   if(!fromPop && history.state?.s) { IGNORE_POP=true; history.back(); }
 }
@@ -2403,8 +2489,9 @@ function vPlan(){
   // Ce cumperi
   h += `<div class="sec"><h2>Ce cumperi luna asta</h2>${lunaFacuta()?`<span class="sub pos">✓ ${investitLuna()>0?'confirmat din cont':'bifat manual'}</span>`:`<span class="sub num">${s} lei</span>`}</div>
   ${SNAP.cashNeinvestit?.lei>=20?`<div class="al" style="margin:0 0 12px">Ai deja bani neinvestiți în ${esc(SNAP.cashNeinvestit.broker)}: ${S.privat?'•••':nf(SNAP.cashNeinvestit.lei)} lei. Depui doar diferența.</div>`:''}
-  ${plan.length?plan.map((l,k)=>`<div class="card bon" style="animation:rise .3s ${k*60}ms both">
-    <div class="row"><div><div style="font-size:var(--t4);font-weight:800">${esc(l.symbol)}${SNAP.virtuale?.some(v=>v.symbol===l.symbol)?' <span class="eti">ETF nou, ales de tine</span>':''}</div><div class="sub">la ${esc(l.broker)}</div>${ecusonSector([...SNAP.pozitii,...(SNAP.virtuale||[])].find(x=>x.symbol===l.symbol), 1)}</div><div class="hero num" style="font-size:var(--t5)">${nf(l.suma,0)}<small>lei</small></div></div>
+  ${lunaFacuta()?`<div class="${STAMPILA?'inchide':''}">${inelLuna(false)}</div>`:''}
+  ${plan.length?plan.map((l,k)=>`<div class="card bon ${lunaFacuta()?'stampilat':''}" style="animation:rise .3s ${k*60}ms both">
+    <div class="row"><div><div style="font-size:var(--t4);font-weight:800">${esc(l.symbol)}${SNAP.virtuale?.some(v=>v.symbol===l.symbol)?' <span class="eti">ETF nou, ales de tine</span>':''}</div><div class="sub">la ${esc(l.broker)}</div>${ecusonSector([...SNAP.pozitii,...(SNAP.virtuale||[])].find(x=>x.symbol===l.symbol), 1)}</div><div class="hero num" style="font-size:var(--t5)">${nf(l.suma,0)}<small>lei</small>${lunaFacuta()?`<span class="stampila ${STAMPILA?'nou':''}" style="--d:${k*120}ms">${investitLuna()>0?'Confirmat':'Cumpărat'}</span>`:''}</div></div>
     <div class="kv kvp num" style="margin-top:12px">
       ${l.unitati?`<span>În ${esc(l.moneda)}</span><span>≈ <b>${nf(l.sumaValuta)} ${esc(l.moneda)}</b></span><span>Cantitate</span><span><b>${nf(l.unitati,4)}</b> ${l.unitati===1?'acțiune':'acțiuni'} la ${nf(l.pret)} ${esc(l.moneda)}</span>`:''}
       ${l.comision?`<span>Comision valutar</span><span>≈ ${nf(l.comision)} lei (0,15%)</span>`:''}
@@ -2412,7 +2499,7 @@ function vPlan(){
       <span>Ponderea</span><span>${esc(String(l.motiv).replace(/^acum /,''))} → <b class="ink2">${nf(l.dupa,1)}%</b></span></div>
     ${l.orar?`<div class="sub" style="margin-top:8px">De ce atunci: ${esc(l.orar.motiv)}.</div>`:''}
     ${l.nota?`<div class="al" style="margin:8px 0 0">${esc(l.nota)}</div>`:''}</div>`).join(''):`<div class="card sub">Nicio poziție nu are nevoie de bani noi luna asta.</div>`}
-  ${!ED?`${butoaneBrokeri()}${!lunaFacuta()?`<button class="btn" style="margin-top:12px" data-c="${A('planFacut')}">Am investit</button>`:''}`:''}
+  ${!ED?`${butoaneBrokeri()}${!lunaFacuta()?`<button class="btn" style="margin-top:12px" data-c="${A('planFacut')}">${ic('portofel')}Am cumpărat</button><div class="sub" style="margin-top:8px">Apasă după ce ai cumpărat la broker. Luna se închide acum, iar confirmarea din cont apare a doua zi.</div>`:''}`:''}
   <div class="sub" style="margin:12px 2px 0">${s<100?`Cu ${s} ${de(s)}lei, planul face o singură cumpărare: comisionul și fracțiunile de acțiune ar mânca din sume mai mici. `:''}Planul ține cont de ținte, plafoane, rezultatele trimestriale și acțiunile care au urcat prea repede. Nu presupune vânzări, deci nici impozit.</div>`;
   h += (ED || PROF_DESCHIS) ? prof : `<div class="sec"><h2>Profilul tău</h2></div><button class="card profr" data-c="${A('profDeschide')}"><span class="tx"><b class="num">${e.suma} lei pe lună · ${pr.orizontAni} ${de(pr.orizontAni)}${pr.orizontAni===1?'an':'ani'}</b><small class="num">${pr.tintaETF}% în ETF global · maxim ${pr.maxActiune}% pe acțiune · ${pr.maxTema}% pe sector</small></span><span class="profm">Modifică</span></button>${pr.orizontAni < 3 ? prof.slice(prof.indexOf('<div class="al err">')) : ''}`;
   // Acțiunile tale: care pot primi bani noi
@@ -3446,14 +3533,15 @@ function galaxie(){
 function gxAtinge(e){
   const cv=$('gxc'), r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, st=GX.st;
   const hit = [...(GX.cadru||[])].reverse().find(p=>Math.hypot(p.q.x-x,p.q.y-y) < p.r+10);
-  if (hit) { if (st.sel===hit.p.symbol) { deschideDetaliu(hit.p.symbol); return; } st.sel = GX.sel = hit.p.symbol; vib(); }
+  // prima atingere alege planeta (vezi RSI, sectorul, dividendele); a doua intră în ea: zoom și fișa acțiunii
+  if (hit) { if (st.sel===hit.p.symbol) { const c = sectorInfo(hit.p.tema).c; zoomPlaneta(r.left+hit.q.x, r.top+hit.q.y, Math.max(hit.r,8), c.startsWith('--')?`var(${c})`:c, hit.p.symbol); return; } st.sel = GX.sel = hit.p.symbol; vib(); }
   else if (Math.hypot(x-(GX.stea?.x ?? r.width/2),y-(GX.stea?.y ?? r.height/2)) < 40) { st.sel = GX.sel = 'ETF'; vib(); }
   else st.sel = GX.sel = null;
   gxInfo(); if (!GX.on) GX.cadruF?.(performance.now());
 }
 function gxInfo(){
   const el=$('gxi'); if (!el) return; const s=GX.st?.sel;
-  if (!s) { el.innerHTML = `<span class="sub">${gxEchilibru()} Trage ca s-o rotești, atinge o planetă.</span>`; return; }
+  if (!s) { el.innerHTML = `<span class="sub">${gxEchilibru()} Trage ca s-o rotești. Atinge o planetă ca s-o alegi, încă o dată ca să intri în ea.</span>`; return; }
   if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Soarele: ETF-ul de bază</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
@@ -4223,29 +4311,36 @@ function viteza(){ const p=[]; return {
   reset(){ p.length=0; } }; }
 const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 ['sheet','sheet2'].forEach(id=>{
-  const sh=$(id), vl=$(id==='sheet'?'veil':'veil2'), vz=viteza(); let y0=null, dy=0, trag=false;
+  const sh=$(id), vl=$(id==='sheet'?'veil':'veil2'), vz=viteza(); let y0=null, dy=0, trag=false, baza=0;
+  const jum = () => sh.classList.contains('jum'), off = () => jum() ? (parseFloat(sh.style.getPropertyValue('--jum'))||0) : 0;
+  // pe jumătate: derularea (rotița, tastatura, un link din interior) o deschide întreagă, nu mișcă textul ascuns sub ecran
+  sh.addEventListener('scroll',()=>{ if (jum() && sh.scrollTop>0) foaiePlina(sh); },{passive:true});
+  sh.addEventListener('wheel',e=>{ if (jum() && e.deltaY>0) foaiePlina(sh); },{passive:true});
+  sh.addEventListener('focusin',e=>{ if (jum() && e.target.matches('input,textarea,select')) foaiePlina(sh); });
   sh.addEventListener('touchstart',e=>{
     if (e.target.closest('[data-noswipe],input,textarea,select')) { y0=null; return; }
     if (sh.scrollTop>0 && !e.target.closest('.grab,.dh')) { y0=null; return; }
-    y0=e.touches[0].clientY; dy=0; trag=false; vz.reset(); vz.add(0);
+    y0=e.touches[0].clientY; dy=0; trag=false; baza=off(); vz.reset(); vz.add(0);
   },{passive:true});
   sh.addEventListener('touchmove',e=>{
     if (y0==null) return; const d=e.touches[0].clientY-y0;
-    if (!trag) { if (d<6) { if (d<-6) y0=null; return; } trag=true; sh.style.transition='none'; vl.style.transition='none'; }
-    dy = d>0 ? d : d*0.2; vz.add(dy);
-    sh.style.transform=`translateY(${dy}px)`; vl.style.opacity = String(Math.max(0, 1 - Math.max(dy,0)/(sh.offsetHeight||600)));
+    if (!trag) { if (Math.abs(d)<6 || (d<0 && !baza)) { if (d<-6) y0=null; return; } trag=true; sh.style.transition='none'; vl.style.transition='none'; }
+    // în sus: liber până la înălțimea întreagă, apoi cu rezistență elastică; în jos: urmează degetul
+    const t = baza + d; dy = d; const y = t<0 ? t*0.2 : t; vz.add(d);
+    sh.style.transform=`translateY(${y}px)`; vl.style.opacity = String(Math.max(0, 1 - Math.max(y-baza,0)/(sh.offsetHeight||600)));
   },{passive:true});
   sh.addEventListener('touchend',()=>{
     if (y0==null || !trag) { y0=null; return; } y0=null; trag=false;
-    const v=vz.get(), h=sh.offsetHeight||600;
-    if (dy>0 && (v>0.45 || dy>h*0.32 || (dy>90 && v>0.15))) {
+    const v=vz.get(), h=sh.offsetHeight||600, rest=h-baza;
+    if (dy>0 && (v>0.45 || dy>rest*0.32 || (dy>90 && v>0.15))) {
       // pleacă cu viteza degetului: cu cât e mai rapid gestul, cu atât animația e mai scurtă
-      const rest=h-dy, ms=reducere()?0:Math.round(Math.min(340, Math.max(140, rest/Math.max(v,1.1))));
+      const ms=reducere()?0:Math.round(Math.min(340, Math.max(140, (rest-dy)/Math.max(v,1.1))));
       vib(); sh.style.transition=`transform ${ms}ms cubic-bezier(.2,.7,.3,1)`; vl.style.transition=`opacity ${ms}ms linear`;
       sh.style.transform='translateY(100%)'; vl.style.opacity='0';
       setTimeout(()=>{ inchideFoaia(); requestAnimationFrame(()=>{ sh.style.transition=''; sh.style.transform=''; vl.style.transition=''; vl.style.opacity=''; }); }, ms+10);
     } else {
-      // revine ca un arc, cu un mic recul proporțional cu viteza
+      // pe jumătate și trasă în sus destul (sau repede): se deschide întreagă; altfel revine ca un arc, cu un mic recul
+      if (baza && (dy<-48 || v<-0.3)) { sh.classList.remove('jum'); vib(); }
       sh.style.transition = reducere() ? 'none' : `transform ${Math.round(380+Math.min(Math.abs(v),2)*80)}ms cubic-bezier(.2,1.25,.35,1)`; vl.style.transition='opacity .3s';
       sh.style.transform=''; vl.style.opacity='';
       setTimeout(()=>{ sh.style.transition=''; vl.style.transition=''; }, 600);
@@ -4253,6 +4348,12 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
 });
 
+// v0.57: după tragere, planeta rămâne sub antet și se rotește pe orbită cât timp se verifică datele sau rulează analiza
+async function trageReincarca(){
+  const pr = $('ptr'); if (pr.classList.contains('rul')) return; vib(); pr.classList.add('rul'); pr.querySelector('.pg')?.style.removeProperty('transform');
+  const gata = () => { if (RULEAZA && pr.isConnected) { setTimeout(gata, 600); return; } pr.classList.remove('rul'); };
+  try { await actualizeaza(); } catch(e) {} finally { setTimeout(gata, 400); }
+}
 // ===== Gesturi: tragere pentru reîncărcare, glisare între tab-uri (pagina urmează degetul) =====
 (()=>{
   let x0=null,y0=null,t0=0,pull=false,zona='',axa='',dx=0; const vz=viteza(), main=()=>$('v');
@@ -4268,7 +4369,7 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   addEventListener('touchmove',e=>{
     if(x0==null) return; const t=e.touches[0], ddx=t.clientX-x0, ddy=t.clientY-y0;
     if (!axa && Math.hypot(ddx,ddy)>10) axa = Math.abs(ddx)>Math.abs(ddy)*1.15 ? 'x' : 'y';
-    if (axa==='y' && pull && ddy>0) { $('ptr').style.transform=`translate(-50%,${Math.min(ddy*0.5,60)-60}px) rotate(${ddy*2}deg)`; $('ptr').style.opacity=Math.min(ddy/40,1); }
+    if (axa==='y' && pull && ddy>0 && !$('ptr').classList.contains('rul')) { const pr=$('ptr'), g=pr.querySelector('.pg'); pr.style.transform=`translate(-50%,${Math.min(ddy*0.5,60)-60}px)`; pr.style.opacity=Math.min(ddy/40,1); if (g) g.style.transform=`rotate(${Math.min(ddy,110)/110*360}deg)`; pr.classList.toggle('gata', ddy>110); }
     if (axa==='x') vz.add(ddx);
     if (axa==='x' && zona==='da' && TABS.includes(VIEW)) {
       const i=TABS.indexOf(VIEW), capat=(ddx>0&&i===0)||(ddx<0&&i===TABS.length-1);
@@ -4278,8 +4379,8 @@ const reducere = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   },{passive:true});
   addEventListener('touchend',e=>{
     if(x0==null) return; const t=e.changedTouches[0], ddx=t.clientX-x0, ddy=t.clientY-y0, v=vz.get(), rapid=performance.now()-t0<320;
-    $('ptr').style.transform='translate(-50%,-60px)'; $('ptr').style.opacity=0;
-    if (axa==='y' && pull && ddy>110 && Math.abs(ddx)<60) actualizeaza();
+    $('ptr').style.transform='translate(-50%,-60px)'; $('ptr').style.opacity=0; $('ptr').classList.remove('gata');
+    if (axa==='y' && pull && ddy>110 && Math.abs(ddx)<60) trageReincarca();
     else if (axa==='x' && zona!=='nu' && TABS.includes(VIEW)) {
       const prag = zona==='rapid' ? (Math.abs(ddx)>60 && (Math.abs(v)>0.5 || rapid)) : (Math.abs(ddx)>70 || (Math.abs(v)>0.35 && Math.abs(ddx)>24));
       const dir = !prag ? 0 : ddx<0 ? 1 : -1, i=TABS.indexOf(VIEW)+dir, m=main();
@@ -4611,7 +4712,7 @@ function quizUrm(){ QZ.i++; QZ.ales=null; arataQuiz(); }
 function alegeFisier(){ $('fimp').click(); }
 function stergeJConfirmat(id){ J=J.filter(x=>x.id!==id); saveJ(); closeSheet(); if($('sheet').classList.contains('on')) closeSheet(); render(); }
 const CMD = Object.freeze(Object.assign(Object.create(null), {
-  comutaAuto, actualizeazaAnaliza, copiazaWorkflow, go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
+  cautare, cautaAlege, ideeDeschide, comutaAuto, actualizeazaAnaliza, copiazaWorkflow, go, termen, detaliu, deschideDetaliu, closeSheet, reincarca, actualizeaza, ruleaza, salveaza, raport, verificare, vib,
   deblocheaza, deblocheazaAmprenta, uitatParola, stergeSeif, schimbaParola, aratăCheia, cheieNoua, cheieExistenta,
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan, comutaEtfToate, arataVerdict,

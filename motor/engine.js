@@ -118,11 +118,14 @@ export function derivaProfil(u = {}, azi = new Date().toISOString().slice(0, 10)
   const unaSingura = suma < 2 * PROFIL.transaMinima;
   const proprie = Number.isFinite(+u.tintaETF) && u.tintaETF !== null && u.tintaETF !== '' ? intreg(u.tintaETF, 0, 100, t.etf) : null;
   const alese = (Array.isArray(u.alese) ? u.alese : []).filter(k => ETF_CATALOG[k] || ACTIUNI_CATALOG[k]);
-  return { ...PROFIL, orizontAni: h, anTinta, treapta: t.nume,
+  // v0.47: cum se împart banii lunii. „echilibrat” (implicit): ETF-ul primește ținta lui plus jumătate din cât îi lipsește,
+  // restul merge la 1–2 acțiuni sub țintă. „tinte”: totul la ce e cel mai departe de țintă (regula de până acum).
+  const impartire = u.impartire === 'tinte' ? 'tinte' : 'echilibrat';
+  return { ...PROFIL, orizontAni: h, anTinta, treapta: t.nume, impartire,
     contributieTipica: suma, contributieMin: suma, contributieMax: suma,
     tintaETF: proprie ?? t.etf, tintaETFRecomandat: t.etf, tintaETFProprie: proprie != null, alese,
     maxActiune: t.actiune, maxTema: t.tema,
-    transaMinima: Math.min(PROFIL.transaMinima, suma), maxCumparariPeLuna: unaSingura ? 1 : PROFIL.maxCumparariPeLuna };
+    transaMinima: Math.min(PROFIL.transaMinima, suma), maxCumparariPeLuna: unaSingura ? 1 : impartire === 'echilibrat' ? Math.min(3, Math.floor(suma / PROFIL.transaMinima)) : PROFIL.maxCumparariPeLuna };
 }
 // Valoarea estimată peste `ani` ani: ce ai acum + depunerea lunară, capitalizat lunar.
 export function proiectie(total, suma, ani, rataAn) {
@@ -558,6 +561,8 @@ export function oportunitateIntraday(p, pret) {
 // Unde merg banii noi ca portofoliul să se apropie de ținte, FĂRĂ vânzări.
 export function planLunar(pozitii, total, suma, profil = PROFIL) {
   const T2 = total + suma;
+  const ech = profil.impartire === 'echilibrat' && planEchilibrat(pozitii, total, suma, profil);
+  if (ech) return ech;
   const cand = pozitii
     .filter(p => p.semnal === 'adauga')
     .map(p => ({ p, deficit: p.tinta / 100 * T2 - p.valueRON }))
@@ -581,6 +586,39 @@ export function planLunar(pozitii, total, suma, profil = PROFIL) {
     l.broker = profil.brokerPreferat;
     l.dupa = (p.valueRON + l.suma) / T2 * 100;
     if (!p.brokers.some(b => b.broker === profil.brokerPreferat)) l.nota = `O ai doar la ${p.brokers[0].broker}. Dacă o găsești și la ${profil.brokerPreferat}, cumpăr-o acolo: contul e în lei.`;
+  }
+  return linii;
+}
+
+// v0.47: împărțirea echilibrată. Când ETF-ul e sub țintă și există acțiuni cu semnal „Adaugă” sub ținta lor,
+// ETF-ul primește ținta lui + jumătate din cât îi lipsește (cel mult 80% din bani), iar restul merge la cel mult
+// 2 acțiuni (oportunitățile întâi, apoi cele mai departe de țintă), fiecare cu cel puțin tranșa minimă.
+// Fără acțiuni potrivite sau cu prea puțini bani pentru două tranșe, întoarce null (regula clasică).
+function planEchilibrat(pozitii, total, suma, profil) {
+  const etf = pozitii.find(p => p.etf && p.semnal === 'adauga'), min = profil.transaMinima, T2 = total + suma;
+  if (!etf || suma < 2 * min || !(total > 0)) return null;
+  const actiuni = pozitii.filter(p => !p.etf && p.semnal === 'adauga')
+    .map(p => ({ p, deficit: p.tinta / 100 * T2 - p.valueRON })).filter(x => x.deficit > 0)
+    .sort((a, b) => (!!b.p.oportunitate - !!a.p.oportunitate) || b.deficit - a.deficit);
+  if (!actiuni.length) return null;
+  const etfP = pozitii.filter(p => p.etf).reduce((a, p) => a + p.valueRON, 0) / total * 100, tinta = profil.tintaETF;
+  if (!(etfP < tinta)) return null;
+  const cota = Math.min(0.8, Math.max(tinta / 100, (tinta + (tinta - etfP) / 2) / 100));
+  let sumaETF = Math.max(min, Math.round(suma * cota / 10) * 10), rest = suma - sumaETF;
+  const k = Math.min(actiuni.length, Math.max(0, (profil.maxCumparariPeLuna || 3) - 1), Math.floor(rest / min));
+  if (k < 1) return null;
+  const alese = actiuni.slice(0, k), totDef = alese.reduce((a, x) => a + x.deficit, 0);
+  let linii = alese.map(x => ({ symbol: x.p.symbol, suma: Math.max(min, Math.floor(rest * x.deficit / totDef / 10) * 10), etf: false,
+    motiv: `acum ${fmt(x.p.pondere)}%, ținta ${fmt(x.p.tinta)}%` }));
+  // ajustarea la suma exactă: diferența de rotunjire merge la ETF
+  sumaETF = suma - linii.reduce((a, l) => a + l.suma, 0);
+  if (sumaETF < min) return null;
+  linii = [{ symbol: etf.symbol, suma: sumaETF, etf: true, motiv: `acum ${fmt(etfP)}%, ținta ${fmt(tinta)}%` }, ...linii];
+  for (const l of linii) {
+    const p = pozitii.find(x => x.symbol === l.symbol);
+    l.broker = profil.brokerPreferat;
+    l.dupa = (p.valueRON + l.suma) / T2 * 100;
+    if (!p.brokers?.some(b => b.broker === profil.brokerPreferat)) l.nota = `O ai doar la ${p.brokers?.[0]?.broker || 'alt broker'}. Dacă o găsești și la ${profil.brokerPreferat}, cumpăr-o acolo: contul e în lei.`;
   }
   return linii;
 }

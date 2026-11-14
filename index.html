@@ -1131,11 +1131,11 @@ svg.tri{width:.72em;height:.72em;fill:currentColor;flex:none}.mot .pct{display:i
 .sorbc svg{position:absolute;inset:0;width:100%;height:100%}
 .sorbe{fill:none;stroke:color-mix(in srgb,var(--ink) 16%,transparent);stroke-dasharray:3 6}.sorbf{fill:none;stroke:color-mix(in srgb,var(--ink) 10%,transparent);stroke-width:11}
 .sorbn{fill:var(--ink);font:700 40px var(--fd)}.sorbl{font:600 13px var(--fb,system-ui),sans-serif}
-.spl{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:4px;cursor:pointer;color:var(--ink);min-width:64px;min-height:64px}
-.spl i{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 32% 28%,color-mix(in srgb,#fff 35%,var(--k)),var(--k) 48%,color-mix(in srgb,var(--k) 40%,#000));box-shadow:0 0 14px color-mix(in srgb,var(--k) 45%,transparent);transition:transform .25s}
-.spl i .ico{width:20px;height:20px;stroke:#fff}.spl i .ico .f,.spl i .ico .s{fill:#fff;opacity:.3}
-.spl span{font-size:var(--t1);font-weight:600}
-.spl.on i{transform:scale(1.16);box-shadow:0 0 0 4px color-mix(in srgb,var(--k) 25%,transparent),0 0 24px color-mix(in srgb,var(--k) 60%,transparent)}
+.sorb .spl{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:4px;cursor:pointer;color:var(--ink);min-width:64px;min-height:64px}
+.sorb .spl i{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 32% 28%,color-mix(in srgb,#fff 35%,var(--k)),var(--k) 48%,color-mix(in srgb,var(--k) 40%,#000));box-shadow:0 0 14px color-mix(in srgb,var(--k) 45%,transparent);transition:transform .25s}
+.sorb .spl i .ico{width:20px;height:20px;stroke:#fff}.sorb .spl i .ico .f,.sorb .spl i .ico .s{fill:#fff;opacity:.3}
+.sorb .spl span{font-size:var(--t1);font-weight:600}
+.sorb .spl.on i{transform:scale(1.16);box-shadow:0 0 0 4px color-mix(in srgb,var(--k) 25%,transparent),0 0 24px color-mix(in srgb,var(--k) 60%,transparent)}
 .sorbt{margin-top:8px;padding:12px 16px;border-radius:var(--r3);background:color-mix(in srgb,var(--bg) 55%,transparent);border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);display:flex;flex-direction:column;gap:4px}
 .sorbt b{display:flex;align-items:center;gap:8px;font-size:var(--t2)}.sorbt b i{width:10px;height:10px;border-radius:50%;flex:none}.sorbt span{font-size:var(--t2);color:var(--ink2);line-height:1.5}
 /* 3) raportul de dimineață: titlul zilei mare și „Pe scurt” ca pastile */
@@ -1226,6 +1226,103 @@ svg.tri{width:.72em;height:.72em;fill:currentColor;flex:none}.mot .pct{display:i
   nav{left:calc(16px + max(0px,(100vw - var(--side) - 1320px) / 2))}
   #v.pan1:has(.gx){--mw:1264px}
 }
+
+/* ===== v0.59 ===== */
+/* ecranul de deblocare: sigla vie, mare, pe un cer cu orbite care se rotesc încet, nebuloase care plutesc și stele căzătoare */
+.lv.urias{--lvs:112px;border-radius:var(--r4);margin:0 auto}
+.lklogo{position:relative;width:112px;height:112px;margin:0 auto;animation:plutire 5s ease-in-out infinite}
+.lklogo::before{content:"";position:absolute;inset:-40px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--g1,#8b6cff) 38%,transparent),transparent 68%);animation:lkPuls 5s ease-in-out infinite}
+.lockw{position:relative;z-index:1}
+.lockbg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;contain:strict}
+.lockbg .neb{position:absolute;width:70vmax;height:70vmax;border-radius:50%;opacity:.5;will-change:transform}
+.lockbg .n1{left:-25vmax;top:-30vmax;background:radial-gradient(circle,color-mix(in srgb,var(--g1,#8b6cff) 34%,transparent),transparent 62%);animation:nebA 26s ease-in-out infinite alternate}
+.lockbg .n2{right:-30vmax;bottom:-35vmax;background:radial-gradient(circle,color-mix(in srgb,var(--g3,#2fd4c6) 26%,transparent),transparent 62%);animation:nebB 32s ease-in-out infinite alternate}
+.lorb{position:absolute;left:50%;top:calc(9vh + 56px);width:0;height:0;transform:rotate(-18deg) scaleY(.36)}
+.lorb .lo{position:absolute;left:0;top:0;border-radius:50%;border:1px solid color-mix(in srgb,var(--g2,#5b7cff) 34%,transparent);animation:lvRot linear infinite}
+.lorb .o1{width:344px;height:344px;margin:-172px 0 0 -172px;animation-duration:38s}
+.lorb .o2{width:560px;height:560px;margin:-280px 0 0 -280px;animation-duration:64s;animation-direction:reverse;border-style:dashed;border-color:color-mix(in srgb,var(--g1,#8b6cff) 30%,transparent)}
+.lorb .o3{width:824px;height:824px;margin:-412px 0 0 -412px;animation-duration:96s;border-color:color-mix(in srgb,var(--g3,#2fd4c6) 22%,transparent)}
+.lorb .lo b{position:absolute;left:50%;top:-8px;width:16px;height:16px;margin-left:-8px;border-radius:50%;transform:scaleY(2.78);background:radial-gradient(circle at 35% 30%,#fff,var(--g1,#8b6cff) 55%,#2a1f6b);box-shadow:0 0 16px color-mix(in srgb,var(--g1,#8b6cff) 70%,transparent)}
+.lorb .o2 b{width:8px;height:8px;margin-left:-4px;top:-4px;background:radial-gradient(circle at 35% 30%,#fff6d6,#f5c84b 50%,#8a5a0a);box-shadow:0 0 14px rgba(245,200,75,.6)}
+.lorb .o3 b{width:24px;height:24px;margin-left:-12px;top:-12px;background:radial-gradient(circle at 35% 30%,#e9fffb,var(--g3,#2fd4c6) 55%,#0b4b46);box-shadow:0 0 18px color-mix(in srgb,var(--g3,#2fd4c6) 60%,transparent)}
+.lockbg .cad{position:absolute;width:140px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#fff);opacity:0;transform:rotate(24deg);animation:lkCad 9s linear infinite}
+.lockbg .c1{left:8%;top:12%}.lockbg .c2{left:55%;top:6%;animation-delay:3.4s;animation-duration:11s}.lockbg .c3{left:28%;top:40%;animation-delay:6.2s;animation-duration:13s}
+@keyframes lkCad{0%{opacity:0;transform:rotate(24deg) translateX(-120px)}3%{opacity:.9}9%{opacity:0;transform:rotate(24deg) translateX(420px)}100%{opacity:0;transform:rotate(24deg) translateX(420px)}}
+@keyframes lkPuls{50%{transform:scale(1.18);opacity:.7}}
+@keyframes nebA{to{transform:translate(12vmax,8vmax) scale(1.15)}}@keyframes nebB{to{transform:translate(-10vmax,-9vmax) scale(1.2)}}
+:root[data-theme="light"] .lockbg .cad{background:linear-gradient(90deg,transparent,var(--g1,#8b6cff))}
+:root[data-theme="light"] .lockbg .neb{opacity:.3}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .lockbg .cad{background:linear-gradient(90deg,transparent,var(--g1,#8b6cff))}:root:not([data-theme="dark"]) .lockbg .neb{opacity:.3}}
+@media (prefers-reduced-motion: reduce){.lockbg *,.lklogo,.lklogo::before{animation:none!important}}
+html.fx-redus .lockbg *,html.fx-redus .lklogo,html.fx-redus .lklogo::before{animation:none!important}
+
+/* galaxia mică, redesenată: se vede mai clar, dar rămâne în spatele textului */
+.hcard .hgal{opacity:.5;top:-28px;right:-16px}.hgal .hst{fill:var(--ink)}
+:root[data-theme="light"] .hcard .hgal{opacity:.5}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .hcard .hgal{opacity:.5}}
+@media (min-width:1100px){.hcard .hgal{width:320px;height:256px;top:-36px;right:72px;opacity:.9}}
+
+/* gradientul liniei „tu” din grafice */
+:root{--lg1:#8b6cff;--lg2:#5b7cff;--lg3:#2fd4c6}
+:root[data-theme="light"]{--lg1:#6a4df0;--lg2:#2f62d8;--lg3:#0a8f84}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--lg1:#6a4df0;--lg2:#2f62d8;--lg3:#0a8f84}}
+.chart path.glow{stroke-width:9;opacity:.2}
+
+/* ===== Planul, redesenat ===== */
+.card.pmis{position:relative;display:grid;grid-template-columns:auto 1fr;gap:16px 20px;align-items:center;padding:20px;overflow:hidden;border:1px solid color-mix(in srgb,var(--g1,#8b6cff) 34%,var(--line));
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--g1,#8b6cff) 20%,transparent),transparent 55%),radial-gradient(120% 140% at 100% 100%,color-mix(in srgb,var(--g3,#2fd4c6) 14%,transparent),transparent 55%),var(--panel)}
+.pmg{position:relative;width:148px;height:148px;flex:none}.pmg svg{width:100%;height:100%;overflow:visible}
+.pmg .pmb{stroke:color-mix(in srgb,var(--ink) 8%,transparent)}.pmg .pmo{stroke:color-mix(in srgb,var(--g2,#5b7cff) 30%,transparent);stroke-width:1;stroke-dasharray:2 5}
+.pmg .pms{animation:pmDes .9s cubic-bezier(.3,.8,.3,1) var(--d) both}
+@keyframes pmDes{from{stroke-dasharray:0 var(--c)}}
+.pmg .pmpl{transform-origin:90px 90px;transform-box:view-box}.pmg .pmpl circle{fill:var(--g3,#2fd4c6)}
+.pmis.acum .pmpl{animation:orbTura 1.4s cubic-bezier(.3,.8,.3,1) .3s both}
+.pmis.gata .pmpl circle{fill:var(--pos)}
+.pmc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.pmc b{font:700 var(--t5)/1.1 SG,system-ui,sans-serif;letter-spacing:-.5px;color:var(--ink)}.pmc small{font-size:var(--t1);color:var(--mut);margin-top:4px}
+.pmok{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--pos);margin-bottom:4px}.pmok svg{width:12px;height:12px;fill:none;stroke:var(--panel);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.pmt{min-width:0}.pmtit{font:700 var(--t4)/1.2 SG,system-ui,sans-serif;letter-spacing:-.3px;margin:4px 0 12px;color:var(--ink)}
+.pmser{display:inline-block;vertical-align:middle;margin-left:4px;padding:4px 8px;border-radius:var(--r4);font:700 var(--t1)/1.2 system-ui,sans-serif;letter-spacing:0;color:var(--acc2);background:color-mix(in srgb,var(--acc2) 14%,transparent)}
+.pmpas{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.pmpas li{position:relative;display:flex;gap:12px;align-items:flex-start;color:var(--mut)}
+.pmpas li>i{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid color-mix(in srgb,var(--ink) 22%,transparent);display:grid;place-items:center;background:var(--panel)}
+.pmpas li>i svg{width:12px;height:12px;fill:none;stroke:var(--panel);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.pmpas li:not(:last-child)::after{content:"";position:absolute;left:9px;top:22px;bottom:-12px;width:2px;background:color-mix(in srgb,var(--ink) 14%,transparent)}
+.pmpas li.ok>i{background:var(--pos);border-color:var(--pos)}.pmpas li.ok::after{background:var(--pos)}
+.pmpas li.cur>i{border-color:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 22%,transparent)}
+.pmpas li b{display:block;font-size:var(--t2);font-weight:700;line-height:1.3;color:var(--ink2)}.pmpas li.cur b,.pmpas li.ok b{color:var(--ink)}
+.pmpas li small{display:block;font-size:var(--t1);line-height:1.3}
+.pmleg{grid-column:1/-1;width:100%;justify-self:stretch;display:grid;gap:8px;padding-top:16px;border-top:1px solid var(--line)}
+.pml{display:grid;grid-template-columns:8px minmax(52px,auto) 1fr 36px auto;gap:8px;align-items:center;font-size:var(--t2)}
+.pml>i{width:8px;height:8px;border-radius:50%}.pml b{font-weight:800}.pml em{font-style:normal;color:var(--mut);text-align:right;font-size:var(--t1)}.pml strong{font-weight:700;text-align:right;min-width:60px}
+.pmbar{height:8px;border-radius:var(--r1);background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:hidden}.pmbar u{display:block;height:100%;border-radius:inherit;animation:pmBar .8s cubic-bezier(.3,.8,.3,1) both;transform-origin:left}
+@keyframes pmBar{from{transform:scaleX(0)}}
+.pmis>div:last-child:has(>.card.inel){grid-column:1/-1}
+.pmis .card.inel{margin:0;background:color-mix(in srgb,var(--pos) 8%,transparent);border-color:color-mix(in srgb,var(--pos) 30%,transparent);box-shadow:none}
+/* bonul: planeta sectorului, câmpuri ca pe un bilet, bara ponderii */
+.bonuri{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:12px}.bonuri>.card{margin:0}
+.card.bon{box-shadow:0 12px 32px -20px color-mix(in srgb,var(--k,var(--acc)) 70%,transparent)}
+.bonsus{align-items:flex-start;gap:12px}.bonec{margin-top:8px}.bonec:empty{display:none}.bonec .ecuson{margin:0;max-width:100%}.bonsus .bonid{flex:1;min-width:0}
+.bonpl{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 32% 28%,color-mix(in srgb,#fff 40%,var(--k)),var(--k) 50%,color-mix(in srgb,var(--k) 40%,#000) 100%);box-shadow:0 0 0 4px color-mix(in srgb,var(--k) 16%,transparent),0 8px 20px -8px var(--k)}
+.bonpl .ico{width:20px;height:20px;stroke:#fff}.bonpl .ico .f,.bonpl .ico .s{fill:#fff;opacity:.3}
+.card.bon .kvp.bonf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}
+.bf{min-width:0;display:flex;flex-direction:column;gap:4px}.bf.lat{grid-column:1/-1}
+.bf small{font-size:var(--t1);font-weight:600;color:var(--mut)}
+.bf b{font-size:var(--t3);font-weight:700;color:var(--ink)}.bf i{font-style:normal;font-size:var(--t1);color:var(--mut)}
+.bpb{position:relative;height:8px;border-radius:var(--r1);background:color-mix(in srgb,var(--ink) 9%,transparent);margin-top:4px}
+.bpb i{position:absolute;top:0;bottom:0;border-radius:var(--r1)}.bpb .acum{left:0;background:color-mix(in srgb,var(--k) 55%,var(--panel2))}
+.bpb .plus{background:var(--k);box-shadow:0 0 12px var(--k);animation:pmBar .8s .3s cubic-bezier(.3,.8,.3,1) both;transform-origin:left}
+.bpb u{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:2px;background:var(--ink)}
+.bpt{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:var(--t1);color:var(--mut)}.bpt b{color:var(--ink2);font-weight:700}.bpt .tin{margin-left:auto}
+@media (max-width:420px){.card.pmis{grid-template-columns:1fr;justify-items:center}.pmt{width:100%}}
+@media (min-width:1100px){
+  .card.pmis{grid-template-columns:auto minmax(220px,1fr) minmax(260px,1.2fr);padding:24px}
+  .pmg{width:180px;height:180px}.pmleg{grid-column:auto;border-top:0;padding-top:0;border-left:1px solid var(--line);padding-left:20px;align-self:stretch;align-content:center}
+  .pmis>div:last-child:has(>.card.inel){grid-column:1/-1}
+  .bonuri{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+}
+@media (prefers-reduced-motion: reduce){.pmg .pms,.pmbar u,.bpb .plus,.pmis.acum .pmpl{animation:none}}
+html.fx-redus .pmg .pms,html.fx-redus .pmbar u,html.fx-redus .bpb .plus{animation:none}
 </style>
 </head>
 <body>

@@ -1205,6 +1205,27 @@ svg.tri{width:.72em;height:.72em;fill:currentColor;flex:none}.mot .pct{display:i
 .qr{display:flex;align-items:center;gap:12px;width:100%;padding:12px;margin:0 0 4px;border:0;border-radius:var(--r2);background:none;color:var(--ink);text-align:left;cursor:pointer}
 .qr:hover,.qr:focus-visible{background:var(--panel2)}.qr .tx{flex:1;min-width:0;display:grid}.qr .tx small{color:var(--mut);font-size:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cautf{min-height:60vh}
+
+/* ===== v0.58: calculator și claritate ===== */
+/* galaxia mică din cartonașul de pe Acasă: soarele pulsează ușor, planetele se mișcă (SMIL, în SVG) */
+.hgal.viu .hsoare{transform-origin:150px 120px;transform-box:view-box;animation:hsoare 5s ease-in-out infinite}
+@keyframes hsoare{50%{transform:scale(1.14)}}
+@media (prefers-reduced-motion: reduce){.hgal.viu .hsoare{animation:none}}
+/* bonul: linia punctată merge dintr-o margine în alta; fără cercurile care arătau ca niște găuri negre pe fundalul cu gradient */
+.card.bon .kvp::before,.card.bon .kvp::after{display:none}
+.card.bon .kvp{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
+@media (min-width:1100px){
+  /* fără vălul de jos: pe telefon ascunde conținutul de sub bara de meniu, pe calculator meniul e în stânga */
+  body::after{display:none}
+  main{--mw:1320px;max-width:var(--mw);margin-left:calc(var(--side) + max(0px,(100vw - var(--side) - var(--mw)) / 2))}
+  .turb{left:calc(var(--side) + 24px + max(0px,(100vw - var(--side) - 1320px) / 2))}
+  #v.pan1{--mw:984px}
+  header .lv{--lvs:40px}
+  .hcard .hgal{width:380px;height:304px;top:-24px;right:24px;opacity:.5}
+  .gx canvas{height:560px}
+  nav{left:calc(16px + max(0px,(100vw - var(--side) - 1320px) / 2))}
+  #v.pan1:has(.gx){--mw:1264px}
+}
 </style>
 </head>
 <body>

@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.57.0';
+const APP_VER = '0.58.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -723,12 +723,13 @@ function muta(){ spatiuJos(); antet(); const b=document.querySelector('nav butto
 // lista pozițiilor) ocupă toată lățimea. Pe telefon nu se schimbă nimic.
 const DESK = matchMedia('(min-width:1100px)');
 function panouri(v){
-  v.classList.remove('pan2'); if (!DESK.matches || !live()) return;
+  v.classList.remove('pan2','pan1'); if (!DESK.matches || !live()) return;
   let cur = null;
   for (const el of [...v.children]) { if (el.tagName === 'FOOTER') { cur = null; continue; }
     if (!cur || el.classList.contains('sec')) { cur = document.createElement('section'); cur.className = 'pan'; v.insertBefore(cur, el); } cur.appendChild(el); }
   v.querySelectorAll(':scope > .pan').forEach(p => { if (p.querySelector('.hcard,.gxc,.list2,.car,.drum')) p.classList.add('lat'); });
-  v.classList.add('pan2');
+  // v0.58: o pagină cu un singur panou (Noutăți) nu mai stă înghesuită în coloana din stânga: ocupă mijlocul, pe o coloană lată
+  v.classList.add(v.querySelectorAll(':scope > .pan').length > 1 ? 'pan2' : 'pan1');
 }
 DESK.addEventListener?.('change', () => { if (V || !are_seif()) render(); });
 // Ce versiune rulezi: aplicația (de pe telefon) și analiza (din GitHub), jos pe fiecare ecran.
@@ -737,7 +738,7 @@ const vederi = { azi:()=>vAzi(), plan:()=>vPlan(), analiza:()=>vAnaliza(), nouta
 function render(){
   if (GO_PEND) { render.pre = null; return; } // o trecere între pagini e în curs: pagina nouă se desenează la schimb, cu datele de atunci
   const PRE = render.pre; render.pre = null; // HTML pregătit în timpul tranziției (doar pentru pagina cerută)
-  ascundeSplash(); $('v').classList.remove('pan2'); // panourile se refac doar pentru ecranele cu date
+  ascundeSplash(); $('v').classList.remove('pan2','pan1'); // panourile se refac doar pentru ecranele cu date
   document.documentElement.classList.toggle('inchis', are_seif() && !V); // pe ecranul de blocare, antetul nu are butoane
   document.documentElement.classList.toggle('sesiune', SESIUNE());
   const bk = $('blk')?.querySelector('small'); if (bk) bk.textContent = SESIUNE() ? 'Închide' : 'Blochează';
@@ -2988,12 +2989,15 @@ function galaxieMica(){
   const sect = [...new Set(poz.map(p=>p.tema))].sort((a,b)=>poz.filter(p=>p.tema===b).reduce((s,p)=>s+p.valueRON,0)-poz.filter(p=>p.tema===a).reduce((s,p)=>s+p.valueRON,0)).slice(0,4);
   const mx = Math.max(...poz.map(p=>p.pondere)), cx = 150, cy = 120, inc = Math.sin(-18*Math.PI/180), co = Math.cos(-18*Math.PI/180);
   const hash = s => [...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0, 7);
+  // v0.58: planetele se mișcă încet pe orbitele lor (cele din interior mai repede); cu mișcarea redusă rămân pe loc
+  const viu = !miscareRedusa() && S.fx !== 'redus';
   let orb = '', pl = '';
-  sect.forEach((n,k)=>{ const rx = 44 + k*34, ry = rx*0.41, c = sectorInfo(n).c;
+  sect.forEach((n,k)=>{ const rx = 44 + k*34, ry = rx*0.41, c = sectorInfo(n).c, dur = 36 + k*22, drum = `M${rx},0A${rx},${ry.toFixed(1)} 0 1,1 ${-rx},0A${rx},${ry.toFixed(1)} 0 1,1 ${rx},0`;
     orb += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry.toFixed(1)}" stroke="${c}" transform="rotate(-18 ${cx} ${cy})"/>`;
     poz.filter(p=>p.tema===n).forEach((p,i)=>{ const a = (hash(p.symbol)%360)*Math.PI/180 + i*1.3, x0 = rx*Math.cos(a), y0 = ry*Math.sin(a), r = 2.5 + 7*Math.sqrt(p.pondere/mx);
-      pl += `<circle cx="${(cx + x0*co - y0*inc).toFixed(1)}" cy="${(cy + x0*inc + y0*co).toFixed(1)}" r="${r.toFixed(1)}" fill="${c}"/>`; }); });
-  return `<svg class="hgal" viewBox="0 0 300 240" aria-hidden="true"><defs><radialGradient id="hgs" cx=".4" cy=".35" r=".6"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#ffb547"/><stop offset="1" stop-color="#b45309"/></radialGradient></defs><g fill="none" stroke-width="1.2" opacity=".7">${orb}</g><circle cx="${cx}" cy="${cy}" r="13" fill="url(#hgs)"/>${pl}</svg>`;
+      pl += viu ? `<circle r="${r.toFixed(1)}" fill="${c}"><animateMotion dur="${dur}s" begin="${(-(((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI))/(2*Math.PI)*dur).toFixed(1)}s" repeatCount="indefinite" path="${drum}"/></circle>`
+        : `<circle cx="${x0.toFixed(1)}" cy="${y0.toFixed(1)}" r="${r.toFixed(1)}" fill="${c}"/>`; }); });
+  return `<svg class="hgal ${viu?'viu':''}" viewBox="0 0 300 240" aria-hidden="true"><defs><radialGradient id="hgs" cx=".4" cy=".35" r=".6"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#ffb547"/><stop offset="1" stop-color="#b45309"/></radialGradient></defs><g fill="none" stroke-width="1.2" opacity=".7">${orb}</g><circle class="hsoare" cx="${cx}" cy="${cy}" r="13" fill="url(#hgs)"/><g transform="translate(${cx} ${cy}) rotate(-18)">${pl}</g></svg>`;
 }
 function sanPlaneta(k){ const sn = sanatate(); if (!sn.F[k]) return; SAN_SEL = k; vib(); const f = sn.F[k], c = document.querySelector('#v .sorb'); if (!c) return;
   c.querySelectorAll('.spl').forEach((b,i)=>{ b.classList.toggle('on', i===k); b.setAttribute('aria-pressed', i===k); });
@@ -3297,7 +3301,7 @@ function gxHarta(tip, sd){ return GX.harti?.get(tip+'|'+sd.toFixed(2)) || null; 
 // hărțile se construiesc în fundal, rând cu rând, în felii de ~5 ms (fără sacadări); până sunt gata, planeta e un disc umbrit
 function gxHartaCere(tip, sd){
   const k = tip+'|'+sd.toFixed(2); GX.harti = GX.harti || new Map(); GX.hCoada = GX.hCoada || new Map(); if (GX.harti.has(k) || GX.hCoada.has(k)) return;
-  const MW = 320, MH = 160, d = new Uint8ClampedArray(MW*MH*3), fb = GX.zg1 || (GX.zg1 = gxZgomot(17)), fb2 = GX.zg2 || (GX.zg2 = gxZgomot(43)); let y = 0;
+  const MW = 512, MH = 256, d = new Uint8ClampedArray(MW*MH*3), fb = GX.zg1 || (GX.zg1 = gxZgomot(17)), fb2 = GX.zg2 || (GX.zg2 = gxZgomot(43)); let y = 0;
   GX.hCoada.set(k, () => { const t0 = performance.now();
     for (; y<MH && performance.now()-t0 < 5; y++) { const la = (0.5 - (y+0.5)/MH)*Math.PI; for (let x=0; x<MW; x++) { const lo = ((x+0.5)/MW)*2*Math.PI - Math.PI, a = gxAlbedo(tip, fb, fb2, lo, la, sd), det = 0.92+0.16*fb2(lo*9+sd, la*9, 3), i = (y*MW+x)*3;
       d[i] = a[0]*det; d[i+1] = a[1]*det; d[i+2] = a[2]*det; } }
@@ -3326,22 +3330,30 @@ function gxSoare(rs, px1 = 2){
 }
 // galaxia din spate: se desenează o singură dată, în bucăți de câteva milisecunde (fără sacadări), apoi doar se rotește
 function* gxFundalGalaxie(){
-  const Z = 1100, o = document.createElement('canvas'); o.width = o.height = Z; const c = o.getContext('2d'), r = gxRng(21), g = () => (r()+r()+r()+r()-2)/2, cx = Z/2, R = 540, fb = gxZgomot(5);
+  // v0.58: de aproape două ori mai mare (2048 px), cu de 2,5 ori mai multe stele, mai fine, și cu o strălucire difuză sub ele:
+  // brațele se văd ca o ceață luminoasă cu stele clare în ea, nu ca niște puncte rare. Se desenează tot o singură dată.
+  const Z = 2048, q = Z/1100, o = document.createElement('canvas'); o.width = o.height = Z; const c = o.getContext('2d'), r = gxRng(21), g = () => (r()+r()+r()+r()-2)/2, cx = Z/2, R = 540*q, fb = gxZgomot(5);
   const pt = (x,y,s,col,a) => { c.globalAlpha=a; c.fillStyle=col; c.beginPath(); c.arc(x,y,s,0,6.283); c.fill(); };
   const halo = c.createRadialGradient(cx,cx,0,cx,cx,R); halo.addColorStop(0,'rgba(255,226,180,.55)'); halo.addColorStop(0.18,'rgba(255,205,150,.18)'); halo.addColorStop(0.5,'rgba(120,140,200,.07)'); halo.addColorStop(1,'rgba(20,30,60,0)'); c.fillStyle=halo; c.fillRect(0,0,Z,Z);
   c.globalCompositeOperation = 'lighter';
-  for (let k=0;k<12000;k++) { if (k%1500===0) yield; const d=-Math.log(1-r()*0.985)*R*0.2, f=r()*6.283; pt(cx+d*Math.cos(f), cx+d*Math.sin(f), 0.6+r()*0.8, r()<0.7?'#ffe9cc':'#fff8ee', 0.06); }
+  for (let k=0;k<30000;k++) { if (k%1500===0) yield; const d=-Math.log(1-r()*0.985)*R*0.2, f=r()*6.283; pt(cx+d*Math.cos(f), cx+d*Math.sin(f), 0.5+r()*0.9, r()<0.7?'#ffe9cc':'#fff8ee', 0.05); }
   const br = [[0,1],[Math.PI,1],[1.5,0.55],[4.65,0.5]];
-  for (const [th,L] of br) { for (let k=0;k<20000*L;k++) { if (k%1500===0) yield; const u=Math.pow(r(),0.85), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2+g()*0.22*(1-u*0.4), d=rr+g()*R*0.055*(1+u), x=cx+d*Math.cos(f), y=cx+d*Math.sin(f);
-      if (fb(x/70,y/70,3) < 0.3) continue; pt(x, y, r()<0.02?1.9:0.6+r()*0.9, r()<0.5?'#cddcff':r()<0.7?'#ffffff':'#a9c2ff', 0.12); }
-    for (let k=0;k<34*L;k++) { const u=0.15+r()*(L-0.15), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2+g()*0.06, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f), rad=4+r()*9, gr=c.createRadialGradient(x,y,0,x,y,rad);
+  for (const [th,L] of br) { for (let k=0;k<50000*L;k++) { if (k%1500===0) yield; const u=Math.pow(r(),0.85), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2+g()*0.22*(1-u*0.4), d=rr+g()*R*0.055*(1+u), x=cx+d*Math.cos(f), y=cx+d*Math.sin(f);
+      if (fb(x/(70*q),y/(70*q),3) < 0.3) continue; pt(x, y, r()<0.012?2.2:0.45+r()*0.85, r()<0.5?'#cddcff':r()<0.7?'#ffffff':'#a9c2ff', 0.11); }
+    for (let k=0;k<34*L;k++) { const u=0.15+r()*(L-0.15), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2+g()*0.06, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f), rad=(4+r()*9)*q, gr=c.createRadialGradient(x,y,0,x,y,rad);
       gr.addColorStop(0,'rgba(255,120,160,.38)'); gr.addColorStop(1,'rgba(255,120,160,0)'); c.globalAlpha=1; c.fillStyle=gr; c.fillRect(x-rad,y-rad,rad*2,rad*2); }
-    for (let k=0;k<40*L;k++) { const u=0.1+r()*(L-0.1), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f), rad=30+r()*40, gr=c.createRadialGradient(x,y,0,x,y,rad);
+    for (let k=0;k<40*L;k++) { const u=0.1+r()*(L-0.1), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f), rad=(30+r()*40)*q, gr=c.createRadialGradient(x,y,0,x,y,rad);
       gr.addColorStop(0,'rgba(140,175,255,.09)'); gr.addColorStop(1,'rgba(140,175,255,0)'); c.globalAlpha=1; c.fillStyle=gr; c.fillRect(x-rad,y-rad,rad*2,rad*2); } }
+  // strălucirea: aceeași imagine, micșorată și mărită la loc (o estompare care merge în orice browser), adunată peste stele
+  yield;
+  for (const [m, al] of [[5, 0.3], [18, 0.2]]) { const t = document.createElement('canvas'); t.width = t.height = Math.round(Z/m); const tc = t.getContext('2d'); tc.imageSmoothingEnabled = true; tc.imageSmoothingQuality = 'high';
+    tc.drawImage(o, 0, 0, t.width, t.height); c.globalAlpha = al; c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(t, 0, 0, Z, Z); yield; }
   c.globalCompositeOperation = 'source-over';
-  for (const [th,L] of br) { for (let k=0;k<3200*L;k++) { if (k%1500===0) yield; const u=0.12+r()*(L-0.14), rr=R*(0.09+u*(L-0.09))-R*0.045, f=th+u*3.2-0.06+g()*0.05, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f);
-    if (fb(x/40+9,y/40,3) < 0.5) continue; pt(x, y, 2+r()*4, '#07040a', 0.012); } }
-  c.globalAlpha = 1; return o;
+  for (const [th,L] of br) { for (let k=0;k<3200*L;k++) { if (k%1500===0) yield; const u=0.3+r()*(L-0.32), rr=R*(0.09+u*(L-0.09))-R*0.045, f=th+u*3.2-0.06+g()*0.05, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f);
+    if (fb(x/(40*q)+9,y/(40*q),3) < 0.5) continue; pt(x, y, (2+r()*4)*q, '#07040a', 0.007); } }
+  // marginile se sting spre exterior, ca pătratul imaginii să nu se vadă niciodată
+  c.globalAlpha = 1; c.globalCompositeOperation = 'destination-in'; const mg = c.createRadialGradient(cx,cx,R*0.72,cx,cx,Z/2); mg.addColorStop(0,'rgba(0,0,0,1)'); mg.addColorStop(1,'rgba(0,0,0,0)'); c.fillStyle = mg; c.fillRect(0,0,Z,Z); c.globalCompositeOperation = 'source-over';
+  return o;
 }
 function gxDate(){
   const pr = P(), etf = SNAP.pozitii.filter(p=>p.etf), etfP = etf.reduce((a,p)=>a+p.pondere,0);
@@ -3422,7 +3434,7 @@ function galaxie(){
     setTimeout(felie, 60); }
   // planetele randate se păstrează (24 de unghiuri de lumină × mărime); pe cadru se randează noi doar cât încape în ~6 ms,
   // restul folosesc între timp cel mai apropiat unghi deja randat (nu se vede diferența, iar animația nu sacadează)
-  const sfera = (x, r, ung, buget) => { const px1 = Math.min(dpr*1.25, 3.5), rr = Math.round(r*2)/2, b = (Math.round((ung+Math.PI)/(Math.PI/12))%24), baza = `${x.tip}|${x.sd.toFixed(2)}|${rr}|${px1}|`, k = baza+b;
+  const sfera = (x, r, ung, buget) => { const px1 = Math.min(Math.max(dpr*1.25, 2), 3.5), rr = Math.round(r*2)/2, b = (Math.round((ung+Math.PI)/(Math.PI/12))%24), baza = `${x.tip}|${x.sd.toFixed(2)}|${rr}|${px1}|`, k = baza+b;
     let s = GX.sfere.get(k); if (s) return s;
     if (performance.now() > buget.pana && buget.facute > 0) { let best = null, bd = 99; for (const [kk,v] of GX.sfere) if (kk.startsWith(baza)) { const d = Math.min(Math.abs(+kk.slice(baza.length)-b), 24-Math.abs(+kk.slice(baza.length)-b)); if (d < bd) { bd = d; best = v; } } return best; }
     if (!gxHarta(x.tip, x.sd)) { gxHartaCere(x.tip, x.sd); return null; }
@@ -3447,10 +3459,13 @@ function galaxie(){
     // când galaxia s-a rotit vizibil: galaxia e difuză, iar desenarea ei mare la fiecare cadru era cea mai scumpă parte
     const ungG = st.yaw*0.6 + t*0.012;
     if (!GX.bg || GX.bgW !== W || GX.bgH !== H || Math.abs(ungG-(GX.bgU??-9)) > 0.004 || Math.abs(inc-(GX.bgI??-9)) > 0.004 || GX.bgGal !== !!GX.gal) {
-      const bg = GX.bg || (GX.bg = document.createElement('canvas')); if (bg.width !== Math.round(W) || bg.height !== Math.round(H)) { bg.width = Math.round(W); bg.height = Math.round(H); }
-      const b = bg.getContext('2d'); b.setTransform(1,0,0,1,0,0); b.globalCompositeOperation='source-over'; b.globalAlpha=1; if (fond.width && fond.height) b.drawImage(fond,0,0,W,H); else { b.fillStyle='#020207'; b.fillRect(0,0,W,H); }
-      if (GX.gal) { const sc = S0*3.4/GX.gal.width; b.save(); b.translate(cx,cy); b.scale(1,inc); b.rotate(ungG); b.globalCompositeOperation='lighter'; b.globalAlpha=0.85;
-        b.drawImage(GX.gal, -GX.gal.width/2*sc, -GX.gal.width/2*sc, GX.gal.width*sc, GX.gal.width*sc); b.restore(); b.globalAlpha=1; b.globalCompositeOperation='source-over'; }
+      // v0.58: fundalul se compune la rezoluția ecranului (cel mult 2x pe calculator, 1,6x pe telefon), nu la 1x: galaxia rămâne clară pe ecrane dense
+      const qb = Math.min(dpr, GX_LIN ? 2 : 1.6), bg = GX.bg || (GX.bg = document.createElement('canvas')); if (bg.width !== Math.round(W*qb) || bg.height !== Math.round(H*qb)) { bg.width = Math.round(W*qb); bg.height = Math.round(H*qb); }
+      const b = bg.getContext('2d'); b.setTransform(qb,0,0,qb,0,0); b.imageSmoothingEnabled = true; b.imageSmoothingQuality = 'high'; b.globalCompositeOperation='source-over'; b.globalAlpha=1; if (fond.width && fond.height) b.drawImage(fond,0,0,W,H); else { b.fillStyle='#020207'; b.fillRect(0,0,W,H); }
+      if (GX.gal) { // imaginea de 2048 px se micșorează o singură dată la mărimea la care se vede; la fiecare rotire se copiază 1:1 (ieftin)
+        const tz = Math.min(GX.gal.width, Math.ceil(S0*3.4*qb)); if (!GX.galS || GX.galS.width !== tz) { const m = document.createElement('canvas'); m.width = m.height = tz; const mc = m.getContext('2d'); mc.imageSmoothingEnabled = true; mc.imageSmoothingQuality = 'high'; mc.drawImage(GX.gal, 0, 0, tz, tz); GX.galS = m; }
+        const sc = S0*3.4/tz; b.save(); b.translate(cx,cy); b.scale(1,inc); b.rotate(ungG); b.globalCompositeOperation='lighter'; b.globalAlpha=0.85; b.imageSmoothingQuality = 'low';
+        b.drawImage(GX.galS, -tz/2*sc, -tz/2*sc, tz*sc, tz*sc); b.restore(); b.globalAlpha=1; b.globalCompositeOperation='source-over'; }
       const vg = b.createRadialGradient(cx,cy,S0*0.7,cx,cy,Math.hypot(W,H)*0.6); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.45)'); b.fillStyle=vg; b.fillRect(0,0,W,H);
       Object.assign(GX, { bgW:W, bgH:H, bgU:ungG, bgI:inc, bgGal:!!GX.gal }); }
     ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low'; if (GX.bg.width && GX.bg.height) ctx.drawImage(GX.bg, 0, 0, cv.width, cv.height);
@@ -3485,7 +3500,7 @@ function galaxie(){
     { const R2 = rs*(4+0.15*Math.sin(t*1.2)), g=ctx.createRadialGradient(cx,cy,rs*0.8,cx,cy,R2); g.addColorStop(0,'rgba(255,214,150,.42)'); g.addColorStop(0.35,'rgba(255,190,120,.12)'); g.addColorStop(1,'rgba(255,160,80,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,R2,0,6.283); ctx.fill(); }
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.05); for (let k=0;k<6;k++) { ctx.rotate(Math.PI/3); const L=rs*(2.2+0.3*Math.sin(t*1.5+k)), g=ctx.createLinearGradient(0,0,L,0); g.addColorStop(0,'rgba(255,236,200,.22)'); g.addColorStop(1,'rgba(255,236,200,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-rs*0.06); ctx.lineTo(L,0); ctx.lineTo(0,rs*0.06); ctx.fill(); } ctx.restore();
     ctx.globalCompositeOperation = 'source-over';
-    const kS = (Math.round(rs*2)/2).toFixed(1); if (GX.soareK !== kS+dpr) { GX.soareImg = gxSoare(+kS, Math.min(dpr*1.25, 3.5)); GX.soareK = kS+dpr; }
+    const kS = (Math.round(rs*2)/2).toFixed(1); if (GX.soareK !== kS+dpr) { GX.soareImg = gxSoare(+kS, Math.min(Math.max(dpr*1.25, 2), 3.5)); GX.soareK = kS+dpr; }
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.03); if (GX.soareImg.width) ctx.drawImage(GX.soareImg, -rs, -rs, rs*2, rs*2); ctx.restore();
     const rT = (9+17)*k0; ctx.beginPath(); ctx.arc(cx,cy,rT+1,0,6.283); ctx.setLineDash([2,4]); ctx.strokeStyle = etfW >= D.pr.tintaETF-0.1 ? 'rgba(126,226,200,.95)' : 'rgba(255,235,200,.4)'; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
     if (st.sel==='ETF') { ctx.beginPath(); ctx.arc(cx,cy,rT+8,0,6.283); ctx.strokeStyle='#fff'; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]); }

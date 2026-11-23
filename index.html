@@ -1363,10 +1363,13 @@ html.fx-redus .pmg .pms,html.fx-redus .pmbar u,html.fx-redus .bpb .plus{animatio
 .sec h2{font-size:var(--t4);text-transform:none}
 .num,.hero,.pmc b{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 #cer{
-  background:var(--stele),radial-gradient(ellipse at 76% 7%,var(--glow),transparent 49%),
-    radial-gradient(ellipse at 10% 64%,color-mix(in srgb,var(--nebula) 17%,transparent),transparent 50%);
-  background-size:300px 300px,100% 100%,100% 100%;
-  background-repeat:repeat,no-repeat,no-repeat;
+  background: var(--stele);
+  background-size:300px 300px;
+  background-repeat:repeat;
+}
+#cer::before{content:"";position:absolute;inset:0;background:
+ radial-gradient(ellipse at 72% 0%,var(--glow),transparent 56%),
+ radial-gradient(ellipse at 10% 70%,color-mix(in srgb,var(--nebula) 24%,transparent),transparent 52%);
 }
 .card,.tile,.sheet{
   box-shadow:inset 0 1px 0 color-mix(in srgb,var(--rim) 12%,transparent),var(--sh2);
@@ -1395,6 +1398,39 @@ html.fx-redus .pmg .pms,html.fx-redus .pmbar u,html.fx-redus .bpb .plus{animatio
 :where(button,input,a,select):focus-visible{outline:2px solid var(--acc);outline-offset:3px}
 @media(min-width:1100px){.card.pmis .pmg{width:190px;height:190px}}
 @media(max-width:420px){.sec h2{font-size:var(--t3)}}
+
+
+/* Compoziția celestă. Galaxia este un panou de lucru, cu datele lângă ea. */
+.cel-title,.lockw h1,.cel-home .todo h2{font:500 clamp(1.65rem,3vw,2.65rem)/1.12 var(--display);letter-spacing:-.025em;margin:0 0 12px}
+.cel-home,.cel-atlas{display:grid;gap:16px;min-width:0}
+.cel-home>.card,.cel-atlas>.card{margin:0;min-width:0}
+.cel-home .todo{display:flex;flex-direction:column;justify-content:center;padding:clamp(16px,3vw,32px);background:linear-gradient(155deg,var(--panel2),var(--panel));border:1px solid var(--line)}
+.cel-home .todo h2{font-size:var(--t5);margin:8px 0}
+.cel-home .todo h3{font-size:var(--t4)}
+.cel-atlas{padding:clamp(14px,2.5vw,30px);border:1px solid var(--line);border-radius:var(--r4);background:radial-gradient(ellipse at 70% 10%,var(--glow),transparent 70%),var(--bg2)}
+.cel-atlas-head p{margin:0;color:var(--ink2);display:flex;align-items:center;gap:8px}
+.cel-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-content:start}
+.cel-metrics>div{display:grid;gap:5px;padding:clamp(8px,1.3vw,16px);border-radius:var(--r2);background:var(--panel);border:1px solid var(--line);overflow-wrap:anywhere}
+.cel-metrics span,.cel-metrics small{font-size:var(--t1);color:var(--ink2)}
+.cel-metrics strong{font:700 clamp(1rem,2vw,1.65rem)/1.1 SG,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.lockscene{display:grid;place-items:center;max-width:1100px;min-height:70vh;margin:auto;gap:24px;padding:24px 0}
+.lockw{width:min(100%,420px);text-align:center;padding:clamp(16px,3vw,36px);border:1px solid var(--line);border-radius:var(--r4);background:linear-gradient(150deg,var(--panel2),var(--panel));box-shadow:var(--sh3)}
+.lockworld{position:relative;width:min(72vw,240px);aspect-ratio:1;display:grid;place-items:center;isolation:isolate;pointer-events:none}
+.lockworld::before{content:"";position:absolute;inset:-25%;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--nebula) 55%,transparent),transparent 69%);z-index:-1}
+.lockworld i{display:block;width:69%;aspect-ratio:1;border-radius:50%;background:radial-gradient(ellipse at 30% 27%,#e8c797 0,transparent 51%),radial-gradient(ellipse at 75% 65%,#121830 20%,transparent 66%),repeating-linear-gradient(150deg,#b39183 2%,#443b71 9%,#7279ac 14%,#322f53 23%);box-shadow:inset -24px -22px 38px #080b17,inset 7px 3px 18px #edc298,0 0 42px #716bc966}
+.lockworld b{position:absolute;width:115%;height:35%;border:1px solid color-mix(in srgb,var(--rim) 55%,transparent);border-radius:50%;transform:rotate(-23deg);box-shadow:0 0 30px #6d68c64d}
+.lockworld b::after{content:"";position:absolute;inset:16%;border:1px solid #aaadfb60;border-radius:50%}
+@media(min-width:1100px){
+ .cel-home{grid-template-columns:minmax(0,2.35fr) minmax(240px,1fr);align-items:stretch}
+ .cel-atlas{grid-template-columns:minmax(150px,.65fr) minmax(0,3fr)}
+ .cel-atlas-head{grid-column:1/-1}
+ .cel-metrics{grid-template-columns:minmax(0,1fr)}
+ .cel-atlas .gx canvas{height:clamp(390px,45vw,550px)}
+ .lockscene{grid-template-columns:1.2fr 1fr}
+ .lockworld{width:min(38vw,520px)}
+}
+@media(max-width:600px){.lockscene{min-height:auto;gap:0}.lockworld{width:min(53vw,225px);margin-bottom:-12px}.lockw .lklogo{margin-top:0}}
+@media(max-width:350px){.cel-metrics{grid-template-columns:1fr}}
 
 </style>
 </head>

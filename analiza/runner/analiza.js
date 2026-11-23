@@ -96,6 +96,13 @@ async function ruleazaZi(env, KV, paza) {
     for (const [s, price] of Object.entries(byS)) { const c = demoCandles(s, price); market[s] = { ind: indicators(c), serie: serie(c), ...(DEMO_FUND[s] || {}) }; }
   } else {
     ({ positions, fx } = await citestePozitii(env, erori, conex, extra));
+    if (env.MOD !== 'test' && (conex.t212?.stare === 'eroare' || conex.etoro?.stare === 'eroare')) {
+      const vechi = J(await KV.get('snapshot'), null);
+      const s = { ...vechi, pozitii: vechi?.pozitii || [], versiune: VERSION, erori, conexiuni: conex,
+        ultimaIncercare: new Date().toISOString(), schimbari: [], pastrat: true, incomplet: true };
+      if (vechi?.pozitii?.length) await KV.put('snapshot', JSON.stringify(s));
+      return s;
+    }
     const detinute = [...new Set(positions.map(p => canon(p.symbol)))];
     // universul de idei: o parte la fiecare rulare (vezi UNIVERS), plus cele alese de tine, încă necumpărate
     const univ = J(await KV.get('univers'), {}), alese = J(await KV.get('profil'), {}).alese || [];
@@ -543,7 +550,9 @@ export async function ruleazaIntraday(env, KV) {
   const snap = J(await KV.get('snapshot'), null);
   const erori = [];
   if (!snap) return { mod: 'intraday', erori: ['Nicio analiză zilnică încă.'], pozitii: [] };
-  const { positions } = await citestePozitii(env, erori);
+  const conex = {};
+  const { positions } = await citestePozitii(env, erori, conex);
+  if (conex.t212?.stare === 'eroare' || conex.etoro?.stare === 'eroare') return { mod: 'intraday', erori, pozitii: [] };
   // v0.42: „azi” se măsoară față de închiderea de ieri. Dacă ultima analiză a rulat în timpul ședinței, prețul ei e deja de azi,
   // iar mișcarea față de el ar arăta doar ce s-a întâmplat de atunci (de exemplu +0,04% în loc de −2,24%).
   const refZi = p => referintaZi(p.ind, azi);

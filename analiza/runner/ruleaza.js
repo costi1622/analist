@@ -8,13 +8,14 @@
 // Criptat, în plus: date/utilizator.enc = starea comună a dispozitivelor (jurnal, plan bifat, lecții, decizii), vezi stare.js.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ruleaza, pushInfo } from './analiza.js';
 import { aplicaPush, trimite } from './notificari.js';
 import { pazaRetea } from './paza.js';
 import { cheieDate, cripteaza, decripteaza, PEM_OK } from './seif.js';
 import { imbinaStare, modulRularii } from './stare.js';
 
-const DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'date');
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'date');
 fs.mkdirSync(DIR, { recursive: true });
 const scrie = (f, t) => fs.writeFileSync(path.join(DIR, f), t);
 const citeste = f => { try { return fs.readFileSync(path.join(DIR, f), 'utf8'); } catch { return null; } };
@@ -50,6 +51,7 @@ const store = {
   async put(k, v) { if (FIS[k]) scrie(FIS[k], await cripteaza(cheie, v)); else cache[k] = v; },
 };
 
+let confirmareProfil = null;
 // Profilul trimis din aplicație (orizont + suma lunară, alertele) și abonamentul la notificări, criptate cu DATA_KEY.
 // Cele două părți se verifică separat: un profil lipsă sau greșit nu oprește abonamentul, și invers.
 if (env.PROFIL_NOU) {
@@ -60,6 +62,7 @@ if (env.PROFIL_NOU) {
     console.log('Notificări: preferințe actualizate din aplicație.');
   }
   if (p && p.anTinta !== undefined) try {
+    if (typeof p.confirmare === 'string' && /^[a-f0-9-]{36}$/i.test(p.confirmare)) confirmareProfil = { id: p.confirmare, ok: false };
     const an = new Date().getUTCFullYear();
     if (!(Number.isInteger(p.anTinta) && p.anTinta > an && p.anTinta <= an + 50 && Number.isFinite(p.suma) && p.suma >= 10 && p.suma <= 100000)) throw new Error('valori în afara limitelor');
     const alerte = (Array.isArray(p.alerte) ? p.alerte : []).filter(a => a && /^[A-Z0-9.]{1,12}$/.test(a.s) && ['sub', 'peste'].includes(a.d) && Number.isFinite(a.p) && a.p > 0 && a.p < 1e7).slice(0, 30)
@@ -69,8 +72,15 @@ if (env.PROFIL_NOU) {
     const alese = (Array.isArray(p.alese) ? p.alese : []).filter(k => ETF_CATALOG[k] || ACTIUNI_CATALOG[k]).slice(0, 10);
     const impartire = p.impartire === 'tinte' ? 'tinte' : 'echilibrat';
     cache.profil = JSON.stringify({ anTinta: p.anTinta, suma: Math.round(p.suma), alerte, ...(tintaETF != null ? { tintaETF } : {}), alese, impartire });
+    if (confirmareProfil) confirmareProfil.ok = true;
     console.log('Profil actualizat din aplicație.');
   } catch (e) { console.log(`::warning::Profilul primit din aplicație a fost ignorat: ${e.message}`); }
+}
+
+if (confirmareProfil) {
+  scrie('cache.enc', await cripteaza(cheie, JSON.stringify(cache)));
+  const confirmari = JSON.parse(await dec('profil-confirmari.enc') || '[]');
+  scrie('profil-confirmari.enc', await cripteaza(cheie, JSON.stringify([...confirmari, confirmareProfil].slice(-20))));
 }
 
 // Starea comună a dispozitivelor: diferența trimisă de un dispozitiv se îmbină cu ce există (câștigă schimbarea cea mai nouă).
@@ -124,7 +134,7 @@ scrie('cache.enc', await cripteaza(cheie, JSON.stringify(cache)));
 // Fără sume: doar ce trebuie pentru diagnostic și pentru raport.
 if (snap.mod !== 'intraday') {
   scrie('stare.json', JSON.stringify({ generat: new Date().toISOString(), versiune: snap.versiune, conexiuni: snap.conexiuni || {}, erori: snap.erori || [], push: snap.push || await pushInfo(env, store) }, null, 1));
-  if (snap.pozitii?.length) scrie('raport-intrare.json', JSON.stringify(intrareRaport(snap), null, 1));
+  if (!snap.pastrat && snap.pozitii?.length) scrie('raport-intrare.json', JSON.stringify(intrareRaport(snap), null, 1));
 }
 export function intrareRaport(s) {
   return {
@@ -145,4 +155,4 @@ else {
   for (const [k, c] of Object.entries(snap.conexiuni || {})) console.log(`  [${c.stare}] ${k}`);
 }
 for (const e of snap.erori) console.log(`::warning::${e.replace(/[\d.,]+\s*(lei|USD|EUR|\$)/g, '… $1')}`);
-if (snap.pastrat || (snap.mod !== 'intraday' && !snap.pozitii.length)) { console.log('::error::Nicio poziție citită. Detalii în aplicație, la Setări.'); process.exitCode = 1; }
+if (snap.pastrat || (snap.mod !== 'intraday' && !snap.pozitii.length)) { console.log(snap.incomplet ? '::error::Datele brokerilor sunt incomplete. Detalii în aplicație, la Setări.' : '::error::Nicio poziție citită. Detalii în aplicație, la Setări.'); process.exitCode = 1; }

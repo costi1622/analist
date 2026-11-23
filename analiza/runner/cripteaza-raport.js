@@ -4,8 +4,9 @@
 // Scrie rapoarte/ultimul.enc și rapoarte/AAAA-LL-ZZ.enc. Fișierul .md în clar NU intră în repo.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cripteazaPentruTelefon } from './seif.js';
-const radacina = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
+const radacina = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [, , sursa] = process.argv;
 if (!sursa) { console.error('Folosire: node runner/cripteaza-raport.js <raport.md>'); process.exit(2); }
 const pem = fs.readFileSync(path.join(radacina, 'date', 'cheie-publica.pem'), 'utf8');

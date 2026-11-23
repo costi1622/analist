@@ -5,11 +5,12 @@
 //   node runner/anunta.js esec    analiza completă a zilei a eșuat (analiza.yml).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cheieDate, cripteaza, decripteaza } from './seif.js';
 import { notificaOdata } from './notificari.js';
 import { pazaRetea } from './paza.js';
 
-const DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'date');
+const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'date');
 const citeste = f => { try { return fs.readFileSync(path.join(DIR, f), 'utf8'); } catch { return null; } };
 const env = process.env;
 

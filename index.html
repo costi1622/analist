@@ -9,8 +9,8 @@
 <script src="garda.js"></script>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#05060f" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f6f2ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080b17" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f3ef" media="(prefers-color-scheme: light)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
 <title>Analist</title>
@@ -1323,6 +1323,79 @@ html.fx-redus .lockbg *,html.fx-redus .lklogo,html.fx-redus .lklogo::before{anim
 }
 @media (prefers-reduced-motion: reduce){.pmg .pms,.pmbar u,.bpb .plus,.pmis.acum .pmpl{animation:none}}
 html.fx-redus .pmg .pms,html.fx-redus .pmbar u,html.fx-redus .bpb .plus{animation:none}
+
+/* Identitatea celestă: aceleași suprafețe și convenții în toate ecranele. */
+:root{
+  --display:Georgia,"Times New Roman",serif;
+  --g1:#776bce;--g2:#555cc4;--g3:#589e92;
+  --lg1:#9194ed;--lg2:#a8b4ff;--lg3:#81c7b6;
+  --orbit-etf:#81c7b6;--orbit-act:#e8ba84;
+  --rim:#a8b4ff;--nebula:#514496;
+}
+:root:not([data-theme="light"]){
+  --bg:#080b17;--bg2:#0e1326;--panel:#14192e;--panel2:#1a2038;
+  --line:#303955;--grid:#262d48;--ink:#f5f2ff;--ink2:#d6d9ec;--mut:#aeb5cf;
+  --acc:#b5bfff;--acc2:#93d7c7;--pos:#91d8ba;--neg:#ff9ba8;--warn:#edc397;
+  --glow:rgba(101,87,183,.26);
+}
+:root[data-theme="light"]{
+  --bg:#f6f3ef;--bg2:#efeaf0;--panel:#fffdfb;--panel2:#f2eef6;
+  --line:#d8d1e2;--grid:#e3ddeb;--ink:#211d36;--ink2:#4e4763;--mut:#665d77;
+  --acc:#514597;--acc2:#286958;--g1:#6153aa;--g2:#5048a0;--g3:#357467;
+  --lg1:#6552aa;--lg2:#4d58af;--lg3:#2e7565;
+  --orbit-etf:#357b6c;--orbit-act:#9a5b2d;--rim:#6c59a3;--nebula:#ded2ed;
+  --glow:rgba(112,93,156,.15);
+}
+@media(prefers-color-scheme:light){
+:root:not([data-theme="dark"]){
+  --bg:#f6f3ef;--bg2:#efeaf0;--panel:#fffdfb;--panel2:#f2eef6;
+  --line:#d8d1e2;--grid:#e3ddeb;--ink:#211d36;--ink2:#4e4763;--mut:#665d77;
+  --acc:#514597;--acc2:#286958;--g1:#6153aa;--g2:#5048a0;--g3:#357467;
+  --lg1:#6552aa;--lg2:#4d58af;--lg3:#2e7565;
+  --orbit-etf:#357b6c;--orbit-act:#9a5b2d;--rim:#6c59a3;--nebula:#ded2ed;
+  --glow:rgba(112,93,156,.15);
+}
+}
+
+.brand .bt b,.spw,.lockw h1,.lockw h2,.cap h3,.dh h2,.dh h3,.pmtit,.sec h2{
+  font-family:var(--display);font-weight:600;letter-spacing:-.015em;
+}
+.sec h2{font-size:var(--t4);text-transform:none}
+.num,.hero,.pmc b{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+#cer{
+  background:var(--stele),radial-gradient(ellipse at 76% 7%,var(--glow),transparent 49%),
+    radial-gradient(ellipse at 10% 64%,color-mix(in srgb,var(--nebula) 17%,transparent),transparent 50%);
+  background-size:300px 300px,100% 100%,100% 100%;
+  background-repeat:repeat,no-repeat,no-repeat;
+}
+.card,.tile,.sheet{
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--rim) 12%,transparent),var(--sh2);
+}
+.card.erou,.card.pmis{
+  background:radial-gradient(ellipse at 86% 12%,color-mix(in srgb,var(--nebula) 37%,transparent),transparent 61%),
+    linear-gradient(155deg,var(--panel2),var(--panel) 70%)!important;
+  border:1px solid color-mix(in srgb,var(--rim) 30%,var(--line))!important;
+}
+.card.bon{
+  background:linear-gradient(150deg,color-mix(in srgb,var(--k,var(--rim)) 12%,var(--panel2)),var(--panel) 62%)!important;
+  border:1px solid color-mix(in srgb,var(--k,var(--rim)) 35%,var(--line))!important;
+}
+.gx canvas{background:#080b17}
+.gxc{border-color:color-mix(in srgb,var(--rim) 32%,var(--line))}
+.pmg{filter:drop-shadow(0 7px 14px color-mix(in srgb,var(--rim) 22%,transparent))}
+.pmg .pmpl circle{fill:var(--orbit-act)}
+.pmis.gata .pmpl circle{fill:var(--pos)}
+.pmg .pms.redistribuit{animation:none}
+.pmc b{font-family:SG,system-ui,sans-serif}
+.pm-buget{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.pm-buget div{min-width:0;padding:8px;border-radius:var(--r1);background:var(--panel2)}
+.pm-buget dt{font-size:var(--t1);color:var(--mut)}.pm-buget dd{margin:4px 0 0;font-weight:700;overflow-wrap:anywhere}
+@media(max-width:340px){.pm-buget{grid-template-columns:1fr}}
+
+:where(button,input,a,select):focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+@media(min-width:1100px){.card.pmis .pmg{width:190px;height:190px}}
+@media(max-width:420px){.sec h2{font-size:var(--t3)}}
+
 </style>
 </head>
 <body>
@@ -1337,7 +1410,7 @@ html.fx-redus .pmg .pms,html.fx-redus .pmbar u,html.fx-redus .bpb .plus{animatio
     <button class="ib ha" id="bset" aria-label="Setări" data-c='["go","setari"]'><span class="ni" data-i="setari"></span><small>Setări</small></button>
   </div>
 </div><div id="rbar" aria-hidden="true"><i></i></div></header>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gIco" gradientUnits="userSpaceOnUse" x1="2" y1="2" x2="22" y2="22"><stop offset="0" stop-color="#5aa2ff"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gIco" gradientUnits="userSpaceOnUse" x1="2" y1="2" x2="22" y2="22"><stop offset="0" stop-color="#a8b4ff"/><stop offset="1" stop-color="#81c7b6"/></linearGradient></defs></svg>
 <div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><circle class="po" cx="12" cy="12" r="8"/><circle class="pc" cx="12" cy="12" r="3.4"/><g class="pg"><circle class="pp" cx="12" cy="4" r="2.4"/></g></svg></div>
 <main id="v"></main>
 <nav><div class="in"><i class="ind" id="ind"></i>

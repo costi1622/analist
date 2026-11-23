@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.60.0';
+const APP_VER = '0.61.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -278,10 +278,10 @@ const LOGO = (c='', anim=true, fundal=true) => { const k='L'+(LOGO_N++), rep = a
 // HTML animate doar prin transform și opacitate, pe care le mișcă placa video. Antetul nu se redesenează deloc.
 const LOGO_VIU = () => { const k = 'LV' + (LOGO_N++);
   const def = `<defs><radialGradient id="${k}b" cx=".5" cy=".38" r=".75"><stop offset="0" stop-color="#16263f"/><stop offset=".6" stop-color="#0b1424"/><stop offset="1" stop-color="#060a12"/></radialGradient>
-    <radialGradient id="${k}s" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#c3b8ff"/><stop offset=".7" stop-color="#5b7cff"/><stop offset="1" stop-color="#2fd4c6"/></radialGradient>
-    <linearGradient id="${k}o" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b7cff" stop-opacity=".25"/><stop offset=".5" stop-color="#8b6cff"/><stop offset="1" stop-color="#2fd4c6" stop-opacity=".35"/></linearGradient>
+    <radialGradient id="${k}s" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#c3b8ff"/><stop offset=".7" stop-color="#a8b4ff"/><stop offset="1" stop-color="#e8ba84"/></radialGradient>
+    <linearGradient id="${k}o" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a8b4ff" stop-opacity=".25"/><stop offset=".5" stop-color="#9589e4"/><stop offset="1" stop-color="#e8ba84" stop-opacity=".35"/></linearGradient>
     <clipPath id="${k}f"><rect x="0" y="32" width="64" height="32"/></clipPath><clipPath id="${k}r"><rect x="0" y="0" width="64" height="32"/></clipPath></defs>`;
-  const inel = (c, op) => `<g clip-path="url(#${k}${c})"><ellipse cx="32" cy="32" rx="25" ry="9.5" fill="none" stroke="url(#${k}o)" stroke-width="${c==='f'?1.5:1.3}" opacity="${op}"/><ellipse cx="32" cy="32" rx="16" ry="6" fill="none" stroke="#8b6cff" stroke-width=".9" stroke-dasharray="1.6 2" opacity="${op*.8}"/></g>`;
+  const inel = (c, op) => `<g clip-path="url(#${k}${c})"><ellipse cx="32" cy="32" rx="25" ry="9.5" fill="none" stroke="url(#${k}o)" stroke-width="${c==='f'?1.5:1.3}" opacity="${op}"/><ellipse cx="32" cy="32" rx="16" ry="6" fill="none" stroke="#9589e4" stroke-width=".9" stroke-dasharray="1.6 2" opacity="${op*.8}"/></g>`;
   return `<span class="lv" aria-hidden="true">
     <svg class="lvf" viewBox="0 0 64 64">${def}<rect width="64" height="64" rx="15" fill="url(#${k}b)"/>
       <g fill="#cfe3ff" opacity=".7"><circle cx="11" cy="13" r=".55"/><circle cx="56" cy="47" r=".6"/><circle cx="9" cy="50" r=".4"/><circle cx="44" cy="56" r=".35"/><circle cx="21" cy="57" r=".45"/></g>
@@ -705,12 +705,15 @@ function crestePanou(r0, sh){
 }
 // v0.57: atingi o planetă din galaxie: un cerc în culoarea ei se mărește peste ecran, iar fișa urcă din el
 function zoomPlaneta(x, y, r, col, sym){
-  if (miscareRedusa()) { detaliu(sym); return; }
+  if (miscareRedusa() || S.fx === 'redus') { detaliu(sym); return; }
   const z = document.createElement('div'); z.className = 'zoomp'; z.setAttribute('aria-hidden','true');
   Object.assign(z.style, { left:(x-r)+'px', top:(y-r)+'px', width:2*r+'px', height:2*r+'px', background:`radial-gradient(circle at 35% 30%, #fff8, ${col} 45%, color-mix(in srgb, ${col} 40%, #000) 100%)` });
-  document.body.appendChild(z); const k = Math.hypot(innerWidth, innerHeight) / r;
-  z.animate([{ transform:'scale(1)', opacity:1 }, { transform:`scale(${k*0.35})`, opacity:.85, offset:.55 }, { transform:`scale(${k})`, opacity:0 }], { duration:520, easing:'cubic-bezier(.5,0,.3,1)', fill:'forwards' }).onfinish = () => z.remove();
-  setTimeout(()=>{ z.remove(); }, 1200); vib(); setTimeout(()=>detaliu(sym), 170);
+  document.body.appendChild(z);
+  const k = Math.min(4, Math.max(1.5, 78 / r));
+  const tx = innerWidth * .53 - x, ty = innerHeight * .42 - y;
+  z.animate([{ transform:'scale(1)', opacity:1 }, { transform:`translate(${tx*.55}px,${ty*.55}px) scale(${k})`, opacity:.85, offset:.55 }, { transform:`translate(${tx}px,${ty}px) scale(${k})`, opacity:0 }], { duration:520, easing:'cubic-bezier(.5,0,.3,1)', fill:'forwards' }).onfinish = () => z.remove();
+  setTimeout(()=>{ z.remove(); }, 1200); vib(); const pagina = VIEW, sesiune = V;
+  setTimeout(()=>{ if (VIEW === pagina && V === sesiune && !SHEET_ON()) detaliu(sym); }, 235);
 }
 // v0.57: căutare rapidă — scrii „nv” și apare NVDA; caută în pozițiile tale și în ideile noi din catalog
 function cautare(){
@@ -795,10 +798,12 @@ function render(){
   const v=$('v'), intra = !!TRANZ || !!render.vine || render.ultim !== VIEW; render.ultim = VIEW; v.classList.remove('dr','st'); TRANZ='';
   if (render.vine) { v.classList.remove('vine','tvdr','tvst'); v.classList.add('vine', render.vine==='dr'?'tvdr':'tvst'); const vv = v; setTimeout(()=>vv.classList.remove('vine','tvdr','tvst'), 420); render.vine = ''; }
   if (!intra) v.classList.remove('intra'); // o redesenare (date noi) nu reia animația de intrare
+  const inelAnterior = VIEW === 'plan' && !intra ? pozitiiInel(v) : null;
   const pre = PRE?.v === VIEW && PRE.html != null ? PRE.html : null;
   $('v').innerHTML = (pre ?? vederi[VIEW]()) + `<footer>Semnalele vin din reguli și statistici, nu din predicții. Decizia îți aparține. Nu e consultanță financiară.${versiuneHTML()}</footer>`;
   // v0.47.1: graficele se amână un cadru doar la intrarea pe o pagină nouă (ascuns de animația de intrare). La o redesenare
   // pe aceeași pagină (perioada 1L/3L/6L/1A, contul, date noi) se desenează imediat: altfel graficul clipea un cadru gol.
+  if (inelAnterior) animaInelPlan(v, inelAnterior);
   panouri(v); if (intra) graficeDupaCadru(); else { cancelAnimationFrame(GR_RAF); GR_RAF = 0; montaGrafice(); } countUp(); animaOdo(); stareZi(); iconiteSectiuni(); animaAlocare(); opresteIlustratii(v); if (intra) esalon(v); requestAnimationFrame(muta);
   if (VIEW === 'noutati') { intraNoutati(); if (intra) filtreVizibile(); } else { if (NOUT_ANT !== null) NOUT_ANT = null; bulinaNout(); }
   if (VIEW==='azi' && incepator() && !S.turVazut && !render.tur) { render.tur = true; tur.t = setTimeout(()=>{ if (VIEW==='azi' && !$('sheet').classList.contains('on')) tur(0); }, 1200); }
@@ -2585,10 +2590,30 @@ function bonPondere(l){
   return `<div class="bpb" role="img" aria-label="Pondere acum ${nf(acum,1)}%, după cumpărare ${nf(dupa,1)}%${tinta!=null?`, ținta ${nf(tinta,0)}%`:''}"><i class="acum" style="width:${pc(acum)}%"></i><i class="plus" style="left:${pc(acum)}%;width:${Math.max(0,pc(dupa)-pc(acum)).toFixed(1)}%"></i>${tinta!=null?`<u style="left:${pc(tinta)}%"></u>`:''}</div>
     <div class="bpt"><span>acum <b>${nf(acum,1)}%</b></span><span class="sag">→ <b class="ink2">${nf(dupa,1)}%</b></span>${tinta!=null?`<span class="tin">ținta ${nf(tinta,0)}%</span>`:''}</div>`;
 }
+const culoareInel = l => /^ETF/i.test(bonPoz(l)?.tema || '') || bonPoz(l)?.etf ? 'var(--orbit-etf)' : 'var(--orbit-act)';
+const pozitiiInel = root => new Map([...root.querySelectorAll('.pms[data-orbita]')].map(el => {
+  const stil = getComputedStyle(el);
+  return [el.dataset.orbita, [stil.strokeDasharray, stil.strokeDashoffset]];
+}));
+function animaInelPlan(root, inainte){
+  if (!inainte.size || miscareRedusa() || S.fx === 'redus') return;
+  for (const el of root.querySelectorAll('.pms[data-orbita]')) {
+    const vechi = inainte.get(el.dataset.orbita);
+    if (!vechi) continue;
+    el.classList.add('redistribuit');
+    const dash = el.getAttribute('stroke-dasharray').split(' ').map(n=>n+'px').join(', ');
+    const offset = el.getAttribute('stroke-dashoffset')+'px';
+    if (dash === vechi[0] && offset === vechi[1]) continue;
+    el.animate([
+      {strokeDasharray:vechi[0], strokeDashoffset:vechi[1]},
+      {strokeDasharray:dash, strokeDashoffset:offset}
+    ], {duration:480, easing:'cubic-bezier(.22,1,.36,1)'});
+  }
+}
 function misiuneLuna(plan, s){
-  const facut = lunaFacuta(), inv = investitLuna(), conf = facut && inv > 0, tot = plan.reduce((a,l)=>a+l.suma,0) || s, n = plan.length;
+  const facut = lunaFacuta(), inv = investitLuna(), conf = facut && inv > 0, alocat = plan.reduce((a,l)=>a+l.suma,0), tot = alocat || s, n = plan.length;
   const R = 62, C = 2*Math.PI*R, gol = n > 1 ? 5 : 0; let off = 0;
-  const seg = plan.map((l,k)=>{ const len = Math.max(2, l.suma/tot*C - gol), d = `<circle class="pms" cx="90" cy="90" r="${R}" fill="none" stroke="${bonCuloare(l)}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${(C-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" style="--d:${k*140}ms;--l:${len.toFixed(1)};--c:${C.toFixed(1)}"/>`; off += l.suma/tot*C; return d; }).join('');
+  const seg = plan.map((l,k)=>{ const len = Math.max(2, l.suma/tot*C - gol), d = `<circle class="pms" data-orbita="${esc(l.symbol)}" cx="90" cy="90" r="${R}" fill="none" stroke="${culoareInel(l)}" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len.toFixed(1)} ${(C-len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" style="--d:${k*140}ms;--l:${len.toFixed(1)};--c:${C.toFixed(1)}"/>`; off += l.suma/tot*C; return d; }).join('');
   const cash = SNAP.cashNeinvestit?.lei || 0, p1 = facut || cash >= s*0.9, p2 = facut, p3 = conf;
   const pas = (ok, cur, t, sub) => `<li class="${ok?'ok':cur?'cur':''}"><i>${ok?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':''}</i><div><b>${t}</b><small>${sub}</small></div></li>`;
   const luna = LUNI_RO[new Date().getMonth()];
@@ -2596,9 +2621,10 @@ function misiuneLuna(plan, s){
     <div class="pmg"><svg viewBox="0 0 180 180" role="img" aria-label="Planul lunii: ${n} ${n===1?'cumpărare':'cumpărări'}, ${tot} lei"><circle cx="90" cy="90" r="82" fill="none" class="pmo"/><circle cx="90" cy="90" r="${R}" fill="none" class="pmb" stroke-width="13"/><g transform="rotate(-90 90 90)">${seg}</g><g class="pmpl"><circle cx="90" cy="8" r="4.5"/></g></svg>
       <div class="pmc">${facut?`<span class="pmok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>`:''}<b class="num">${S.privat?'•••':nf(conf?inv:tot,0)}</b><small>lei ${conf?'investiți':facut?'bifați':'de investit'}</small></div></div>
     <div class="pmt"><div class="lbl">Misiunea lunii · ${luna}</div>
+      <dl class="pm-buget num">${[['Buget',s],['Alocat',alocat],['Rămas de alocat',Math.max(0,s-alocat)]].map(([et,suma])=>`<div><dt>${et}</dt><dd>${S.privat?'•••':nf(suma,2)+' lei'}</dd></div>`).join('')}</dl>
       <div class="pmtit">${n?`${n} ${n===1?'cumpărare':'cumpărări'}`:'Nimic de cumpărat'}${serieLuni()>1?` <span class="pmser">${serieLuni()} luni la rând</span>`:''}</div>
       <ol class="pmpas">${pas(p1, !p1, `Depui ${s} lei`, p1&&!facut?'banii sunt deja la broker':'la brokerul din bon')}${pas(p2, p1&&!p2, n===1?'Cumperi poziția':`Cumperi cele ${n} poziții`, 'la orele din bonuri')}${pas(p3, p2&&!p3, 'Confirmare din cont', p3?'văzută în cont':'apare a doua zi')}</ol></div>
-    ${n?`<div class="pmleg num">${plan.map(l=>`<div class="pml"><i style="background:${bonCuloare(l)}"></i><b>${esc(l.symbol)}</b><span class="pmbar"><u style="width:${(l.suma/tot*100).toFixed(1)}%;background:${bonCuloare(l)}"></u></span><em>${Math.round(l.suma/tot*100)}%</em><strong>${nf(l.suma,0)} lei</strong></div>`).join('')}</div>`:''}
+    ${n?`<div class="pmleg num">${plan.map(l=>`<div class="pml"><i style="background:${culoareInel(l)}"></i><b>${esc(l.symbol)}</b><span class="pmbar"><u style="width:${(l.suma/tot*100).toFixed(1)}%;background:${culoareInel(l)}"></u></span><em>${Math.round(l.suma/tot*100)}%</em><strong>${nf(l.suma,0)} lei</strong></div>`).join('')}</div>`:''}
     ${facut?`<div class="${STAMPILA?'inchide':''}">${inelLuna(false)}</div>`:''}</div>`;
 }
 // ===== Stil comun: antetul foilor, intrarea eșalonată =====
@@ -3428,9 +3454,9 @@ function* gxFundalGalaxie(){
   for (const [th,L] of br) { for (let k=0;k<50000*L;k++) { if (k%1500===0) yield; const u=Math.pow(r(),0.85), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2+g()*0.22*(1-u*0.4), d=rr+g()*R*0.055*(1+u), x=cx+d*Math.cos(f), y=cx+d*Math.sin(f);
       if (fb(x/(70*q),y/(70*q),3) < 0.3) continue; pt(x, y, r()<0.012?2.2:0.45+r()*0.85, r()<0.5?'#cddcff':r()<0.7?'#ffffff':'#a9c2ff', 0.11); }
     for (let k=0;k<34*L;k++) { const u=0.15+r()*(L-0.15), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2+g()*0.06, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f), rad=(4+r()*9)*q, gr=c.createRadialGradient(x,y,0,x,y,rad);
-      gr.addColorStop(0,'rgba(255,120,160,.38)'); gr.addColorStop(1,'rgba(255,120,160,0)'); c.globalAlpha=1; c.fillStyle=gr; c.fillRect(x-rad,y-rad,rad*2,rad*2); }
+      gr.addColorStop(0,'rgba(158,133,240,.38)'); gr.addColorStop(1,'rgba(158,133,240,0)'); c.globalAlpha=1; c.fillStyle=gr; c.fillRect(x-rad,y-rad,rad*2,rad*2); }
     for (let k=0;k<40*L;k++) { const u=0.1+r()*(L-0.1), rr=R*(0.09+u*(L-0.09)), f=th+u*3.2, x=cx+rr*Math.cos(f), y=cx+rr*Math.sin(f), rad=(30+r()*40)*q, gr=c.createRadialGradient(x,y,0,x,y,rad);
-      gr.addColorStop(0,'rgba(140,175,255,.09)'); gr.addColorStop(1,'rgba(140,175,255,0)'); c.globalAlpha=1; c.fillStyle=gr; c.fillRect(x-rad,y-rad,rad*2,rad*2); } }
+      gr.addColorStop(0,'rgba(148,161,255,.13)'); gr.addColorStop(1,'rgba(140,175,255,0)'); c.globalAlpha=1; c.fillStyle=gr; c.fillRect(x-rad,y-rad,rad*2,rad*2); } }
   // strălucirea: aceeași imagine, micșorată și mărită la loc (o estompare care merge în orice browser), adunată peste stele
   yield;
   for (const [m, al] of [[5, 0.3], [18, 0.2]]) { const t = document.createElement('canvas'); t.width = t.height = Math.round(Z/m); const tc = t.getContext('2d'); tc.imageSmoothingEnabled = true; tc.imageSmoothingQuality = 'high';
@@ -3503,7 +3529,7 @@ const SHEET_ON = () => document.getElementById('sheet')?.classList.contains('on'
 function galaxie(){
   const cv = $('gxc'); if (!cv) return;
   cancelAnimationFrame(GX.raf);
-  const D = gxDate(), calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const D = gxDate(), calm = miscareRedusa() || S.fx === 'redus';
   const st = { yaw: GX.yaw ?? 0.6, tilt: GX.tilt ?? 0.58, vy: 0, t0: performance.now(), sel: GX.sel ?? null, drag: null, rel: null, met: null };
   if (D.dep?.tinte.length && S.gxDep !== D.dep.cheie && !calm) { st.met = { t0: performance.now()+900, tinte: D.dep.tinte }; S.gxDep = D.dep.cheie; save(); }
   Object.assign(GX, { on:true, D, st }); GX.sfere = GX.sfere || new Map();
@@ -3511,7 +3537,7 @@ function galaxie(){
   let W=0, H=0, dpr=1;
   const fond = document.createElement('canvas'), fc = fond.getContext('2d');
   const rS = gxRng(90001), stele = Array.from({length:220},()=>({ x:rS(), y:rS(), r:rS()*0.7+0.15, f:rS()*6.28, c: rS()<0.15?'#ffd9b8':rS()<0.2?'#c9dbff':'#ffffff' }));
-  const deseneazaFond = () => { fond.width = cv.width; fond.height = cv.height; fc.setTransform(dpr,0,0,dpr,0,0); fc.fillStyle='#020207'; fc.fillRect(0,0,W,H);
+  const deseneazaFond = () => { fond.width = cv.width; fond.height = cv.height; fc.setTransform(dpr,0,0,dpr,0,0); fc.fillStyle='#080b17'; fc.fillRect(0,0,W,H);
     stele.forEach((s,i)=>{ if (i%5===0) return; fc.globalAlpha=0.15+0.3*s.r; fc.fillStyle=s.c; fc.beginPath(); fc.arc(s.x*W,s.y*H,s.r,0,6.283); fc.fill(); }); fc.globalAlpha=1; };
   const marime = () => { const r=cv.getBoundingClientRect(); dpr=Math.min(devicePixelRatio||1, 3); W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); deseneazaFond(); };
   marime(); GX.marime = marime;

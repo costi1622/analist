@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.62.0';
+const APP_VER = '0.63.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -3374,7 +3374,7 @@ const GX = { on:false, raf:0 };
 function galaxieHTML(){
   return `<div class="gx" data-noswipe><canvas id="gxc" aria-label="Portofoliul ca sistem solar: soarele e ETF-ul de bază, planetele sunt acțiunile, orbitele sunt sectoarele"></canvas>
     <div class="gxtop"><span class="gxd" id="gxd"></span><button class="gxb" id="gxp" data-c="${A('gxReluare')}">${ic('play')}<span>Ultimul an</span></button></div>
-    <div class="gxinfo" id="gxi"></div></div>`;
+    </div><aside class="gxinfo cel-detail" id="gxi" aria-live="polite"></aside>`;
 }
 function gxCul(n){ return cssv(n) || '#5aa2ff'; }
 const gxRng = seed => { let s = (seed * 48271 + 12345) % 2147483647 || 7; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; };
@@ -3574,10 +3574,10 @@ function galaxie(){
     if (!GX.bg || GX.bgW !== W || GX.bgH !== H || Math.abs(ungG-(GX.bgU??-9)) > 0.004 || Math.abs(inc-(GX.bgI??-9)) > 0.004 || GX.bgGal !== !!GX.gal) {
       // v0.58: fundalul se compune la rezoluția ecranului (cel mult 2x pe calculator, 1,6x pe telefon), nu la 1x: galaxia rămâne clară pe ecrane dense
       const qb = Math.min(dpr, GX_LIN ? 2 : 1.6), bg = GX.bg || (GX.bg = document.createElement('canvas')); if (bg.width !== Math.round(W*qb) || bg.height !== Math.round(H*qb)) { bg.width = Math.round(W*qb); bg.height = Math.round(H*qb); }
-      const b = bg.getContext('2d'); b.setTransform(qb,0,0,qb,0,0); b.imageSmoothingEnabled = true; b.imageSmoothingQuality = 'high'; b.globalCompositeOperation='source-over'; b.globalAlpha=1; if (fond.width && fond.height) b.drawImage(fond,0,0,W,H); else { b.fillStyle='#020207'; b.fillRect(0,0,W,H); }
+      const b = bg.getContext('2d'); b.setTransform(qb,0,0,qb,0,0); b.imageSmoothingEnabled = true; b.imageSmoothingQuality = 'high'; b.globalCompositeOperation='source-over'; b.globalAlpha=1; b.clearRect(0,0,W,H);
       if (GX.gal) { // imaginea de 2048 px se micșorează o singură dată la mărimea la care se vede; la fiecare rotire se copiază 1:1 (ieftin)
         const tz = Math.min(GX.gal.width, Math.ceil(S0*3.4*qb)); if (!GX.galS || GX.galS.width !== tz) { const m = document.createElement('canvas'); m.width = m.height = tz; const mc = m.getContext('2d'); mc.imageSmoothingEnabled = true; mc.imageSmoothingQuality = 'high'; mc.drawImage(GX.gal, 0, 0, tz, tz); GX.galS = m; }
-        const sc = S0*3.4/tz; b.save(); b.translate(cx,cy); b.scale(1.17,inc*1.24); b.rotate(ungG); b.globalCompositeOperation='lighter'; b.globalAlpha=1; b.imageSmoothingQuality = 'low';
+        const sc = S0*3.4/tz; b.save(); b.translate(cx,cy); b.scale(1.17,inc*1.24); b.rotate(ungG); b.globalCompositeOperation='screen'; b.globalAlpha=.34; b.imageSmoothingQuality = 'low';
         b.drawImage(GX.galS, -tz/2*sc, -tz/2*sc, tz*sc, tz*sc); b.restore(); b.globalAlpha=1; b.globalCompositeOperation='source-over'; }
       const vg = b.createRadialGradient(cx,cy,S0*0.7,cx,cy,Math.hypot(W,H)*0.6); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.45)'); b.fillStyle=vg; b.fillRect(0,0,W,H);
       Object.assign(GX, { bgW:W, bgH:H, bgU:ungG, bgI:inc, bgGal:!!GX.gal }); }
@@ -3677,7 +3677,9 @@ function gxInfo(){
   const gp = GX.D?.pl.find(x=>x.p.symbol===p.symbol), nd = gp ? gp.luni : nl;
   // RSI-ul se vede mereu aici, la planeta atinsă; aura apare pe planetă doar la extreme (peste 70 sau sub 30)
   const extra = [rsi != null ? `RSI ${nf(rsi,0)}${rsi >= 70 ? ', supraîncălzită' : rsi <= 30 ? ', răcită' : ', normal'}` : '', p.ind?.subProtectie ? '<span class="neg">sub nivelul de alertă</span>' : '', nd ? `${nd} ${nd===1?'dividend':'dividende'} pe an${gp?.luniEst?' (estimat)':''}` : (p.etf ? '' : 'fără dividende')].filter(Boolean).join(' · ');
-  el.innerHTML = `${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)}${sp!=null?` <span class="${sp>P().maxTema?'neg':''}">${nf(sp,0)}%</span>`:''} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div>${extra?`<div class="sub">${extra}</div>`:''}</div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button>`;
+  const seriePret = p.serie?.c?.slice(-40).filter(Number.isFinite);
+  const evolutie = seriePret?.length > 1 ? `<div class="cel-stock-chart"><span>Evoluția prețului</span>${spark(seriePret)}</div>` : '';
+  el.innerHTML = `<div class="cel-detail-top">${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)}${sp!=null?` <span class="${sp>P().maxTema?'neg':''}">${nf(sp,0)}%</span>`:''} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div>${extra?`<div class="sub">${extra}</div>`:''}</div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button></div>${evolutie}`;
 }
 // v0.50: ce spune sistemul dintr-o privire: orbitele roșii (sectoare peste plafon) și cât din țintă are soarele (ETF-urile)
 function gxEchilibru(){

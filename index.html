@@ -1484,12 +1484,92 @@ html.inchis #v{max-width:1140px;width:100%;margin-inline:auto}
  html.inchis nav{display:none}
 }
 
+
+/* Identitatea celestă 0.64 · aceeași structură de panouri în toate ecranele. */
+.insigna{display:inline-grid;place-items:center;width:var(--lvs,44px);height:var(--lvs,44px);background:none;box-shadow:none}
+.insigna img{width:100%;height:100%;object-fit:contain}
+#splash{background:linear-gradient(180deg,#0b10223b,#080b17dc),var(--cel-art) center 55%/cover no-repeat}
+#splash::before,#splash::after{display:none}
+#splash .spc{padding:28px 40px;border:1px solid #b0a7e555;border-radius:28px;background:#10152ce3;box-shadow:0 20px 90px #020412ad}
+#splash .spl{display:grid;place-items:center;width:auto;height:auto;margin:0 auto 14px}
+#splash .insigna{--lvs:92px}
+#splash .spw,.lockw h1{color:#f8efff;font-family:var(--display);font-weight:500;letter-spacing:-.04em;background:none;-webkit-text-fill-color:currentColor}
+#splash .spt{color:#dbd6f2}
+.lockw{--ink:#f8efff;--mut:#c9c3df;--ink2:#f3ebfb;--panel:#11172b;--panel2:#232343;background:linear-gradient(155deg,var(--panel2),var(--panel));box-shadow:0 24px 90px #0305149e}
+.lockw .lklogo .insigna{--lvs:84px}
+.lockworld{background:none;mask-image:none}
+.lockworld::before{display:none}
+.lockbg .lorb,.lockbg .neb{display:none}
+.lockbg .cad{width:110px;height:1px;background:linear-gradient(90deg,transparent,#b1b6ff7a 66%,#fff1d4);box-shadow:0 0 7px #b9a4ff;animation:celMeteor 16s linear infinite}
+.lockbg .cad.c2{animation-delay:5.8s}.lockbg .cad.c3{animation-delay:11.8s}
+@keyframes celMeteor{0%,76%,100%{opacity:0;transform:rotate(-27deg) translateX(-45px)}79%{opacity:.76}87%{opacity:0;transform:rotate(-27deg) translateX(380px)}}
+.cel-pagehead{position:relative;display:grid;gap:7px;min-width:0;margin:0 0 18px;padding:24px clamp(16px,4vw,42px);border:1px solid var(--cel-border);border-radius:var(--r4);background:linear-gradient(90deg,var(--panel2) 24%,color-mix(in srgb,var(--panel) 35%,transparent)),var(--cel-art) center 35%/cover}
+.cel-pagehead .cel-title{margin:0}.cel-pagehead p{margin:0;color:var(--ink2)}
+.cel-pagehead>.btn{width:max-content;margin:8px 0 0}
+.cel-home>.todo{padding:24px;border-left:3px solid var(--k);min-height:175px}
+.cel-total-label{margin-top:14px}
+.cel-home .hero.big{font-size:clamp(2.1rem,4vw,4rem);line-height:1.08}
+.cel-home .hgal{opacity:.25}
+.cel-home .erou{background:linear-gradient(90deg,#10152fe8,#11163298),var(--cel-art) 50% 42%/cover!important}
+.card.cel-brief{position:relative;border-left:3px solid var(--orbit-etf);padding:clamp(16px,3vw,26px)}
+.cel-brief .rtit{font:500 clamp(1.25rem,2.5vw,1.9rem)/1.23 var(--display)}
+.cel-brief .rpas{background:var(--panel2)}
+.cel-report .rp-hero{background:linear-gradient(90deg,#15182fed,#202643bb),var(--cel-art) center 54%/cover;border:1px solid #706c9b;color:#faf1ff;padding:clamp(18px,4vw,32px)}
+.cel-report .rp-hero h2{font:500 clamp(1.85rem,4vw,2.75rem)/1.12 var(--display)}
+.cel-report .rp-toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.cel-report .rp-toc button{border:1px solid #9892c57a;background:#171c38;color:#f8efff;border-radius:999px;padding:6px 10px}
+.cel-report .rp-card{margin-block:12px;border-inline-start:3px solid var(--k);background:var(--panel)}
+.cel-report .rp-pct{padding-block:12px}.cel-report .rp-pct+.rp-pct{border-top:1px solid var(--line)}
+.cel-report .rp-n{background:var(--panel2);color:var(--ink)}
+[data-view=plan] .pmis{padding:clamp(16px,4vw,36px);background:linear-gradient(90deg,#0e142ebd,#10163275),var(--cel-art) center/cover!important}
+[data-view=plan] .pmg{width:clamp(155px,24vw,300px);height:auto;aspect-ratio:1}
+[data-view=plan] .pm-buget{gap:10px}
+[data-view=plan] .pm-buget div{background:#151c39e8;padding:13px}
+[data-view=plan] .pm-buget dd{font-size:clamp(1rem,2vw,1.45rem)}
+[data-view=plan] .pmleg{background:#12182fbd;padding:14px;border:1px solid #64688c;border-radius:14px}
+[data-view=plan] .bon{padding:18px;border-inline-start:3px solid var(--k)!important}
+[data-view=plan] .bonf{background:var(--panel2);border-radius:12px;border-top:0;margin-inline:0;padding:12px}
+.cel-atlas{background:linear-gradient(180deg,#11152a32,#080c1b69),var(--cel-art) center 58%/cover!important}
+.cel-atlas .gx{background:none;border:0;border-radius:0}
+.cel-atlas .gx canvas{mix-blend-mode:normal}
+.cel-atlas .gxleg{background:var(--cel-glass)}
+.cel-atlas .cel-detail{min-height:205px;align-content:center;border-color:var(--cel-border);box-shadow:0 18px 50px #040716a0}
+.cel-detail .cel-stock-chart{margin-top:8px}
+.cel-news{grid-template-columns:1fr auto;align-items:center}
+.cel-news-stats{display:flex;gap:8px}.cel-news-stats div{display:grid;padding:8px 12px;border:1px solid var(--cel-border);border-radius:12px;background:var(--panel)}
+.cel-news-stats strong{font-size:1.45rem;font-variant-numeric:tabular-nums}.cel-news-stats span{color:var(--mut);font-size:.75rem}
+.card.cel-news-item{position:relative;border-left:3px solid var(--k);padding:16px 18px;background:var(--cel-glass);margin-bottom:10px}
+[data-view=noutati] .nout-zi{border-bottom:1px solid var(--line);padding-bottom:7px;margin-top:16px}
+[data-view=invata] .acad{display:grid;gap:18px;padding:clamp(18px,4vw,38px);background:linear-gradient(90deg,var(--panel),color-mix(in srgb,var(--panel) 53%,transparent)),var(--cel-art) 50% 45%/cover!important}
+[data-view=invata] .acb{min-height:58px}
+[data-view=invata] .atile,[data-view=invata] .mod{border:1px solid var(--cel-border);background:var(--cel-glass);border-radius:14px}
+[data-view=invata] .mod{padding:12px}
+@media(min-width:1100px){
+ #v[data-view=plan] .pan:has(.cel-pagehead),#v[data-view=invata] .pan:has(.cel-pagehead),#v[data-view=azi] .pan:has(.cel-brief){column-span:all}
+ [data-view=plan] .bonuri{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+ [data-view=invata] .acad{grid-template-columns:1fr 1fr;align-items:center}
+ [data-view=invata] .acb{grid-column:2;grid-row:1/3}
+}
+@media(max-width:550px){.cel-news{grid-template-columns:1fr}.cel-pagehead{padding:17px}.cel-atlas .cel-detail{min-height:125px}}
+@media(prefers-reduced-motion:reduce){.lockbg .cad{animation:none!important}}
+
+
+@media(max-width:600px){
+ [data-view=plan] .card.pmis{grid-template-columns:minmax(0,1fr);justify-items:center;row-gap:12px}
+ [data-view=plan] .pmt{width:100%;min-width:0}
+ [data-view=plan] .pm-buget{grid-template-columns:repeat(3,minmax(0,1fr))}
+ [data-view=plan] .pm-buget div{padding:8px}
+ [data-view=plan] .pm-buget dd{font-size:clamp(.77rem,3.7vw,1rem);overflow-wrap:normal}
+ [data-view=plan] .pmleg{max-width:100%;overflow:hidden}
+ [data-view=plan] .pml{grid-template-columns:8px minmax(41px,auto) minmax(12px,1fr) auto auto;gap:5px}
+}
+
 </style>
 </head>
 <body>
 <div id="cer" aria-hidden="true"></div>
 <div id="aur" aria-hidden="true"><canvas id="aurc" width="72" height="144"></canvas></div>
-<div id="splash" aria-hidden="true"><div class="spc"><div class="spl"></div><div class="spw">Analist</div><div class="spt">analistul tău personal pe bursă</div></div></div>
+<div id="splash" aria-hidden="true"><div class="spc"><div class="spl"></div><div class="spw">Analist</div><div class="spt">Portofoliu și analiză</div></div></div>
 <header><div class="hrow">
   <div class="brand"><span id="blogo"></span><div class="bt"><b>Analist</b><span class="stamp num" id="stare"></span></div></div><span class="pill" id="pill">…</span>
   <div class="hact" role="toolbar" aria-label="Acțiuni">

@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.59.0';
+const APP_VER = '0.60.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -529,14 +529,40 @@ async function salveazaProfil(){
   aplicaProfil(); vib(); render(); await sincronizeazaProfil();
 }
 // Profilul ajunge în GitHub criptat cu cheia de date, printr-o rulare a analizei (nu e nevoie de alte permisiuni).
+const profilDeTrimis = p => ({ anTinta: p.anTinta, suma: p.suma, tintaETF: p.tintaETF ?? null,
+  alese: p.alese || [], impartire: p.impartire || 'echilibrat', alerte: p.alerte || [] });
+let PROFIL_TRIMIS = null;
 async function sincronizeazaProfil(mod='zi'){
   if (!V?.profil || !DK || ePCcitire()) return;
+  const sesiune = V, repo = S.repo, continut = JSON.stringify(profilDeTrimis(V.profil));
+  const id = crypto.randomUUID();
+  PROFIL_TRIMIS = id;
+  const curent = () => V === sesiune && S.repo === repo && PROFIL_TRIMIS === id && V.profil && JSON.stringify(profilDeTrimis(V.profil)) === continut;
   try {
-    const ct = await encDate(JSON.stringify({ anTinta: V.profil.anTinta, suma: V.profil.suma, tintaETF: V.profil.tintaETF ?? null, alese: V.profil.alese || [], impartire: V.profil.impartire || 'echilibrat', alerte: V.profil.alerte || [] }));
+    V.profil.sincronizat = false;
+    await salveazaSeif();
+    const ct = await encDate(JSON.stringify({ ...JSON.parse(continut), confirmare: id }));
+    if (!curent()) return;
     await gh('/actions/workflows/analiza.yml/dispatches', {method:'POST', body:JSON.stringify({ref:'main', inputs:{mod, profil:ct}})});
-    V.profil.sincronizat = true; await salveazaSeif(); toast(mod==='profil'?'Alertele au fost trimise. Analiza din GitHub le verifică din oră în oră.':'Profil salvat. Analiza din GitHub îl folosește de acum.'); render();
+    if (!curent()) return;
+    toast('Profil trimis. Așteaptă confirmarea din GitHub.');
+    for (let i = 0; i < 24 && curent(); i++) {
+      await new Promise(r => setTimeout(r, 10000));
+      if (!curent()) return;
+      const r = await fisier('date/profil-confirmari.enc').catch(() => null);
+      const lista = r?.text ? await decDate(r.text).then(J_).catch(() => null) : null;
+      const confirmare = Array.isArray(lista) && lista.find(x => x.id === id);
+      if (!confirmare || !curent()) continue;
+      V.profil.sincronizat = confirmare.ok === true;
+      await salveazaSeif();
+      toast(confirmare.ok ? 'Profil sincronizat.' : 'GitHub a respins profilul. Verifică valorile și retrimite.');
+      return;
+    }
+    if (curent()) toast('Profilul este salvat local. GitHub încă nu a confirmat sincronizarea.');
   } catch(e) {
-    toast(/422/.test(e.message) ? 'Salvat pe telefon. Ca notificările să-l folosească, actualizează fișierul analiza.yml (pașii din documentație).' : 'Salvat pe telefon. Sincronizarea cu GitHub a eșuat, reîncearcă din Plan.');
+    if (curent()) toast(/422/.test(e.message) ? 'Salvat local. Actualizează workflow-ul analiza.yml.' : 'Salvat local. Trimiterea către GitHub a eșuat.');
+  } finally {
+    if (PROFIL_TRIMIS === id) { PROFIL_TRIMIS = null; if (V === sesiune) render(); }
   }
 }
 
@@ -556,6 +582,7 @@ async function actualizeaza(){
   const nou = await reincarca(false);
   if (nou) { toast('Actualizat.'); return; }
   if (OFFLINE) return;
+  if (SNAP?.incomplet) { toast('Un broker este indisponibil. Sunt afișate ultimele date complete.'); return; }
   const v = varstaDate();
   if (bursaDeschisa() && v > 20*60e3 && !S.kill && !ePCcitire()) { ruleaza(false, true); return; }
   toast(v < 20*60e3 ? `Datele sunt de acum ${Math.max(1, Math.round(v/60e3))} min. Nimic nou.` : bursaDeschisa() ? 'Nimic nou.' : 'Bursa e închisă. Datele sunt de la ultima analiză.');
@@ -565,16 +592,27 @@ async function reincarca(manual) {
   $('bref').classList.add('spin'); OFFLINE=false;
   try {
     if (live()) {
-      const rez = await Promise.all(['date/snapshot.enc','rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/utilizator.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{ if(f==='date/stare.json') throw e; return {text:FIS[f]?.text||null,schimbat:false}; })));
+      const principal = 'date/snapshot.enc', vechi = FIS[principal];
+      const rez = await Promise.all([principal,'rapoarte/ultimul.enc','date/intraday.enc','date/istoric.enc','date/notificari.enc','date/utilizator.enc','date/stare.json'].map(f=>fisier(f).catch(e=>{
+        if (f === principal || f === 'date/stare.json') return {eroare:e};
+        return {text:FIS[f]?.text||null, schimbat:false};
+      })));
+      const problema = rez[0].eroare || rez[6].eroare || (vechi && !rez[0].text && new Error('Datele portofoliului lipsesc din GitHub.'));
+      const portofoliuNou = !!rez[0].text && (rez[0].schimbat || !SNAP);
+      const date = portofoliuNou ? await decDate(rez[0].text).then(J_).catch(() => null) : null;
+      if (problema || (portofoliuNou && !Array.isArray(date?.pozitii))) {
+        if (vechi) FIS[principal] = vechi; else delete FIS[principal];
+        throw problema || new Error('Datele portofoliului nu pot fi citite.');
+      }
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
       saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{}); versiuneSite().then(v=>{ if (v && analizaNoua() && VIEW==='azi') render(); }).catch(()=>{});
-      if (manual === true) toast(schimbat?'Actualizat.':'Nimic nou de la ultima verificare.');
-      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return schimbat;
+      if (manual === true) toast(portofoliuNou && !SNAP?.incomplet ? 'Actualizat.' : SNAP?.incomplet ? 'Un broker este indisponibil. Sunt afișate ultimele date complete.' : 'Nimic nou de la ultima verificare.');
+      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return portofoliuNou && !SNAP?.incomplet;
     }
     // neconectat: nu există date de arătat, doar ecranul Pornire
     SNAP = null; IST = null; RAP = null; INTRA = null;
   } catch(e) {
-    if (live() && FIS['date/snapshot.enc']) { await dinCache(); OFFLINE=true; toast(navigator.onLine?e.message:'Fără conexiune: arăt ultimele date salvate.'); }
+    if (live() && FIS['date/snapshot.enc']) { await dinCache(); OFFLINE=true; toast(navigator.onLine ? e.message + ' Sunt afișate ultimele date salvate.' :'Fără conexiune: arăt ultimele date salvate.'); }
     else { if (!navigator.onLine) OFFLINE=true; $('bref').classList.remove('spin'); LOADED=true; stare(); render(); if (!OFFLINE) toast(e.message); return; }
   }
   $('bref').classList.remove('spin'); LOADED=true; stare(); render(); ancora(); setTimeout(verificaAbonament, 3000);
@@ -2479,7 +2517,7 @@ function vPlan(){
   let h = '';
   // Profilul: suma lunară și orizontul. v0.48: stă sub plan, strâns într-un rând; se deschide la „Modifică” sau când îl editezi.
   let prof = '';
-  prof += `<div class="sec"><h2>Profilul tău</h2>${ED?'<span class="sub" style="color:var(--warn)">previzualizare, nesalvat</span>':u.sincronizat===false?'<button class="link" data-c="[&quot;sincronizeazaProfil&quot;]">Trimite în GitHub ↻</button>':''}</div>
+  prof += `<div class="sec"><h2>Profilul tău</h2>${ED?'<span class="sub" style="color:var(--warn)">previzualizare, nesalvat</span>':u.sincronizat===false && !PROFIL_TRIMIS?'<button class="link" data-c="[&quot;sincronizeazaProfil&quot;]">Trimite în GitHub ↻</button>':''}</div>
   <div class="card">
     <div class="lbl">Cât investești pe lună</div>
     <div class="stepper" style="margin-top:8px"><button class="ib" style="width:46px;height:46px;font-size:var(--t4)" aria-label="Mai puțin" data-c="${A('sumaPas',-1)}">−</button>
@@ -3890,7 +3928,7 @@ const syncVal = k => { if (k !== 'profil') return S[k] ?? null; if (!V?.profil) 
 // tipul așteptat al fiecărui câmp: o valoare de alt tip (dintr-o versiune viitoare sau stricată) se ignoră, nu strică aplicația
 const SYNC_TIP = { planFacut:'string', luniFacute:'array', citite:'array', quiz:'object', notifVazut:'string', alVazute:'array', actConf:'array', cod:'object', cronExp:'string', incepator:'boolean', profil:'object', exercitii:'object', simulari:'object' };
 const tipOk = (k, v) => v === null || (SYNC_TIP[k] === 'array' ? Array.isArray(v) : SYNC_TIP[k] === 'object' ? v && typeof v === 'object' && !Array.isArray(v) : typeof v === SYNC_TIP[k]);
-function syncSet(k, v){ if (!tipOk(k, v)) return; if (k === 'profil') { if (V) V.profil = v && typeof v === 'object' ? { ...v, sincronizat: true } : V.profil; } else if (v === null || v === undefined) delete S[k]; else S[k] = v; }
+function syncSet(k, v){ if (!tipOk(k, v)) return; if (k === 'profil') { if (V) V.profil = v && typeof v === 'object' ? { ...v, sincronizat: !!V.profil?.sincronizat && JSON.stringify(profilDeTrimis(v)) === JSON.stringify(profilDeTrimis(V.profil)) } : V.profil; } else if (v === null || v === undefined) delete S[k]; else S[k] = v; }
 const syncAmp = () => Object.fromEntries(SYNC_CAMPURI.map(k => [k, JSON.stringify(syncVal(k))]));
 const syncJA = () => new Map(J.map(x => [String(x.id), JSON.stringify(x)]));
 const SY = () => (S.sync ||= { t:{}, jm:{}, js:{}, rt:{}, rj:{}, rs:{} });
@@ -3918,17 +3956,63 @@ function syncDiferenta(){
 }
 const syncDeTrimis = d => Object.keys(d.t).length + d.j.length + Object.keys(d.s).length;
 function syncProgrameaza(ms = 20000){ clearTimeout(SYNC_T); SYNC_T = setTimeout(syncTrimite, ms); }
+// Trimite o tranșă și așteaptă să apară în starea comună înainte de următoarea.
 async function syncTrimite(){
-  SYNC_T = 0; if (SYNC_OCUPAT || !live() || !DK || ePCcitire() || OFFLINE) return;
-  const d = syncDiferenta(); if (!syncDeTrimis(d)) return;
+  SYNC_T = 0;
+  if (SYNC_OCUPAT || !live() || !DK || ePCcitire() || OFFLINE) return;
+  const diferenta = syncDiferenta();
+  if (!syncDeTrimis(diferenta)) return;
+  const sesiune = V, repo = S.repo;
+  const curent = () => V === sesiune && S.repo === repo && live();
   SYNC_OCUPAT = true;
+  let reluare = 0;
   try {
-    let ct = await encDate(JSON.stringify(d));
-    while (ct.length > 60000 && d.j.length > 1) { d.j = d.j.slice(0, Math.ceil(d.j.length / 2)); ct = await encDate(JSON.stringify(d)); } // jurnal mare: pleacă în tranșe
-    if (ct.length > 60000) return;
+    const d = { v:1, t:{}, c:{}, j:[], s:{} };
+    const adauga = [
+      ...Object.keys(diferenta.t).map(k => () => { d.t[k] = diferenta.t[k]; d.c[k] = diferenta.c[k]; return () => { delete d.t[k]; delete d.c[k]; }; }),
+      ...Object.entries(diferenta.s).map(([id, t]) => () => { d.s[id] = t; return () => { delete d.s[id]; }; }),
+      ...diferenta.j.map(x => () => { d.j.push(x); return () => { d.j.pop(); }; }),
+    ];
+    const lungime = x => new TextEncoder().encode(JSON.stringify(x)).length;
+    for (const adaugaElement of adauga) {
+      const retrage = adaugaElement();
+      if (lungime(d) > 44000) retrage();
+    }
+    if (!syncDeTrimis(d)) {
+      toast('O modificare depășește limita de sincronizare. Este păstrată pe acest dispozitiv.');
+      return;
+    }
+    const ct = await encDate(JSON.stringify(d));
+    if (!curent()) return;
     await gh('/actions/workflows/analiza.yml/dispatches', { method:'POST', body: JSON.stringify({ ref:'main', inputs:{ mod:'sync', stare: ct } }) });
+    if (!curent()) return;
     SY().trimis = acumISO(); saveRaw();
-  } catch(e) {} finally { SYNC_OCUPAT = false; }
+    for (let i = 0; i < 24 && curent(); i++) {
+      await new Promise(r => setTimeout(r, 10000));
+      if (!curent()) return;
+      const r = await fisier('date/utilizator.enc').catch(() => null);
+      const u = r?.text ? await decDate(r.text).then(J_).catch(() => null) : null;
+      if (!u || !curent()) continue;
+      syncAplica(u);
+      const z = SY();
+      const confirmat = Object.entries(d.t).every(([k,t]) => z.rt[k] >= t)
+        && Object.entries(d.s).every(([id,t]) => z.rs[id] >= t || z.rj[id] > t)
+        && d.j.every(x => z.rj[x.id] >= x.m || z.rs[x.id] >= x.m);
+      if (confirmat) {
+        if (syncDeTrimis(syncDiferenta())) reluare = 1000;
+        render();
+        return;
+      }
+    }
+    if (curent()) toast('Sincronizarea este în așteptare. Modificările sunt salvate local.');
+    reluare = 60000;
+  } catch(e) {
+    if (curent()) toast('Sincronizarea nu a reușit. Modificările sunt salvate local.');
+    reluare = 60000;
+  } finally {
+    SYNC_OCUPAT = false;
+    if (curent() && reluare) syncProgrameaza(reluare);
+  }
 }
 // Starea comună citită din GitHub: câmpurile mai noi decât cele de aici le înlocuiesc; jurnalul se îmbină notiță cu notiță.
 function syncAplica(u){
@@ -3945,7 +4029,7 @@ function syncAplica(u){
   if (sch || schJ) salveazaSeif();
   SYNC_AMP = syncAmp(); SYNC_JA = syncJA(); saveRaw();
   // ce n-a ajuns încă în GitHub pleacă din nou, dacă a trecut destul de la ultima trimitere
-  if (syncDeTrimis(syncDiferenta()) && !SYNC_T && (!z.trimis || Date.now() - Date.parse(z.trimis) > 4 * 60e3)) syncProgrameaza(5000);
+  if (!SYNC_OCUPAT && syncDeTrimis(syncDiferenta()) && !SYNC_T && (!z.trimis || Date.now() - Date.parse(z.trimis) > 4 * 60e3)) syncProgrameaza(5000);
   return sch || schJ;
 }
 // când pleci din aplicație, ce aștepta să plece pleacă imediat

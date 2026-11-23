@@ -2,11 +2,11 @@
 // Analist service worker: aplicația pornește instant și fără rețea.
 // Cache versionat: o versiune nouă se instalează în fundal și așteaptă până apeși „Reîncarcă”.
 // Datele din GitHub NU trec pe aici (alt domeniu); aplicația le ține singură, cu ETag.
-const CACHE = 'analist-0.59.0';
+const CACHE = 'analist-0.60.0';
 const SHELL = ['./', 'index.html', 'app.js', 'garda.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'badge-96.png', 'motor/engine.js', 'motor/config.js', 'font/space-grotesk-latin-500-normal.woff2', 'font/space-grotesk-latin-700-normal.woff2', 'font/space-grotesk-latin-ext-500-normal.woff2', 'font/space-grotesk-latin-ext-700-normal.woff2'];
 self.addEventListener('install', e => {
-  // fișier cu fișier: unul lipsă nu blochează instalarea
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))));
+  // Instalarea e atomică pentru fișierele necesare pornirii offline.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))));
 });
 self.addEventListener('message', e => { if (e.data === 'activeaza') self.skipWaiting(); });
 // Chitanțele de primire (IndexedDB): doar id-ul notificării și ora. Aplicația vede așa ce n-a ajuns pe telefon.
@@ -23,13 +23,13 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
-  if (u.origin !== location.origin || e.request.method !== 'GET' || u.pathname.endsWith('.webmanifest')) return;
+  if (!u.href.startsWith(self.registration.scope) || u.origin !== location.origin || e.request.method !== 'GET' || u.pathname.endsWith('.webmanifest')) return;
   // v0.46: codul analizei publicat pentru actualizare și amprentele lui se citesc mereu din rețea, niciodată din cache
   if (u.pathname.includes('/analiza/') || u.pathname.endsWith('/amprente.json')) return;
   // cache întâi (instant), rețea doar pentru ce lipsește
   e.respondWith(caches.open(CACHE).then(c => c.match(e.request, { ignoreSearch: true }).then(hit => hit ||
     fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; })
-      .catch(() => c.match('index.html')))));
+      .catch(async () => e.request.mode === 'navigate' ? (await c.match('index.html')) || Response.error() : Response.error()))));
 });
 
 // Notificările analistului (Web Push). Mesajul vine criptat cap-coadă; browserul îl decriptează și îl dă aici.

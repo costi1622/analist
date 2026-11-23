@@ -1564,6 +1564,98 @@ html.inchis #v{max-width:1140px;width:100%;margin-inline:auto}
  [data-view=plan] .pml{grid-template-columns:8px minmax(41px,auto) minmax(12px,1fr) auto auto;gap:5px}
 }
 
+
+/* 0.65 · Observator: tipografie editorială, date pe suprafețe opace. */
+:root{--desk-shell:14px;--unit-border:color-mix(in srgb,var(--ink) 16%,var(--panel));--accent-warm:#d5a779}
+:root:not([data-theme=light]){--bg:#0b0e19;--bg2:#111624;--panel:#141a2a;--panel2:#1c2437;--ink:#f6f2eb;--ink2:#d3d7e1;--mut:#aeb8cd;--acc:#b8b7ec;--acc2:#9cd5c3;--line:#333b51}
+@media(prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#f6f3ef;--bg2:#efeaf0;--panel:#fffdfb;--panel2:#f2eef6;--ink:#211d36;--ink2:#4e4763;--mut:#665d77;--acc:#514597;--acc2:#286958;--line:#d8d1e2}}
+#cer::before{background:radial-gradient(ellipse at 72% 0%,color-mix(in srgb,var(--acc) 13%,transparent),transparent 55%),linear-gradient(180deg,var(--bg2),var(--bg) 72%)}
+:root[data-theme=light] #cer::before{background:linear-gradient(var(--bg2),var(--bg))}
+@media(prefers-color-scheme:light){:root:not([data-theme=dark]) #cer::before{background:linear-gradient(var(--bg2),var(--bg))}}
+html.inchis #cer::before{background:linear-gradient(100deg,#0b102347,#080b17c9),var(--cel-art) 50% 54%/cover no-repeat}
+#aur{opacity:.12}
+.card:not(.hcard):not(.gxc):not(.pmis):not(.bon),.tile,.dd{
+ background:var(--panel)!important;border:1px solid var(--unit-border)!important;box-shadow:none
+}
+.card.ks{border-top:2px solid var(--k)!important}
+.card.ks .sub{line-height:1.55}
+.card.nout.cel-news-item{border-inline-start:3px solid var(--k)!important}
+.card.nout.cel-news-item.nou{background:color-mix(in srgb,var(--k) 8%,var(--panel))!important}
+.card.cel-brief{border-inline-start:3px solid var(--orbit-etf)!important}
+.cel-home>.todo{border-inline-start:3px solid var(--k)!important}
+.card.hcard.sorb{background:var(--panel)!important;border:1px solid var(--unit-border)!important;box-shadow:none}
+.card.hcard.sorb::before,.card.acad::before{display:none}
+.cel-pagehead{background:linear-gradient(110deg,var(--panel),var(--panel2));border-color:var(--unit-border)}
+.cel-pagehead::after{content:"";position:absolute;inset:14px 21px 14px auto;width:76px;border-radius:50%;border:1px solid color-mix(in srgb,var(--accent-warm) 58%,transparent);transform:rotate(-22deg);pointer-events:none;opacity:.4}
+.cel-news::after{display:none}
+.cel-home .erou{background:linear-gradient(115deg,#101629f2,#111831bb),var(--cel-art) 50% 46%/cover!important}
+.cel-home .hgal{opacity:.15}
+.cel-home .kpi3>div{background:transparent!important;border:0!important;box-shadow:none}
+.cel-home .kpi3>div+div{border-inline-start:1px solid #aeb7d13b!important}
+.cel-home .todo h2{letter-spacing:-.025em}
+.position-record.pr.p2{
+ width:100%;position:relative;display:grid;
+ grid-template-columns:minmax(120px,1.7fr) minmax(66px,.8fr) minmax(60px,.7fr) minmax(72px,.8fr) minmax(80px,.85fr) minmax(60px,.8fr);
+ grid-template-areas:"id value day weight pnl trend" "status status status status status status";
+ gap:10px 14px;padding:13px 16px;background:var(--panel);border:1px solid var(--unit-border);color:var(--ink);text-align:left
+}
+.position-record.pr.p2::before{display:none}
+.position-record.pr.p2:hover{background:var(--panel2);border-color:var(--acc)}
+.position-id{grid-area:id;display:flex;gap:9px;align-items:center;min-width:0}
+.position-id .av{width:38px;height:38px;flex:none}
+.position-id span:last-child{min-width:0}.position-id strong,.position-id small{display:block}
+.position-id small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.position-record small{font-size:var(--t1);line-height:1.35;color:var(--mut)}
+.position-value,.position-day,.position-weight,.position-pnl{display:grid;gap:2px;align-content:center;min-width:0}
+.position-value{grid-area:value}.position-day{grid-area:day}.position-weight{grid-area:weight}.position-pnl{grid-area:pnl}
+.position-day .mv{justify-self:start;white-space:nowrap}
+.position-trend{grid-area:trend}.position-trend svg{display:block;width:100%;height:29px}
+.position-status{grid-area:status;border-top:1px solid var(--line);padding-top:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.position-status .sig{margin:0}.position-opportunity{color:var(--warn);font-size:var(--t1);display:inline-flex;align-items:center;gap:4px}
+.position-opportunity svg{width:14px;height:14px}
+[data-view=azi] .list2{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
+.cel-atlas{padding:clamp(16px,3vw,36px)}
+.cel-atlas .cel-detail{border-color:var(--unit-border);background:var(--panel);box-shadow:0 12px 35px #0709147a}
+.cel-atlas .cel-metrics>div{background:var(--panel);border-color:var(--unit-border)}
+.cel-legend-wrap{grid-column:1/-1;background:var(--panel);color:var(--ink);border:1px solid var(--unit-border);border-radius:12px}
+.cel-legend-wrap summary{padding:11px 14px;cursor:pointer;font-weight:650}
+.cel-legend-wrap .gxleg{border:0;border-top:1px solid var(--line);border-radius:0}
+[data-view=analiza] .atabs{border:1px solid var(--unit-border);border-radius:14px;background:var(--panel);padding:7px;gap:6px}
+[data-view=analiza] .atabs button.on{background:var(--panel2);border-color:var(--acc);color:var(--ink)}
+[data-view=analiza] .bento .tile{padding:18px;gap:6px}
+[data-view=analiza] .bento .tv{font-variant-numeric:tabular-nums}
+[data-view=plan] .pmis{background:linear-gradient(90deg,#1016299c,#101629eb),var(--cel-art) center 52%/cover!important}
+[data-view=plan] .pmleg{max-width:none;width:100%;background:#11182ddf;padding:14px 18px}
+.pmleg h3{font:500 1.15rem var(--display);margin:0 0 4px;color:#f6f2eb}
+[data-view=plan] .bon{background:var(--panel)!important;box-shadow:none;border:1px solid var(--unit-border)!important;border-top:2px solid color-mix(in srgb,var(--k) 65%,var(--line))!important}
+[data-view=plan] .bonf{background:var(--panel2);padding:12px;gap:12px}
+[data-view=plan] .bonsus .bonpl{background:color-mix(in srgb,var(--k) 20%,var(--panel2));box-shadow:none;border:1px solid var(--unit-border)}
+[data-view=plan] .stampila{transform:none;font-size:.68rem;border:1px solid currentColor;letter-spacing:.02em}
+[data-view=invata] .acad{background:linear-gradient(115deg,var(--panel),var(--panel2))!important;border-color:var(--unit-border)!important}
+[data-view=invata] .atile{min-height:0;padding:16px!important}
+[data-view=invata] .acb{max-width:450px;justify-self:stretch}
+.cel-report .rp-hero{background:linear-gradient(120deg,#1c2541,#282240)}
+.cel-report .rp-card{border-inline-start-width:3px}
+@media(max-width:780px){
+ .position-record.pr.p2{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:"id id value" "day weight pnl" "status status status";gap:9px 12px}
+ .position-value{text-align:right}.position-trend{display:none}
+}
+@media(min-width:1100px){
+ [data-view=plan] .pan:has(.cel-purchases){column-span:all}
+ [data-view=plan] .bonuri{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+ [data-view=invata] .pan:has(.agrid){column-span:all}
+ [data-view=invata] .agrid{grid-template-columns:repeat(auto-fit,minmax(225px,1fr))}
+ [data-view=invata] .agrid .atile.lat{grid-column:auto}
+}
+
+
+.tmap2 .pl{background:linear-gradient(155deg,var(--c1),var(--c2));border:1px solid #bcc2e449}
+.tmap2 .psp{opacity:.42}
+.tleg{flex-wrap:wrap;gap:6px}
+[data-view=plan] .pf{padding:12px 8px}
+[data-view=plan] .pf .tx small{display:block;line-height:1.45;white-space:normal}
+.rp .rp-toc{border-top:1px solid #a8a7ca45;padding-top:12px}
+
 </style>
 </head>
 <body>

@@ -1656,6 +1656,37 @@ html.inchis #cer::before{background:linear-gradient(100deg,#0b102347,#080b17c9),
 [data-view=plan] .pf .tx small{display:block;line-height:1.45;white-space:normal}
 .rp .rp-toc{border-top:1px solid #a8a7ca45;padding-top:12px}
 
+
+/* 0.67 · Reglaje pentru grafice, alocare și harta portofoliului. */
+.cel-accounts{gap:8px}
+.cel-accounts .seg.mini{min-width:0}
+.cel-accounts .eye{flex:none;min-width:44px;min-height:44px;justify-content:center}
+.cel-home .erou .chart{border-radius:var(--r2);background:linear-gradient(180deg,#0a112410,#0a112474)}
+.cel-atlas .gx{display:flex;flex-direction:column;min-width:0}
+.cel-atlas .gxtop{position:static;order:-1;gap:8px;min-height:44px;justify-content:flex-end}
+.cel-atlas .gxd:not(:empty){margin-inline-end:auto}
+.cel-atlas .gxb{min-height:44px;white-space:nowrap}
+.cel-atlas .gx canvas{background:radial-gradient(ellipse at 50% 48%,#090d22ad,transparent 75%)}
+.cel-atlas .cel-detail{gap:10px}
+.pm-actual{
+ display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;
+ margin:0 0 14px;padding:10px 12px;border:1px solid #9cd5c344;border-radius:var(--r2);
+ background:#132438;color:#bce7dc;font-size:var(--t2)
+}
+.pm-actual span{display:inline-flex;align-items:center;gap:7px}
+.pm-actual .ico{width:16px;height:16px;flex:none}
+.pm-actual strong{color:#e2fff6;white-space:nowrap}
+@media(pointer:coarse){.cel-atlas .gx canvas{touch-action:pan-y}}
+@media(max-width:600px){
+ .cel-atlas{gap:12px}
+ .cel-atlas .gx canvas{height:clamp(238px,67vw,375px)}
+ .cel-atlas .cel-metrics>div{align-content:start;gap:4px}
+ .cel-atlas .cel-metrics span,.cel-atlas .cel-metrics small{line-height:1.25;overflow-wrap:normal}
+ .cel-atlas .cel-detail{min-height:0}
+ .cel-home .hero.big{font-size:clamp(1.9rem,9.3vw,2.55rem)}
+ .cel-home .perioade{margin-top:12px}
+}
+
 </style>
 </head>
 <body>

@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.65.0';
+const APP_VER = '0.67.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -347,7 +347,7 @@ aplicaTema();
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
 const GLOS = {
   harta:['Harta zilei','Fiecare dreptunghi e o poziție. Mărimea arată cât din portofoliu ocupă, culoarea arată mișcarea zilei: verde crește, roșu scade, gri stă pe loc (sub 0,3%). Cu cât culoarea e mai intensă, cu atât mișcarea e mai mare. Atinge un dreptunghi ca să deschizi acțiunea.'],
-  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar, în mijlocul unei galaxii. Soarele e ETF-ul de bază: crește odată cu ponderea ETF-urilor și ajunge la cercul punctat când atingi ținta (cercul devine verde). Orbitele sunt sectoarele; o orbită roșie înseamnă că sectorul a trecut de plafonul tău. Planetele sunt acțiunile, fiecare cu numele ei: suprafața planetei e proporțională cu banii din ea, deci când investești într-o acțiune, planeta ei crește. Un inel înseamnă că acțiunea trece de plafonul pe acțiune. Fiecare sector are o familie de planete (giganți gazoși, planete ca Saturn, Neptun, Pământul sau Marte), iar în sector fiecare acțiune arată altfel. Lunile sunt dividendele: câte una pentru fiecare plată pe an (luna aurie: plată luna asta sau luna viitoare). O acțiune cumpărată de curând, care încă nu ți-a plătit, primește lunile estimate după bursă (SUA: 4 pe an, Europa: 1). Companiile care nu plătesc dividende (de exemplu AMD sau Take-Two) n-au luni. RSI-ul îl vezi când atingi planeta, în rândul de sub galaxie; pe planetă apare o aură doar la extreme: portocalie peste 70 (a urcat repede), albastră sub 30 (a scăzut repede). Aura roșie care pulsează înseamnă că prețul e sub nivelul de alertă. În ziua în care investești, stele căzătoare zboară spre ce ai cumpărat. Trage ca s-o rotești și s-o înclini, atinge o planetă ca s-o vezi (orbita ei se aprinde) și încă o dată ca să-i deschizi fișa. „Ultimul an” arată cum s-au schimbat mărimile în ultimele 12 luni. Galaxia din spate e doar decor.','O acțiune cu 25% din portofoliu e o planetă mare, cu inel; una cu 2% e o planetă mică. Dacă pui încă o dată banii din ea, suprafața i se dublează.','pondere tema rsi dividende'],
+  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar, în mijlocul unei galaxii. Soarele e ETF-ul de bază: crește odată cu ponderea ETF-urilor și ajunge la cercul punctat când atingi ținta (cercul devine verde). Orbitele sunt sectoarele; o orbită roșie înseamnă că sectorul a trecut de plafonul tău. Planetele sunt acțiunile, fiecare cu numele ei: suprafața planetei e proporțională cu banii din ea, deci când investești într-o acțiune, planeta ei crește. Un inel înseamnă că acțiunea trece de plafonul pe acțiune. Fiecare sector are o familie de planete (giganți gazoși, planete ca Saturn, Neptun, Pământul sau Marte), iar în sector fiecare acțiune arată altfel. Lunile sunt dividendele: câte una pentru fiecare plată pe an (luna aurie: plată luna asta sau luna viitoare). O acțiune cumpărată de curând, care încă nu ți-a plătit, primește lunile estimate după bursă (SUA: 4 pe an, Europa: 1). Companiile care nu plătesc dividende (de exemplu AMD sau Take-Two) n-au luni. RSI-ul îl vezi când atingi planeta, în rândul de sub galaxie; pe planetă apare o aură doar la extreme: portocalie peste 70 (a urcat repede), albastră sub 30 (a scăzut repede). Aura roșie care pulsează înseamnă că prețul e sub nivelul de alertă. În ziua în care investești, stele căzătoare zboară spre ce ai cumpărat. Glisează lateral ca s-o rotești. Cu mouse-ul poți schimba și înclinarea. Atinge o planetă sau simbolul ei pentru detalii, apoi încă o dată pentru fișă. „Ultimul an” arată cum s-au schimbat mărimile în ultimele 12 luni. Galaxia din spate e doar decor.','O acțiune cu 25% din portofoliu e o planetă mare, cu inel; una cu 2% e o planetă mică. Dacă pui încă o dată banii din ea, suprafața i se dublează.','pondere tema rsi dividende'],
   proiectie:['Unde poți ajunge','Trei scenarii pentru valoarea portofoliului la orizontul tău: 3%, 6% și 9% pe an, în lei, înainte de inflație. Linia punctată e doar ce depui. Diferența până la scenarii e dobânda compusă: câștigurile fac la rândul lor câștiguri. Anii reali vor fi neregulați, cu scăderi de 20–30% pe drum. Nu e o promisiune, e un ordin de mărime.'],
   agitatie:['Cât de mult se mișcă portofoliul','Agitația (volatilitatea) arată cât urcă și coboară valoarea într-un an obișnuit, calculată din prețurile ultimelor până la 12 luni, cu ponderile de azi. VWCE e reperul. Cea mai mare scădere e de la un vârf la minimul de după. O lună proastă apare cam o dată la 20 de luni. Testele de stres arată cât ai pierde în scenarii plauzibile. Scăderile de felul ăsta sunt normale pe termen lung. Întrebarea e dacă le-ai privi liniștit, fără să vinzi.'],
   castigAcum:['Câștig pe poziții','Cât au câștigat sau pierdut, în lei, pozițiile pe care le ai acum: valoarea de azi minus cât ai plătit pe ele. La eToro, ce ai plătit în dolari e socotit cu cursul BNR din ziua fiecărei cumpărări, deci intră și câștigul sau pierderea din curs. Nu intră dividendele încasate și câștigurile din ce ai vândut: pe acelea le vezi în Analiză → Randamentul tău, care le socotește pe toate.'],
@@ -906,7 +906,7 @@ function graficCont(C, ist){
   const ev = evolutieCont(C);
   if (!ev) return C==='toate'&&ist.length>5 ? `<div style="margin-top:16px">${lineChart({series:[SERIE_TU(ist.map(x=>x.totalRON),'Valoarea ta'),SERIE_VWCE(ist.map(x=>x.bench),'Totul în VWCE')],x:ist.map(x=>x.azi),area:1,privat:1,erou:1,fmt:x=>nf(x,0)+' lei',aria:'Valoarea ta față de VWCE'})}</div>` : '';
   const nume = C==='toate' ? 'ambele conturi' : C, dif = ev.b?.at(-1)!=null ? ev.v.at(-1)-ev.b.at(-1) : null;
-  return `<div class="perioade" data-noswipe>${incepator()?`<span class="sub">${esc(ev.per[2]||'')}</span>`:`<div class="pseg" role="group" aria-label="Perioada graficului">${PERIOADE.map(([k,,t])=>`<button class="${ev.per[0]===k?'on':''}" aria-label="${t}" data-c="${A('setPerioada',k)}">${k}</button>`).join('')}</div>`}
+  return `<div class="perioade" data-noswipe>${incepator()?`<span class="sub">${esc(ev.per[2]||'')}</span>`:`<div class="pseg" role="group" aria-label="Perioada graficului">${PERIOADE.map(([k,,t])=>`<button class="${ev.per[0]===k?'on':''}" aria-label="${t}" aria-pressed="${ev.per[0]===k}" data-c="${A('setPerioada',k)}">${k}</button>`).join('')}</div>`}
       ${dif!=null&&!S.privat?`<span class="sub num pdif">față de VWCE <b class="${cls(dif)}">${sgL(dif,0)} lei</b></span>`:''}</div>
     <div style="margin-top:8px">${lineChart({series:[SERIE_TU(ev.v,'Valoarea ta'),...(ev.b?[SERIE_VWCE(ev.b,'Aceiași bani în VWCE')]:[])],x:ev.x,area:1,privat:1,erou:1,anim:'acasa',fmt:x=>nf(x,0)+' lei',aria:`Valoarea din ${nume} față de VWCE, ${ev.per[2]}`})}</div>`;
 }
@@ -2289,7 +2289,7 @@ function vAzi(){
   else if (OFFLINE) h += bandaIlustrata('offline', 'Fără internet', `Vezi datele din ${esc(cand(SNAP.generat))}. Se actualizează singur când revine conexiunea.`);
   // 1) Portofoliul: totalul, ziua, câștigul, luna
   h += `<div class="cel-home"><div class="card hcard erou ${t}"><h1 class="cel-title">Portofoliul tău</h1>${galaxieMica()}
-    <div class="row" style="gap:8px"><div class="seg mini" data-noswipe>${CONTURI.map(([k,tt])=>`<button class="${C===k?'on':''}" data-c="${A('setCont',k)}">${tt}</button>`).join('')}</div>
+    <div class="row cel-accounts"><div class="seg mini" role="group" aria-label="Conturi de brokeraj" data-noswipe>${CONTURI.map(([k,tt])=>`<button class="${C===k?'on':''}" aria-pressed="${C===k}" data-c="${A('setCont',k)}">${tt}</button>`).join('')}</div>
       <button class="eye" aria-label="${S.privat?'Arată sumele':'Ascunde sumele'}" data-c="${A('comutaPrivat')}">${ic('ochi')}${S.privat?'Arată':'Ascunde'}</button></div>
     <div class="lbl cel-total-label">Valoarea portofoliului</div>
     <div class="hero num big">${S.privat?'•••••':odo(nf(VC.total))}<small>lei</small></div>
@@ -2530,12 +2530,13 @@ function vPlan(){
     ${ED?`<div class="acts" style="display:flex;gap:8px;margin-top:16px"><button class="btn" style="flex:1" data-c="${A('salveazaProfil')}">Salvează</button><button class="btn ghost" style="flex:1" data-c="${A('renuntaProfil')}">Renunță</button></div>`:''}
   </div>`;
   if (pr.orizontAni < 3) prof += `<div class="al err">Pentru bani de care ai nevoie în mai puțin de 3 ani, acțiunile sunt riscante. Analistul nu te oprește, dar varianta prudentă e să muți treptat suma necesară în titluri de stat sau într-un depozit.</div>`;
+  const bifatManual = lunaFacuta() && investitLuna() <= 0;
   // Ce cumperi
-  h += `<div class="cel-pagehead cel-budget"><h1 class="cel-title">Planul lunii</h1><p>Buget și alocări</p><button class="btn ghost" data-c="${A('profDeschide')}">Schimbă bugetul</button></div><div class="sec"><h2>Alocarea propusă</h2>${lunaFacuta()?`<span class="sub pos">✓ ${investitLuna()>0?'confirmat din cont':'bifat manual'}</span>`:`<span class="sub num">${s} lei</span>`}</div>
+  h += `<div class="cel-pagehead cel-budget"><h1 class="cel-title">Planul lunii</h1><p>Buget și alocări</p><button class="btn ghost" data-c="${A('profDeschide')}">Schimbă bugetul</button></div><div class="sec"><h2>Alocarea propusă</h2>${lunaFacuta()?`<span class="sub pos">✓ ${investitLuna()>0?'Lună cu investiții':'Bifat manual'}</span>`:`<span class="sub num">${s} lei</span>`}</div>
   ${SNAP.cashNeinvestit?.lei>=20?`<div class="al" style="margin:0 0 12px">Ai deja bani neinvestiți în ${esc(SNAP.cashNeinvestit.broker)}: ${S.privat?'•••':nf(SNAP.cashNeinvestit.lei)} lei. Depui doar diferența.</div>`:''}
   ${misiuneLuna(plan, s)}
-  <div class="sec cel-purchases"><h2>Cumpărări din plan</h2></div><div class="bonuri">${plan.length?plan.map((l,k)=>`<div class="card bon ${lunaFacuta()?'stampilat':''}" style="animation:rise .3s ${k*60}ms both;--k:${bonCuloare(l)}">
-    <div class="row bonsus"><span class="bonpl" aria-hidden="true">${ic(sectorInfo(bonPoz(l)?.tema||(bonPoz(l)?.etf?'ETF':'')).ico)}</span><div class="bonid"><div style="font-size:var(--t4);font-weight:800">${esc(l.symbol)}${SNAP.virtuale?.some(v=>v.symbol===l.symbol)?' <span class="eti">ETF nou, ales de tine</span>':''}</div><div class="sub">la ${esc(l.broker)}</div></div><div class="hero num" style="font-size:var(--t5)">${nf(l.suma,0)}<small>lei</small>${lunaFacuta()?`<span class="stampila ${STAMPILA?'nou':''}" style="--d:${k*120}ms">${investitLuna()>0?'Confirmat':'Cumpărat'}</span>`:''}</div></div>
+  <div class="sec cel-purchases"><h2>Cumpărări propuse</h2></div><div class="bonuri">${plan.length?plan.map((l,k)=>`<div class="card bon ${bifatManual?'stampilat':''}" style="animation:rise .3s ${k*60}ms both;--k:${bonCuloare(l)}">
+    <div class="row bonsus"><span class="bonpl" aria-hidden="true">${ic(sectorInfo(bonPoz(l)?.tema||(bonPoz(l)?.etf?'ETF':'')).ico)}</span><div class="bonid"><div style="font-size:var(--t4);font-weight:800">${esc(l.symbol)}${SNAP.virtuale?.some(v=>v.symbol===l.symbol)?' <span class="eti">ETF nou, ales de tine</span>':''}</div><div class="sub">la ${esc(l.broker)}</div></div><div class="hero num" style="font-size:var(--t5)">${nf(l.suma,0)}<small>lei</small>${bifatManual?`<span class="stampila ${STAMPILA?'nou':''}" style="--d:${k*120}ms">Plan bifat</span>`:''}</div></div>
     <div class="bonec">${ecusonSector(bonPoz(l), 1)}</div>
     <div class="kvp bonf num" style="margin-top:12px">
       ${l.unitati?`<div class="bf"><small>În ${esc(l.moneda)}</small><b>≈ ${nf(l.sumaValuta)} ${esc(l.moneda)}</b></div><div class="bf"><small>Cantitate</small><b>${nf(l.unitati,4)}</b><i>${l.unitati===1?'acțiune':'acțiuni'} la ${nf(l.pret)} ${esc(l.moneda)}</i></div>`:''}
@@ -2603,14 +2604,15 @@ function misiuneLuna(plan, s){
   const pas = (ok, cur, t, sub) => `<li class="${ok?'ok':cur?'cur':''}"><i>${ok?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':''}</i><div><b>${t}</b><small>${sub}</small></div></li>`;
   const luna = LUNI_RO[new Date().getMonth()];
   return `<div class="card pmis ${facut?'gata':''} ${STAMPILA?'acum':''}">
-    <div class="pmg"><svg viewBox="0 0 180 180" role="img" aria-label="Planul lunii: ${n} ${n===1?'cumpărare':'cumpărări'}, ${tot} lei"><circle cx="90" cy="90" r="82" fill="none" class="pmo"/><circle cx="90" cy="90" r="${R}" fill="none" class="pmb" stroke-width="13"/><g transform="rotate(-90 90 90)">${seg}</g><g class="pmpl"><circle cx="90" cy="8" r="4.5"/></g></svg>
-      <div class="pmc">${facut?`<span class="pmok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>`:''}<b class="num">${S.privat?'•••':nf(conf?inv:tot,0)}</b><small>lei ${conf?'investiți':facut?'bifați':'de investit'}</small></div></div>
+    <div class="pmg"><svg viewBox="0 0 180 180" aria-hidden="true"><circle cx="90" cy="90" r="82" fill="none" class="pmo"/><circle cx="90" cy="90" r="${R}" fill="none" class="pmb" stroke-width="13"/><g transform="rotate(-90 90 90)">${seg}</g><g class="pmpl"><circle cx="90" cy="8" r="4.5"/></g></svg>
+      <div class="pmc"><b class="num">${S.privat?'•••':nf(alocat,0)}</b><small>lei alocați</small></div></div>
     <div class="pmt"><div class="lbl cel-period">${luna}</div><h2 class="cel-title">Misiunea lunii</h2>
-      <dl class="pm-buget num">${[['Buget',s],['Alocat',alocat],['Rămas de alocat',Math.max(0,s-alocat)]].map(([et,suma])=>`<div><dt>${et}</dt><dd>${S.privat?'•••':nf(suma,2)+' lei'}</dd></div>`).join('')}</dl>
+      <dl class="pm-buget num">${[['Buget',s],['Alocat',alocat],['Nealocat',Math.max(0,s-alocat)]].map(([et,suma])=>`<div><dt>${et}</dt><dd>${S.privat?'•••':nf(suma,2)+' lei'}</dd></div>`).join('')}</dl>
+      ${conf?`<div class="pm-actual"><span>${ic('scut')} Investiții înregistrate în cont</span><strong class="num">${S.privat?'•••':nf(inv,2)} lei</strong></div>`:''}
       <div class="pmtit">${n?`${n} ${n===1?'cumpărare':'cumpărări'}`:'Nimic de cumpărat'}${serieLuni()>1?` <span class="pmser">${serieLuni()} luni la rând</span>`:''}</div>
       <ol class="pmpas">${pas(p1, !p1, `Depui ${s} lei`, p1&&!facut?'banii sunt deja la broker':'la brokerul din bon')}${pas(p2, p1&&!p2, n===1?'Cumperi poziția':`Cumperi cele ${n} poziții`, 'la orele din bonuri')}${pas(p3, p2&&!p3, 'Confirmare din cont', p3?'văzută în cont':'apare a doua zi')}</ol></div>
     ${n?`<div class="pmleg num"><h3>Distribuția bugetului</h3>${plan.map(l=>`<div class="pml"><i style="background:${culoareInel(l)}"></i><b>${esc(l.symbol)}</b><span class="pmbar"><u style="width:${(l.suma/tot*100).toFixed(1)}%;background:${culoareInel(l)}"></u></span><em>${Math.round(l.suma/tot*100)}%</em><strong>${nf(l.suma,0)} lei</strong></div>`).join('')}</div>`:''}
-    ${facut?`<div class="${STAMPILA?'inchide':''}">${inelLuna(false)}</div>`:''}</div>`;
+    ${facut&&!conf?`<div class="${STAMPILA?'inchide':''}">${inelLuna(false)}</div>`:''}</div>`;
 }
 // ===== Stil comun: antetul foilor, intrarea eșalonată =====
 const capFoaie = (icon, titlu, sub, col='--acc') => `<div class="grab"></div><div class="cap"><span class="tic" style="--k:var(${col})">${ic(icon)}</span><div style="min-width:0"><h3>${esc(titlu)}</h3>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div></div>`;
@@ -3556,7 +3558,7 @@ function galaxie(){
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.03); if (GX.soareImg.width) ctx.drawImage(GX.soareImg, -rs, -rs, rs*2, rs*2); ctx.restore();
     const rT = (9+17)*k0; ctx.beginPath(); ctx.arc(cx,cy,rT+1,0,6.283); ctx.setLineDash([2,4]); ctx.strokeStyle = etfW >= D.pr.tintaETF-0.1 ? 'rgba(126,226,200,.95)' : 'rgba(255,235,200,.4)'; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
     if (st.sel==='ETF') { ctx.beginPath(); ctx.arc(cx,cy,rT+8,0,6.283); ctx.strokeStyle='#fff'; ctx.setLineDash([2,3]); ctx.stroke(); ctx.setLineDash([]); }
-    GX.stea = { x:cx, y:cy };
+    GX.stea = { x:cx, y:cy, r:rs };
     D.orb.forEach(o=>orbita(o,true)); P_.filter(x=>x.q.z>=0).sort((a,b)=>a.q.z-b.q.z).forEach(planeta);
     // ziua depunerii: stele căzătoare de jos spre ce ai cumpărat (spre soare, dacă ai cumpărat ETF)
     if (st.met) { let viu = false;
@@ -3572,6 +3574,7 @@ function galaxie(){
     // numele: fiecare planetă își are numele. Se încearcă sub ea, deasupra, în dreapta, în stânga; se alege primul loc care nu
     // acoperă alt nume, altă planetă sau soarele (dacă niciunul nu e liber, cel cu cea mai mică suprapunere)
     const puse = [], MT = GX.mt || (GX.mt = new Map()); ctx.font = '600 10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    GX.etichete = [];
     const corpuri = ET.map(e=>({ x:e.x, y:e.y, r:e.r+1 })).concat([{ x:cx, y:cy, r:rs*1.1 }]);
     const supra = (x, y, w, h) => { let s = 0; for (const b of puse) { const ox = Math.min(x+w, b.x+b.w) - Math.max(x-w, b.x-b.w), oy = Math.min(y+h, b.y+b.h) - Math.max(y-h, b.y-b.h); if (ox>0 && oy>0) s += ox*oy*3; }
       for (const c of corpuri) { const dx = Math.max(Math.abs(c.x-x)-w, 0), dy = Math.max(Math.abs(c.y-y)-h, 0); const d = c.r - Math.hypot(dx,dy); if (d > 0) s += d*d*2; }
@@ -3579,7 +3582,9 @@ function galaxie(){
     for (const e of ET.sort((a,b)=>(b.sym===st.sel)-(a.sym===st.sel) || b.r-a.r)) { if (!MT.has(e.t)) MT.set(e.t, ctx.measureText(e.t).width);
       const w = MT.get(e.t)/2+3, h = 6.5, cand = [[e.x, e.y+e.ri*0.42+e.r*0.62+9], [e.x, e.y-e.ri*0.42-e.r*0.62-9], [e.x+e.ri+w+2, e.y], [e.x-e.ri-w-2, e.y], [e.x, e.y+e.ri*0.42+e.r*0.62+21]];
       let best = null; for (const [x,y] of cand) { const v = supra(x, y, w, h); if (!best || v < best.v) best = { x, y, v }; if (v === 0) break; }
-      puse.push({ x:best.x, y:best.y, w, h }); ctx.globalAlpha = e.z<0 ? 0.78 : 1; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(2,3,10,.85)'; ctx.strokeText(e.t, best.x, best.y);
+      puse.push({ x:best.x, y:best.y, w, h });
+      GX.etichete.push({ x:best.x, y:best.y, w, h, sym:e.sym });
+      ctx.globalAlpha = 1; ctx.lineJoin = 'round'; ctx.lineWidth = 3.5; ctx.strokeStyle = '#090b1a'; ctx.strokeText(e.t, best.x, best.y);
       ctx.fillStyle = e.sym===st.sel ? '#ffffff' : '#e6ebf5'; ctx.fillText(e.t, best.x, best.y); }
     ctx.textBaseline = 'alphabetic';
     ctx.globalAlpha = 1;
@@ -3587,9 +3592,9 @@ function galaxie(){
     if (!calm && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
   }
   cv.onpointerdown = e => { GX.atins = performance.now(); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(cadru); } st.drag = {x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, tm:performance.now()}; cv.setPointerCapture(e.pointerId); };
-  cv.onpointermove = e => { const d=st.drag; if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; st.yaw += dx*0.012; st.vy = dx*0.012*0.6; st.tilt = Math.min(Math.max(st.tilt - dy*0.004, 0.5), 0.9); d.x=e.clientX; d.y=e.clientY; if (calm) cadru(performance.now()); };
+  cv.onpointermove = e => { const d=st.drag; if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; st.yaw += dx*0.012; st.vy = dx*0.012*0.6; if (e.pointerType !== 'touch') st.tilt = Math.min(Math.max(st.tilt - dy*0.004, 0.5), 0.9); d.x=e.clientX; d.y=e.clientY; if (calm) cadru(performance.now()); };
   cv.onpointerup = e => { const d=st.drag; st.drag=null; if (!d) return; if (Math.hypot(e.clientX-d.x0, e.clientY-d.y0) < 8) gxAtinge(e); };
-  cv.onpointercancel = () => { st.drag=null; };
+  cv.onpointercancel = () => { st.drag=null; st.vy=0; };
   GX.cadruF = cadru;
   GX.io?.disconnect(); GX.viz = true; GX.atins = performance.now(); GX.ult = 0;
   GX.io = new IntersectionObserver(([e])=>{ GX.viz = e.isIntersecting; if (GX.viz && !GX.on && cv.isConnected && VIEW==='analiza' && !document.hidden) { GX.on=true; GX.ult=0; GX.atins=performance.now(); GX.raf=requestAnimationFrame(cadru); } });
@@ -3597,19 +3602,28 @@ function galaxie(){
   GX.raf = requestAnimationFrame(cadru);
   gxInfo();
 }
+function gxPozitieLa(x, y, planete, etichete, stea){
+  const dist = p => Math.hypot(p.q.x-x, p.q.y-y);
+  const apropiate = [...planete].reverse().sort((a,b)=>dist(a)-dist(b));
+  const corp = apropiate.find(p=>dist(p) <= p.r);
+  if (corp) return corp;
+  if (stea && Math.hypot(x-stea.x,y-stea.y) <= stea.r) return null;
+  const et = etichete.find(e=>Math.abs(e.x-x) <= e.w && Math.abs(e.y-y) <= e.h);
+  return (et && planete.find(p=>p.p.symbol===et.sym)) || apropiate.find(p=>dist(p) <= p.r+10);
+}
 function gxAtinge(e){
   const cv=$('gxc'), r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, st=GX.st;
   st.alegere = true;
-  const hit = [...(GX.cadru||[])].reverse().find(p=>Math.hypot(p.q.x-x,p.q.y-y) < p.r+10);
+  const hit = gxPozitieLa(x, y, GX.cadru || [], GX.etichete || [], GX.stea);
   // prima atingere alege planeta (vezi RSI, sectorul, dividendele); a doua intră în ea: zoom și fișa acțiunii
   if (hit) { if (st.sel===hit.p.symbol) { const c = sectorInfo(hit.p.tema).c; zoomPlaneta(r.left+hit.q.x, r.top+hit.q.y, Math.max(hit.r,8), c.startsWith('--')?`var(${c})`:c, hit.p.symbol); return; } st.sel = GX.sel = hit.p.symbol; vib(); }
-  else if (Math.hypot(x-(GX.stea?.x ?? r.width/2),y-(GX.stea?.y ?? r.height/2)) < 40) { st.sel = GX.sel = 'ETF'; vib(); }
+  else if (GX.stea && Math.hypot(x-GX.stea.x,y-GX.stea.y) <= GX.stea.r+5) { st.sel = GX.sel = 'ETF'; vib(); }
   else st.sel = GX.sel = null;
   gxInfo(); if (!GX.on) GX.cadruF?.(performance.now());
 }
 function gxInfo(){
   const el=$('gxi'); if (!el) return; const s=GX.st?.sel;
-  if (!s) { const prim = SNAP.pozitii.find(p=>!p.virtual && !p.etf); if (prim && GX.st && !GX.st.alegere) { GX.st.sel = GX.sel = prim.symbol; gxInfo(); return; } el.innerHTML = `<span class="sub">${gxEchilibru()} Trage ca s-o rotești. Atinge o planetă ca s-o alegi, încă o dată ca să intri în ea.</span>`; return; }
+  if (!s) { const prim = SNAP.pozitii.find(p=>!p.virtual && !p.etf); if (prim && GX.st && !GX.st.alegere) { GX.st.sel = GX.sel = prim.symbol; gxInfo(); return; } el.innerHTML = `<span class="sub">${gxEchilibru()} Glisează lateral pentru a roti harta. Atinge o planetă sau simbolul ei pentru detalii.</span>`; return; }
   if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Soarele: ETF-ul de bază</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
@@ -3643,7 +3657,7 @@ function vAnaliza(){
   <div class="cel-atlas-head"><h1 class="cel-title">Analiză</h1><p>Structura portofoliului ${q('orbita')}</p></div>
   <aside class="cel-metrics" aria-label="Structura portofoliului">
     <div><span>ETF-uri</span><strong>${nf(etf,1)}%</strong><small>Țintă ${nf(pr.tintaETF,0)}%</small></div>
-    <div><span>Expunere în USD</span><strong>${SNAP.valute?.USD == null?'—':nf(SNAP.valute.USD,1)+'%'}</strong></div>
+    <div><span>Expunere USD</span><strong>${SNAP.valute?.USD == null?'—':nf(SNAP.valute.USD,1)+'%'}</strong></div>
     ${sector?`<div><span>Sectorul principal</span><strong>${nf(sector[1],1)}%</strong><small>${esc(sector[0])}</small></div>`:''}
   </aside>
   <div class="card gxc">${galaxieHTML()}

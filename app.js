@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.67.0';
+const APP_VER = '0.68.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -563,17 +563,27 @@ function bursaDeschisa(d = new Date()){
 function varstaDate(){ const g = intraValid() ? INTRA.generat : SNAP?.generat; return g ? Date.now() - Date.parse(g) : Infinity; }
 // „Actualizează”: aduce ce a scris analiza din GitHub; dacă nu e nimic nou, iar bursa e deschisă și prețurile au peste 20 de minute,
 // cere chiar acum o analiză scurtă (prețurile de acum, ~40 de secunde). Seara și în weekend, spune de când sunt datele.
+let ACTUALIZARE_MANUALA = false;
 async function actualizeaza(){
-  if (RULEAZA || !live()) { reincarca(true); return; }
-  const nou = await reincarca(false);
-  if (nou) { toast('Actualizat.'); return; }
-  if (OFFLINE) return;
-  if (SNAP?.incomplet) { toast('Un broker este indisponibil. Sunt afișate ultimele date complete.'); return; }
-  const v = varstaDate();
-  if (bursaDeschisa() && v > 20*60e3 && !S.kill && !ePCcitire()) { ruleaza(false, true); return; }
-  toast(v < 20*60e3 ? `Datele sunt de acum ${Math.max(1, Math.round(v/60e3))} min. Nimic nou.` : bursaDeschisa() ? 'Nimic nou.' : 'Bursa e închisă. Datele sunt de la ultima analiză.');
+  if (RULEAZA || ACTUALIZARE_MANUALA) return;
+  if (!live()) return reincarca(true);
+  ACTUALIZARE_MANUALA = true;
+  progres('Sincronizez', 1, 3);
+  try {
+    const nou = await reincarca(false, true);
+    if (nou) { progresGata('Actualizat'); return; }
+    if (OFFLINE || !SNAP) { progres(null); return; }
+    if (SNAP.incomplet) { progres(null); toast('Un broker este indisponibil. Sunt afișate ultimele date complete.'); return; }
+    const v = varstaDate();
+    if (bursaDeschisa() && v > 20*60e3 && !S.kill && !ePCcitire()) { await ruleaza(false, true); return; }
+    progresGata('Verificat');
+    toast(v < 20*60e3 ? `Datele sunt de acum ${Math.max(1, Math.round(v/60e3))} min. Nimic nou.` : bursaDeschisa() ? 'Nimic nou.' : 'Bursa e închisă. Datele sunt de la ultima analiză.');
+  } finally {
+    ACTUALIZARE_MANUALA = false;
+    if (PROGRES_TEXT) progres(null);
+  }
 }
-async function reincarca(manual) {
+async function reincarca(manual, indica = false) {
   if (are_seif() && !V) { LOADED=true; stare(); render(); return; } // blocat: nimic de încărcat
   $('bref').classList.add('spin'); OFFLINE=false;
   try {
@@ -585,12 +595,14 @@ async function reincarca(manual) {
       })));
       const problema = rez[0].eroare || rez[6].eroare || (vechi && !rez[0].text && new Error('Datele portofoliului lipsesc din GitHub.'));
       const portofoliuNou = !!rez[0].text && (rez[0].schimbat || !SNAP);
+      if (indica) progres('Descifrez', 2, 3);
       const date = portofoliuNou ? await decDate(rez[0].text).then(J_).catch(() => null) : null;
       if (problema || (portofoliuNou && !Array.isArray(date?.pozitii))) {
         if (vechi) FIS[principal] = vechi; else delete FIS[principal];
         throw problema || new Error('Datele portofoliului nu pot fi citite.');
       }
       const schimbat = rez.some(x=>x.schimbat) || !SNAP;
+      if (indica) progres('Aplic', 3, 3);
       saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{}); versiuneSite().then(v=>{ if (v && analizaNoua() && VIEW==='azi') render(); }).catch(()=>{});
       if (manual === true) toast(portofoliuNou && !SNAP?.incomplet ? 'Actualizat.' : SNAP?.incomplet ? 'Un broker este indisponibil. Sunt afișate ultimele date complete.' : 'Nimic nou de la ultima verificare.');
       $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return portofoliuNou && !SNAP?.incomplet;
@@ -1777,13 +1789,27 @@ function montaGrafice(){
       if (k===0 && o.area) s+=`<path d="${d}L${X(n-1)} ${H-pb}L${X(0)} ${H-pb}Z" fill="url(#${id}g0)"/>`;
       if (k===0 && !se.dash) s+=`<path d="${d}" class="ln glow" pathLength="1" stroke="${st}"/>`; // strălucire fără filtru (filtrele se redesenează la fiecare atingere)
       s+=`<path d="${d}" fill="none" ${se.dash?'stroke-dasharray="4 4"':`class="ln ln${k}" pathLength="1"`} stroke="${st}" stroke-width="${se.w||2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+      if(k===0 && o.anim==='acasa'){
+        const semne={sus:'',jos:''}, forma=plin?neted(se.v):null;
+        for(let i=1;i<n;i++){
+          const a=se.v[i-1], b=se.v[i];
+          if(!Number.isFinite(a)||!Number.isFinite(b)||a===b)continue;
+          let segment=`M${X(i-1).toFixed(1)} ${Y(a).toFixed(1)}`;
+          if(forma)for(let j=1;j<5;j++){const f=i-1+j/5;segment+=`L${X(f).toFixed(1)} ${Y(forma(f)).toFixed(1)}`;}
+          semne[b>a?'sus':'jos']+=segment+`L${X(i).toFixed(1)} ${Y(b).toFixed(1)}`;
+        }
+        for(const [sens,segmente] of Object.entries(semne)){
+          if(segmente)s+=`<path class="semn-grafic ${sens}" d="${segmente}" fill="none" pathLength="1"/>`;
+        }
+        el.classList.add('directie-grafic');
+      }
     });
     o.series.forEach((se,k)=>{ const li=se.v.length-1, cc = (se.color==='--tu'||se.color==='--s1') ? '--lg3' : se.color; if(se.v[li]!=null&&k===0) s+=`<circle class="cap" cx="${X(li)}" cy="${Y(se.v[li])}" r="9" fill="var(${cc})" opacity=".18"/><circle cx="${X(li)}" cy="${Y(se.v[li])}" r="6" fill="none" stroke="var(${cc})" stroke-width="1" opacity=".5"/><circle cx="${X(li)}" cy="${Y(se.v[li])}" r="3.6" fill="var(${cc})" stroke="var(--panel)" stroke-width="1.6"/>`; });
     s+=`<line class="xh" y1="${pt}" y2="${H-pb}" stroke="var(--ink2)" stroke-width="1" opacity="0"/>${o.series.map((se,k)=>`<circle class="xd${k}" r="4.5" fill="var(${se.color})" stroke="var(--panel)" stroke-width="2" opacity="0"/>`).join('')}<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" class="hit"/></svg>`;
     el.insertAdjacentHTML('beforeend', s);
     const svg=el.querySelector('svg'), ro=el.querySelector('.ro');
     if (o.anim) { // aceeași diagramă, date noi: liniile alunecă din forma veche în cea nouă
-      const ps=[...svg.querySelectorAll('path')], nou=ps.map(p=>p.getAttribute('d')), vechi=CHART_PREV[o.anim];
+      const ps=[...svg.querySelectorAll('path:not(.semn-grafic)')], nou=ps.map(p=>p.getAttribute('d')), vechi=CHART_PREV[o.anim];
       if (vechi && vechi.length===nou.length && W===CHART_PREV[o.anim+'W'] && !matchMedia('(prefers-reduced-motion: reduce)').matches && S.fx!=='redus') { el.classList.remove('intra'); ps.forEach((p,i)=>p.setAttribute('d',vechi[i])); requestAnimationFrame(()=>requestAnimationFrame(()=>ps.forEach((p,i)=>{ p.style.transition='d .7s cubic-bezier(.22,1,.36,1)'; p.setAttribute('d',nou[i]); }))); }
       CHART_PREV[o.anim]=nou; CHART_PREV[o.anim+'W']=W;
     }
@@ -3352,11 +3378,11 @@ function deschideSect(k){
 }
 const tile = (k, ico, titlu, val, sub, viz='', lat='') => `<button class="tile ${lat}" data-c="${A('deschideSect',k)}"><div class="th">${ic(ico)}<span>${titlu}</span></div><div class="tv fd num">${val==='–'?'<span class="tgol">încă nimic</span>':val}</div>${sub?`<div class="sub">${sub}</div>`:''}${viz}</button>`;
 // ===== Galaxia ta (v0.50): un sistem solar realist în nucleul unei galaxii spirale =====
-// Soarele e ETF-ul de bază (mărimea = ponderea ETF-urilor), orbitele sunt sectoarele (roșii peste plafon), planetele sunt
-// acțiunile (mărimea = ponderea, inel = peste plafonul pe acțiune), lunile sunt dividendele pe an, aura roșie = sub nivelul
+// Soarele e ETF-ul de bază, orbitele sunt sectoarele (roșii peste plafon), planetele sunt
+// acțiunile (mărimea = suma investită, inel = de la 1.500 lei investiți), lunile sunt dividendele pe an, aura roșie = sub nivelul
 // de alertă, aura portocalie/albastră = RSI peste 70/sub 30. Planetele sunt randate pixel cu pixel (zgomot fractal, lumină
 // dinspre soare, atmosferă); fiecare sector are o familie de planete reale, iar în sector fiecare acțiune arată altfel.
-// Galaxia din spate e decor. Tragi = rotești și înclini; atingi = alegi; „Ultimul an” = mărimile din ultimele 12 luni.
+// Fundalul rămâne fix. Atingerea alege o poziție; „Ultimul an” redă variația ponderilor istorice.
 const GX = { on:false, raf:0 };
 function galaxieHTML(){
   return `<div class="gx" data-noswipe><canvas id="gxc" aria-label="Portofoliul ca sistem solar: soarele e ETF-ul de bază, planetele sunt acțiunile, orbitele sunt sectoarele"></canvas>
@@ -3374,6 +3400,10 @@ function gxZgomot(seed){
 }
 // familiile de planete, pe sectoare (după mărimea sectorului); în același sector, fiecare acțiune primește alt tip
 const GX_FAM = [['jupiter','fierbinte','saturn','gazalb','crem','bruma'], ['saturn','titan','crem'], ['neptun','gazalb'], ['uranus','bruma'], ['pamant','venus'], ['marte','mercur'], ['venus','titan'], ['mercur','marte']];
+const GX_MATERIALE = {GEV:'saturn',GOOGL:'neptun',GOOG:'neptun',NVDA:'jupiter',AMD:'marte',TSM:'bruma',PWR:'mercur',GE:'venus',AIR:'titan',TTWO:'gazalb',AAPL:'pamant',AMZN:'fierbinte',JPM:'crem',JNJ:'uranus'};
+const gxMaterial = p => GX_MATERIALE[p.symbol.replace(/\..*$/, '')];
+const gxInvestit = p => Math.max(0, Number(p.costRON) || 0);
+const gxInel = p => gxInvestit(p) >= 1500;
 const GX_ATM = { jupiter:[255,220,180], fierbinte:[255,170,120], saturn:[255,230,190], crem:[255,240,210], bruma:[200,230,210], gazalb:[130,170,255], titan:[255,190,120], neptun:[110,160,255], uranus:[170,230,240], pamant:[120,170,255], venus:[255,235,190], marte:[255,170,130], mercur:[220,220,220] };
 function gxAlbedo(tip, fb, fb2, lon, lat, sd){
   const mix = (a,b,t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
@@ -3443,14 +3473,15 @@ function gxDate(){
   const plati = p => { const l = SNAP.dividende?.luni?.[p.symbol] || []; if (l.length) return { n:Math.min(l.length,12), aproape:l.includes(lc)||l.includes(lu), est:false };
     if (!cuDiv.has(p.symbol) && !(p.fund?.randDiv > 0)) return { n:0 }; return { n: /\.(PA|DE|AS|MI|MC|BR|SW|VI|LS|HE|ST|CO|OL)$/.test(p.symbol) ? 1 : /\.L$/.test(p.symbol) ? 2 : 4, aproape:false, est:true }; };
   // mărimea: suprafața planetei e proporțională cu banii din ea (raza ∝ √pondere), față de cea mai mare acțiune
-  const wMax = Math.max(1, ...SNAP.pozitii.filter(p=>!p.etf).map(p=>p.pondere));
+  const wMax = Math.max(1500, ...SNAP.pozitii.filter(p=>!p.etf).map(gxInvestit));
   orb.forEach(o=>{ const ps = SNAP.pozitii.filter(p=>!p.etf && p.tema===o.n).sort((a,b)=>b.pondere-a.pondere), F = fam.get(o.n);
     ps.forEach((p,j)=>{ const d = plati(p);
-      pl.push({ p, o, tip:F[j % F.length], sd:p.symbol.charCodeAt(0)*0.37+p.symbol.length+j*1.3, rsi:p.ind?.rsi, fisura:!!p.ind?.subProtectie, luni:d.n, luniAproape:!!d.aproape, luniEst:!!d.est, m:MISC(p), rn: Math.max(0.032, 0.105*Math.sqrt(p.pondere/wMax)) }); }); });
+      const sd = Array.from(p.symbol).reduce((seed,c)=>(seed*31+c.charCodeAt(0))%104729, 0)/823;
+      pl.push({ p, o, tip:gxMaterial(p)||F[j % F.length], sd, rsi:p.ind?.rsi, fisura:!!p.ind?.subProtectie, luni:d.n, luniAproape:!!d.aproape, luniEst:!!d.est, m:MISC(p), rn: Math.max(0.032, 0.116*Math.sqrt(gxInvestit(p)/wMax)) }); }); });
   // așezarea, în unități de „rază a sistemului” (1 = orbita exterioară): orbitele se depărtează după cât de mari sunt planetele lor,
   // apoi fiecare planetă primește unghiul la care stă cel mai departe de celelalte, la orice rotire (sistemul se rotește rigid,
   // deci o așezare fără suprapuneri rămâne fără suprapuneri). Dacă tot nu încape, planetele se micșorează puțin și se reîncearcă.
-  const etfW0 = etf.reduce((a,p)=>a+p.pondere,0), rsN = (9+17*Math.sqrt(Math.max(etfW0,0)/50))/170, inel = x => x.p.pondere > pr.maxActiune;
+  const etfW0 = etf.reduce((a,p)=>a+gxInvestit(p),0), rsN = (9+17*Math.sqrt(etfW0/wMax))/170, inel = x => gxInel(x.p);
   const ext = x => x.rn*(inel(x) ? 2.15 : 1.25) + 0.012;
   for (let n = 0; n < 6; n++) {
     const mx = o => Math.max(0.03, ...pl.filter(x=>x.o===o).map(ext));
@@ -3459,7 +3490,7 @@ function gxDate(){
     if (R <= 1.05) break; pl.forEach(x=>{ x.rn *= 0.9; });
   }
   // așezarea se calculează doar când se schimbă pozițiile sau ponderile (rotunjite), nu la fiecare intrare pe pagină
-  const cheieA = pl.map(x=>x.p.symbol+':'+x.p.pondere.toFixed(1)+':'+x.o.n).join('|')+'|'+pr.maxActiune+'|'+etfW0.toFixed(1), cA = GX.asez?.cheie === cheieA ? GX.asez : null; // doar în memorie: cheia conține simbolurile și ponderile, care nu se scriu nicăieri necriptat
+  const cheieA = pl.map(x=>x.p.symbol+':'+gxInvestit(x.p).toFixed(2)+':'+x.o.n).join('|')+'|'+etfW0.toFixed(2), cA = GX.asez?.cheie === cheieA ? GX.asez : null; // doar în memorie
   if (cA) pl.forEach((x,k)=>{ x.th = cA.th[k]; x.rn = cA.rn[k]; });
   else {
   const YAW = Array.from({length:16},(_,k)=>k*Math.PI/8), INC = 0.5, CY = YAW.map(Math.cos), SY = YAW.map(Math.sin);
@@ -3510,7 +3541,6 @@ function galaxie(){
     if (!cv.isConnected || VIEW!=='analiza') { GX.on=false; return; }
     if (GX.viz===false && !st.drag) { GX.on=false; return; }
     const activ = st.drag || Math.abs(st.vy)>=0.0004 || st.rel || st.met;
-    if (!activ && SHEET_ON()) { GX.raf = requestAnimationFrame(cadru); return; }
     // se rotește tot timpul cât o vezi; după 20 s fără atingere coboară la 20 de cadre pe secundă (telefon: 32 / 20)
     if (!activ && !calm && !GX_LIN && now-(GX.ult||0) < (now-(GX.atins||0) > 20000 ? 49 : 31)) { GX.raf = requestAnimationFrame(cadru); return; }
     const pas = Math.min((now-(GX.ult||now))/16.7, 3) || 1; GX.ult = now;
@@ -3539,7 +3569,7 @@ function galaxie(){
       const atm = o.rsi>=70 ? '255,150,70' : o.rsi!=null && o.rsi<=30 ? '125,211,252' : null;
       if (atm) { const g=ctx.createRadialGradient(q.x,q.y,r*0.9,q.x,q.y,r*2.2); g.addColorStop(0,`rgba(${atm},.45)`); g.addColorStop(1,`rgba(${atm},0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.2,0,6.283); ctx.fill(); }
       if (o.fisura) { const al=0.28+0.28*Math.sin(t*3+o.th*5), g=ctx.createRadialGradient(q.x,q.y,r,q.x,q.y,r*2.3); g.addColorStop(0,`rgba(255,96,120,${al*.55})`); g.addColorStop(1,'rgba(255,70,90,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q.x,q.y,r*2.3,0,6.283); ctx.fill(); }
-      const ring = pond(o.p) > D.pr.maxActiune; if (ring) inel(o,false);
+      const ring = gxInel(o.p); if (ring) inel(o,false);
       const img = sfera(o, r, Math.atan2(cy-q.y, cx-q.x), buget);
       if (img && img.width) ctx.drawImage(img, q.x-r-0.5, q.y-r-0.5, r*2+1, r*2+1); else { const a = GX_ATM[o.tip] || [180,180,180], ug = Math.atan2(cy-q.y, cx-q.x), g = ctx.createRadialGradient(q.x+Math.cos(ug)*r*0.4, q.y+Math.sin(ug)*r*0.4, r*0.1, q.x, q.y, r); g.addColorStop(0, `rgb(${a[0]*0.8|0},${a[1]*0.75|0},${a[2]*0.7|0})`); g.addColorStop(1, '#08080c'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x,q.y,r,0,6.283); ctx.fill(); }
       if (ring) inel(o,true);
@@ -3591,10 +3621,7 @@ function galaxie(){
     GX.cadru = P_;
     if (!calm && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
   }
-  cv.onpointerdown = e => { GX.atins = performance.now(); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(cadru); } st.drag = {x:e.clientX, y:e.clientY, x0:e.clientX, y0:e.clientY, tm:performance.now()}; cv.setPointerCapture(e.pointerId); };
-  cv.onpointermove = e => { const d=st.drag; if(!d) return; const dx=e.clientX-d.x, dy=e.clientY-d.y; st.yaw += dx*0.012; st.vy = dx*0.012*0.6; if (e.pointerType !== 'touch') st.tilt = Math.min(Math.max(st.tilt - dy*0.004, 0.5), 0.9); d.x=e.clientX; d.y=e.clientY; if (calm) cadru(performance.now()); };
-  cv.onpointerup = e => { const d=st.drag; st.drag=null; if (!d) return; if (Math.hypot(e.clientX-d.x0, e.clientY-d.y0) < 8) gxAtinge(e); };
-  cv.onpointercancel = () => { st.drag=null; st.vy=0; };
+  cv.onclick = e => { GX.atins = performance.now(); gxAtinge(e); };
   GX.cadruF = cadru;
   GX.io?.disconnect(); GX.viz = true; GX.atins = performance.now(); GX.ult = 0;
   GX.io = new IntersectionObserver(([e])=>{ GX.viz = e.isIntersecting; if (GX.viz && !GX.on && cv.isConnected && VIEW==='analiza' && !document.hidden) { GX.on=true; GX.ult=0; GX.atins=performance.now(); GX.raf=requestAnimationFrame(cadru); } });
@@ -3615,15 +3642,14 @@ function gxAtinge(e){
   const cv=$('gxc'), r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, st=GX.st;
   st.alegere = true;
   const hit = gxPozitieLa(x, y, GX.cadru || [], GX.etichete || [], GX.stea);
-  // prima atingere alege planeta (vezi RSI, sectorul, dividendele); a doua intră în ea: zoom și fișa acțiunii
-  if (hit) { if (st.sel===hit.p.symbol) { const c = sectorInfo(hit.p.tema).c; zoomPlaneta(r.left+hit.q.x, r.top+hit.q.y, Math.max(hit.r,8), c.startsWith('--')?`var(${c})`:c, hit.p.symbol); return; } st.sel = GX.sel = hit.p.symbol; vib(); }
+  if (hit) { st.sel = GX.sel = hit.p.symbol; vib(); }
   else if (GX.stea && Math.hypot(x-GX.stea.x,y-GX.stea.y) <= GX.stea.r+5) { st.sel = GX.sel = 'ETF'; vib(); }
   else st.sel = GX.sel = null;
   gxInfo(); if (!GX.on) GX.cadruF?.(performance.now());
 }
 function gxInfo(){
   const el=$('gxi'); if (!el) return; const s=GX.st?.sel;
-  if (!s) { const prim = SNAP.pozitii.find(p=>!p.virtual && !p.etf); if (prim && GX.st && !GX.st.alegere) { GX.st.sel = GX.sel = prim.symbol; gxInfo(); return; } el.innerHTML = `<span class="sub">${gxEchilibru()} Glisează lateral pentru a roti harta. Atinge o planetă sau simbolul ei pentru detalii.</span>`; return; }
+  if (!s) { const prim = SNAP.pozitii.find(p=>!p.virtual && !p.etf); if (prim && GX.st && !GX.st.alegere) { GX.st.sel = GX.sel = prim.symbol; gxInfo(); return; } el.innerHTML = `<span class="sub">${gxEchilibru()} Atinge o planetă sau simbolul ei pentru detalii.</span>`; return; }
   if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Soarele: ETF-ul de bază</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
   const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
   const m = MISC(p), u = sem(p);
@@ -3664,8 +3690,8 @@ function vAnaliza(){
     <div class="cel-legend-wrap"><details><summary>Cum citești harta</summary><div class="gxleg" data-c="${A('termen','orbita')}">${(()=>{ const ps = SNAP.pozitii, pr = P(), it = (svg, t) => `<span class="gxl">${svg}<span>${t}</span></span>`, h = [];
       const pl = (c1, c2, extra = '') => `<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="g${c1.slice(1)}" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient></defs>${extra}<circle cx="14" cy="14" r="7" fill="url(#g${c1.slice(1)})"/></svg>`;
       h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gS" cx="40%" cy="40%" r="60%"><stop offset="0" stop-color="#fffbe8"/><stop offset=".55" stop-color="#ffd36b"/><stop offset="1" stop-color="#ff8f30"/></radialGradient><radialGradient id="gC"><stop offset=".45" stop-color="#ffcf80" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf80" stop-opacity="0"/></radialGradient></defs><circle cx="14" cy="14" r="13" fill="url(#gC)"/><circle cx="14" cy="14" r="7" fill="url(#gS)"/></svg>`, 'Soarele: ETF-ul de bază'));
-      h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gM" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#e8d6b4"/><stop offset="1" stop-color="#6b4a30"/></radialGradient></defs><circle cx="7" cy="18" r="3.5" fill="url(#gM)"/><circle cx="18" cy="12" r="8" fill="url(#gM)"/></svg>`, 'Mărimea: câți bani are'));
-      if (ps.some(p=>!p.etf && p.pondere>pr.maxActiune)) h.push(it(pl('#efe2c4','#7a5a34', '<ellipse cx="14" cy="14" rx="13" ry="4" fill="none" stroke="#e3cfa6" stroke-width="2" transform="rotate(-14 14 14)"/>'), `Inel: peste ${pr.maxActiune}% din bani`));
+      h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gM" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#e8d6b4"/><stop offset="1" stop-color="#6b4a30"/></radialGradient></defs><circle cx="7" cy="18" r="3.5" fill="url(#gM)"/><circle cx="18" cy="12" r="8" fill="url(#gM)"/></svg>`, 'Mărime după suma investită'));
+      h.push(it(pl('#efe2c4','#7a5a34', '<ellipse cx="14" cy="14" rx="13" ry="4" fill="none" stroke="#e3cfa6" stroke-width="2" transform="rotate(-14 14 14)"/>'), 'Inel de la 1.500 lei investiți'));
       if (Object.entries(SNAP.teme||{}).some(([k,v])=>!/^ETF/.test(k) && v>pr.maxTema)) h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><ellipse cx="14" cy="14" rx="12.5" ry="6" fill="none" stroke="#ff7a5f" stroke-width="1.8"/><circle cx="25" cy="15" r="2.6" fill="#c9a47c"/><circle cx="14" cy="14" r="2.6" fill="#ffd36b"/></svg>`, 'Orbită roșie: sector peste plafon'));
       h.push(it(pl('#9ec4ff','#2a4a8c', '<circle cx="24" cy="10" r="2" fill="#dfe3ea"/><circle cx="5" cy="19" r="2" fill="#fbbf24"/>'), 'Lunile: plăți de dividend pe an'));
       h.push(it(pl('#d9c6a6','#5e4630', '<circle cx="14" cy="14" r="12.5" fill="#ff8a3d" opacity=".35"/><path d="M14 1.5a12.5 12.5 0 0 0 0 25z" fill="#7dd3fc" opacity=".55"/>'), 'Aura: RSI peste 70 / sub 30'));
@@ -4315,10 +4341,28 @@ let PROGRES_TEXT = '';
 // o linie subțire care se umple. Fără pastilă plutitoare, fără card mare (cardul apare doar dacă durează peste un minut).
 let PROGRES_PAS = 0, PROGRES_DIN = 0, PROGRES_LENT = null;
 // în antet încape un cuvânt; ecranul mare de la prima analiză și titlul (ținut apăsat) au fraza întreagă
-const PROGRES_LUNG = { Pornesc:'GitHub pornește analiza', 'La rând':'În așteptare la GitHub', Prețuri:'Citesc prețurile de acum', Brokeri:'Citesc brokerii și prețurile', Salvez:'Aduc rezultatele', Verific:'Verific și pun fișierele noi', Test:'Testez conexiunile', Reiau:'GitHub n-a pornit analiza, o reiau', Aștept:'Aștept actualizarea în curs' };
+const PROGRES_LUNG = { Sincronizez:'Citesc datele din GitHub', Descifrez:'Verific și descifrez portofoliul', Aplic:'Aplic datele verificate', Pornesc:'GitHub pornește analiza', 'La rând':'În așteptare la GitHub', Prețuri:'Citesc prețurile de acum', Brokeri:'Citesc brokerii și prețurile', Salvez:'Aduc rezultatele', Verific:'Verific și pun fișierele noi', Test:'Testez conexiunile', Reiau:'GitHub n-a pornit analiza, o reiau', Aștept:'Aștept actualizarea în curs' };
 const progresLung = () => PROGRES_LUNG[PROGRES_TEXT] || PROGRES_TEXT;
+function progresPanou(text, pas, total, gata=false){
+  const panou=$('actualizare-panou'), bara=$('actualizare-etape');
+  if(!panou||!bara)return;
+  panou.hidden=!text;
+  if(!text)return;
+  const etapa=$('actualizare-eticheta'), mesaj=$('actualizare-mesaj');
+  const numar=gata?'100%':pas&&total?`Etapa ${pas}/${total}`:'În curs';
+  if(etapa.textContent!==numar)etapa.textContent=numar;
+  if(mesaj.textContent!==text)mesaj.textContent=text;
+  if(gata){bara.max=100;bara.value=100;}
+  else if(pas&&total){bara.max=total;bara.value=pas-1;}
+  else bara.removeAttribute('value');
+  panou.classList.toggle('terminat',gata);
+}
 function progres(t, pas, din){
   PROGRES_TEXT = t||''; const bt = $('bref'), lb = bt?.querySelector('small'), bar = $('rbar');
+  clearTimeout(progresGata.t);
+  clearTimeout(progresGata.bara);
+  progresPanou(t ? progresLung()+'…' : null, pas, din);
+  if(bt)bt.setAttribute('aria-busy',String(!!t));
   if (t) document.querySelectorAll('#rulc .pt').forEach(x=>x.textContent=progresLung()+'…');
   if (t == null) { PROGRES_PAS = 0; document.body.classList.remove('prg'); bar?.classList.remove('on','nedet'); if (bt && !bt.classList.contains('gata')) { bt.classList.remove('rul'); if (lb) lb.textContent = 'Actualizează'; bt.removeAttribute('title'); $('stare')?.removeAttribute('data-pas'); } return; }
   document.body.classList.add('prg');
@@ -4335,12 +4379,14 @@ function progres(t, pas, din){
 // La final: linia se umple, butonul arată „✓ Gata” 2 secunde, apoi revine la „Actualizează”. Cifrele schimbate clipesc scurt.
 function progresGata(text){
   const bar = $('rbar'), i = bar?.firstElementChild, bt = $('bref'), lb = bt?.querySelector('small');
+  progresPanou(text || 'Actualizarea s-a încheiat', 0, 0, true);
+  bt?.setAttribute('aria-busy','false');
   if (i) { i.style.transition = 'transform .3s ease-out'; i.style.transform = 'scaleX(1)'; }
-  setTimeout(() => { bar?.classList.remove('on','nedet'); if (i) { i.style.transition = 'none'; i.style.transform = 'scaleX(0)'; } }, 450);
+  progresGata.bara = setTimeout(() => { bar?.classList.remove('on','nedet'); if (i) { i.style.transition = 'none'; i.style.transform = 'scaleX(0)'; } }, 450);
   PROGRES_TEXT = ''; PROGRES_PAS = 0; document.body.classList.remove('prg');
   if (bt) { bt.classList.remove('rul'); bt.classList.add('gata'); bt.removeAttribute('title'); if (lb) lb.textContent = '✓ ' + (text || 'Gata'); }
   const st = $('stare'); if (st) st.dataset.pas = '✓ ' + (text || 'Gata');
-  clearTimeout(progresGata.t); progresGata.t = setTimeout(() => { const b2 = $('bref'); b2?.classList.remove('gata'); if (!PROGRES_TEXT && b2) { b2.querySelector('small').textContent = 'Actualizează'; $('stare')?.removeAttribute('data-pas'); } }, 2200);
+  clearTimeout(progresGata.t); progresGata.t = setTimeout(() => { const b2 = $('bref'); b2?.classList.remove('gata'); if (!PROGRES_TEXT && b2) { b2.querySelector('small').textContent = 'Actualizează'; $('stare')?.removeAttribute('data-pas'); progresPanou(null); } }, 2200);
 }
 // Ce arată Acasă înainte de actualizare, ca după ea să clipească doar cifrele care s-au schimbat
 function cifreAcum(){ return [...document.querySelectorAll('#v .kpi3 > div')].map(d => { const e = d.querySelector('.mv,b'); return e?.getAttribute('aria-label') || e?.textContent || ''; }); }
@@ -4433,7 +4479,9 @@ async function ruleaza(test, scurta){
           continue; }
         progres(null); toast('GitHub nu reușește acum să pornească analiza (o problemă la ei, nu la tine). Încearcă din nou peste câteva minute.'); return;
       }
-      progres('Salvez', 3, 3); const inainteCifre = cifreAcum(); await new Promise(r=>setTimeout(r,1200)); await reincarca(); progresGata(test ? 'Test gata' : 'Gata'); requestAnimationFrame(() => clipesteSchimbate(inainteCifre));
+      progres('Salvez', 3, 3); const inainteCifre = cifreAcum(); await new Promise(r=>setTimeout(r,1200)); await reincarca();
+      if(run.conclusion==='success'&&!OFFLINE)progresGata(test ? 'Test gata' : 'Gata');else progres(null);
+      requestAnimationFrame(() => clipesteSchimbate(inainteCifre));
       if (test || run.conclusion!=='success') { go('setari'); if (live()) setTimeout(conexiuniFoaie, 350); toast(run.conclusion==='success'?`Testul s-a terminat în ${sec()} s.`:'O conexiune nu merge. Vezi ce trebuie reparat.'); return; }
       if (scurta) { render(); return; }
       go('azi'); return;

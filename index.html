@@ -1688,6 +1688,7 @@ html.inchis #cer::before{background:linear-gradient(100deg,#0b102347,#080b17c9),
 }
 
 </style>
+<link rel="stylesheet" href="vizual-068.css">
 </head>
 <body>
 <div id="cer" aria-hidden="true"></div>
@@ -1700,7 +1701,12 @@ html.inchis #cer::before{background:linear-gradient(100deg,#0b102347,#080b17c9),
     <button class="ib ha" id="blk" aria-label="Blochează aplicația" data-c='["blocheazaAnim","$el"]'><span class="ni" data-i="lacat"></span><small>Blochează</small></button>
     <button class="ib ha" id="bset" aria-label="Setări" data-c='["go","setari"]'><span class="ni" data-i="setari"></span><small>Setări</small></button>
   </div>
-</div><div id="rbar" aria-hidden="true"><i></i></div></header>
+</div><div id="rbar" aria-hidden="true"><i></i></div>
+<section id="actualizare-panou" aria-label="Progresul actualizării" hidden>
+  <div><strong>Actualizare</strong><span id="actualizare-eticheta"></span></div>
+  <progress id="actualizare-etape" aria-label="Etape finalizate"></progress>
+  <small id="actualizare-mesaj" role="status" aria-atomic="true"></small>
+</section></header>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="gIco" gradientUnits="userSpaceOnUse" x1="2" y1="2" x2="22" y2="22"><stop offset="0" stop-color="#a8b4ff"/><stop offset="1" stop-color="#81c7b6"/></linearGradient></defs></svg>
 <div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24"><circle class="po" cx="12" cy="12" r="8"/><circle class="pc" cx="12" cy="12" r="3.4"/><g class="pg"><circle class="pp" cx="12" cy="4" r="2.4"/></g></svg></div>
 <main id="v"></main>

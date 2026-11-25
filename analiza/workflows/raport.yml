@@ -1,8 +1,18 @@
 name: Raportul de dimineață
 
-# Pornește când raportul de dimineață (criptat pentru telefon) ajunge în repo și te anunță pe telefon.
-# Raportul nu e citit aici: e criptat cu cheia telefonului. Se trimite doar „Raportul de dimineață e gata”.
+# Generează raportul în GitHub Actions. Un push extern rămâne compatibil.
 on:
+  schedule:
+    - cron: '17 7 * * 1-5'
+      timezone: Europe/Bucharest
+    - cron: '47 8 * * 1-5'
+      timezone: Europe/Bucharest
+  workflow_dispatch:
+    inputs:
+      regenereaza:
+        description: Regenerează chiar dacă există raportul de azi
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['rapoarte/ultimul.enc']
@@ -15,11 +25,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  anunta:
+  raport:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      # ref: main = ultima versiune din repo în momentul pornirii (o analiză poate fi rulat între timp)
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
@@ -27,18 +36,132 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+      - name: Generează raportul criptat
+        id: genereaza
+        if: github.event_name != 'push'
+        env:
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          REGENEREAZA: ${{ inputs.regenereaza }}
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import { cripteazaPentruTelefon } from './runner/seif.js';
+          import { pazaRetea } from './runner/paza.js';
+
+          const acum = new Date();
+          const zona = 'Europe/Bucharest';
+          const iso = d => new Intl.DateTimeFormat('sv-SE', {timeZone: zona, year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+          const azi = iso(acum), dataTitlu = new Intl.DateTimeFormat('ro-RO', {timeZone:zona,day:'numeric',month:'short',year:'numeric'}).format(acum);
+          const vechi = 'rapoarte/'+azi+'.enc';
+          if (fs.existsSync(vechi) && fs.existsSync('rapoarte/ultimul.enc') &&
+              fs.readFileSync(vechi).equals(fs.readFileSync('rapoarte/ultimul.enc')) && process.env.REGENEREAZA !== 'true') {
+            console.log('Raportul de azi există deja.');
+            process.exit(0);
+          }
+          const date = JSON.parse(fs.readFileSync('date/raport-intrare.json','utf8'));
+          if (!Array.isArray(date.pozitii) || !date.pozitii.length || !Number.isFinite(Date.parse(date.generat))) throw new Error('Intrarea raportului lipsește sau nu este validă.');
+          const pem = fs.readFileSync('date/cheie-publica.pem','utf8');
+          const varsta = acum.getTime()-Date.parse(date.generat);
+          if (varsta < -3600000) throw new Error('Data analizei este în viitor.');
+          const vechiDate = varsta > 4*86400000;
+          const curat = v => String(v ?? '').replace(/[\r\n\t]+/g,' ').replace(/[\[\]()*#<>]/g,'').replace(/\s+/g,' ').trim();
+          const procent = v => typeof v==='number' && Number.isFinite(v) ? new Intl.NumberFormat('ro-RO',{maximumFractionDigits:1}).format(v)+'%' : 'indisponibil';
+          const sigurMotiv = v => !/\b(?:lei|RON|USD|EUR)\b|[$€]/i.test(String(v));
+          const pozitii = [...date.pozitii].filter(p=>p && typeof p.symbol==='string').sort((a,b)=>(b.pondere||0)-(a.pondere||0));
+          if (!pozitii.length) throw new Error('Nicio poziție validă pentru raport.');
+          const sectoare = Object.entries(date.teme||{}).filter(([,v])=>typeof v==='number'&&Number.isFinite(v)).sort((a,b)=>b[1]-a[1]);
+          const semnale = pozitii.filter(p=>/verific|reechilibr|așteapt|asteapt|nu mai adaug/i.test(p.semnal||'') || p.oportunitate);
+          const zile = n => iso(new Date(acum.getTime()+n*86400000));
+          const raport = ['# Raport '+dataTitlu, '## Pe scurt',
+            '- **Analiză din '+curat(date.azi||iso(new Date(date.generat)))+'.** '+(vechiDate?'Datele au peste 4 zile. Raportul nu extrapolează semnale vechi.':'Raport automat pe baza ultimei analize disponibile.')];
+          if (!vechiDate) {
+            raport.push('- **'+semnale.length+' poziții de urmărit.** '+(semnale.length?semnale.slice(0,4).map(p=>curat(p.symbol)+' ('+curat(p.semnal||'oportunitate')+')').join(', ')+'.':'Motorul nu indică poziții de verificat.'));
+            if (sectoare.length) raport.push('- **Sectorul principal: '+curat(sectoare[0][0])+'.** Pondere '+procent(sectoare[0][1])+'.');
+            raport.push('## Semnale');
+            if (!semnale.length) raport.push('- Nu există semnale de atenție în ultima analiză.');
+            for (const p of semnale) {
+              const motive = Array.isArray(p.motive)?p.motive.filter(sigurMotiv).slice(0,2).map(curat):[];
+              raport.push('- **'+curat(p.symbol)+': '+curat(p.semnal||'Oportunitate')+'.** '+procent(p.pondere)+' din portofoliu, țintă '+procent(p.tinta)+'. '+motive.join('. '));
+            }
+            // Primele cinci zile lucrătoare ale lunii, în ora României.
+            const [an,luna,zi] = azi.split('-').map(Number);
+            let lucratoare=0;
+            for(let i=1;i<=zi;i++){const dw=new Date(Date.UTC(an,luna-1,i)).getUTCDay();if(dw!==0&&dw!==6)lucratoare++;}
+            if(lucratoare<=5 && Array.isArray(date.planLunii) && date.planLunii.length){
+              raport.push('## Planul lunii',...date.planLunii.map(p=>'- '+curat(p.symbol)+': '+procent(p.ponderePct)+' din bugetul lunii.'));
+            }
+            raport.push('## Știri care contează');
+            const eligibile = [...new Set(pozitii.filter(p=>!p.etf && /^[A-Z][A-Z0-9-]{0,9}$/.test(p.symbol)).map(p=>p.symbol))];
+            const cheie = process.env.FINNHUB_KEY;
+            const stiri = [], esecuri = [];
+            if (cheie && eligibile.length) {
+              const elibereaza = pazaRetea([],[]);
+              try {
+                // Aceeași sursă de date ca în analiza de bursă. Numai simbolul și intervalul, fără ponderi sau solduri.
+                for (let i=0;i<eligibile.length;i+=4) {
+                  await Promise.all(eligibile.slice(i,i+4).map(async symbol=>{
+                    try {
+                      const url = new URL('https://finnhub.io/api/v1/company-news');
+                      url.search = new URLSearchParams({symbol,from:zile(-2),to:azi});
+                      const r = await fetch(url,{headers:{'X-Finnhub-Token':cheie},redirect:'error',signal:AbortSignal.timeout(12000)});
+                      if (!r.ok) throw new Error('Sursa indisponibilă');
+                      const j = await r.json();
+                      if (!Array.isArray(j)) throw new Error('Răspuns nevalid');
+                      for (const x of j) {
+                        if (!x || !Number.isFinite(x.datetime) || x.datetime*1000<acum.getTime()-2*86400000 || x.datetime*1000>acum.getTime()) continue;
+                        let link; try { const u=new URL(x.url);if(u.protocol!=='https:'||u.username||u.password||/[()\s"<>]/.test(u.href))continue;link=u.href; } catch {continue;}
+                        const titlu=curat(x.headline).slice(0,160);
+                        if (titlu) stiri.push({symbol,titlu,link,sursa:curat(x.source)||'Sursă',t:x.datetime});
+                      }
+                    } catch { esecuri.push(symbol); }
+                  }));
+                }
+              } finally { elibereaza(); }
+            }
+            const vazute=new Set(), peCompanie=new Set(), alese=[];
+            for (const x of stiri.sort((a,b)=>b.t-a.t)){
+              if(vazute.has(x.link)||vazute.has(x.titlu)||peCompanie.has(x.symbol))continue;
+              vazute.add(x.link);vazute.add(x.titlu);peCompanie.add(x.symbol);alese.push(x);
+              if(alese.length===8)break;
+            }
+            if(alese.length) raport.push(...alese.map(x=>'- **'+x.symbol+'.** '+x.titlu+' ['+x.sursa+']('+x.link+')'));
+            else raport.push('- '+(!cheie?'Cheia sursei de știri nu este disponibilă.':!eligibile.length?'Nu există simboluri acoperite de această sursă.':esecuri.length?'Sursa de știri nu a oferit suficiente date verificabile.':'Sursa nu a returnat știri în intervalul verificat.'));
+            raport.push('Acoperire: companii listate în SUA. Titlurile sunt din sursă, fără o evaluare automată a impactului asupra semnalelor.');
+            if(esecuri.length) raport.push('Date de știri indisponibile pentru '+esecuri.length+' companii.');
+            raport.push('## Riscul portofoliului',...sectoare.slice(0,4).map(([k,v])=>'- '+curat(k)+': '+procent(v)+'.'));
+            raport.push('## De urmărit');
+            const rezultate=pozitii.filter(p=>typeof p.rezultate==='string' && /^\d{4}-\d{2}-\d{2}$/.test(p.rezultate) && p.rezultate>=azi && p.rezultate<=zile(14));
+            raport.push(...(rezultate.length?rezultate.map(p=>'- '+curat(p.symbol)+': rezultate anunțate pentru '+p.rezultate+'.'):['- Nicio dată de rezultate în următoarele 14 zile în analiza disponibilă.']));
+          } else raport.push('## Starea raportului','- Așteaptă următoarea analiză completă înainte de a utiliza semnalele.');
+          const text=raport.join('\n')+'\n';
+          const criptat=await cripteazaPentruTelefon(pem,text);
+          fs.mkdirSync('rapoarte',{recursive:true});
+          fs.writeFileSync(vechi,criptat);
+          fs.writeFileSync('rapoarte/ultimul.enc',criptat);
+          console.log('Raportul criptat a fost generat.');
+          JS
+      - name: Publică raportul criptat
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "analist-bot"
+          git config user.email "analist-bot@users.noreply.github.com"
+          git add rapoarte/*.enc
+          git diff --cached --quiet && exit 0
+          git commit -m "raport $(TZ=Europe/Bucharest date +%F)"
+          git pull --rebase origin main
+          git push
       - name: Anunță raportul
         env:
           DATA_KEY: ${{ secrets.DATA_KEY }}
           FCM_CONT: ${{ secrets.FCM_CONT }}
           APP_URL: https://costi1622.github.io/analist/
         run: node runner/anunta.js raport
-      - name: Salvează că anunțul a fost trimis
+      - name: Salvează jurnalul notificărilor
         run: |
           git config user.name "analist-bot"
           git config user.email "analist-bot@users.noreply.github.com"
           git add date/
           git diff --cached --quiet && exit 0
-          git commit -m "anunț raport $(date -u +%F)"
+          git commit -m "anunț raport $(TZ=Europe/Bucharest date +%F)"
           git pull --rebase origin main
           git push

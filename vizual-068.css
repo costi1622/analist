@@ -60,3 +60,17 @@ html.fx-redus :is(#actualizare-panou,.cel-detail-top,.semn-grafic,.ni,.toarta,.n
 @media(prefers-reduced-motion:reduce){
   :is(#actualizare-panou,.cel-detail-top,.semn-grafic,.ni,.toarta,#bset .ico *){animation:none!important;transition:none!important}
 }
+
+.stare-date{margin-bottom:14px;padding:14px 16px}
+.stare-date h2{margin:0 0 10px;font-size:var(--t3)}
+.stare-date dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.stare-date dl>div{border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+.stare-date dt,.stare-date small{font-size:var(--t1);color:var(--mut)}
+.stare-date dd{margin:3px 0 0;display:grid;gap:2px}
+.stare-date p{margin:8px 0 0;font-size:var(--t2)}
+.stare-date .warn{color:var(--warn)}
+@media(max-width:520px){
+  .stare-date dl{grid-template-columns:1fr}
+  .stare-date dl>div{display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,1.3fr);gap:8px}
+  .stare-date dd{margin:0}
+}

@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.68.0';
+const APP_VER = '0.68.1';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -585,6 +585,7 @@ async function actualizeaza(){
 }
 async function reincarca(manual, indica = false) {
   if (are_seif() && !V) { LOADED=true; stare(); render(); return; } // blocat: nimic de încărcat
+  const eraOffline = OFFLINE;
   $('bref').classList.add('spin'); OFFLINE=false;
   try {
     if (live()) {
@@ -605,7 +606,7 @@ async function reincarca(manual, indica = false) {
       if (indica) progres('Aplic', 3, 3);
       saveFIS(); await dinCache(); ULTIM=Date.now(); verificaCod().catch(()=>{}); versiuneSite().then(v=>{ if (v && analizaNoua() && VIEW==='azi') render(); }).catch(()=>{});
       if (manual === true) toast(portofoliuNou && !SNAP?.incomplet ? 'Actualizat.' : SNAP?.incomplet ? 'Un broker este indisponibil. Sunt afișate ultimele date complete.' : 'Nimic nou de la ultima verificare.');
-      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual) render(); ancora(); setTimeout(verificaAbonament, 3000); return portofoliuNou && !SNAP?.incomplet;
+      $('bref').classList.remove('spin'); LOADED=true; stare(); if (schimbat) ANIM=true; if (schimbat || manual || eraOffline) render(); ancora(); setTimeout(verificaAbonament, 3000); return portofoliuNou && !SNAP?.incomplet;
     }
     // neconectat: nu există date de arătat, doar ecranul Pornire
     SNAP = null; IST = null; RAP = null; INTRA = null;
@@ -2298,6 +2299,78 @@ function inelLuna(mic){
   return mic ? `<div class="hfoot ${facut?'inchisa':''} ${prima?'prima':''}" data-c="${A('go','plan')}">${ring}${txt}<span class="ch">${ic('chev')}</span></div>` : `<div class="card inel ${prima||STAMPILA?'prima':''}" style="display:flex;align-items:center;gap:16px;padding:12px 16px">${ring}${txt}</div>`;
 }
 const TODO_IC = {'--opor':'stea','--verifica':'alerta','--pos':'scut','--acc':'portofel','--asteapta':'calendar'};
+const DATA_ORA_RO = new Intl.DateTimeFormat('ro-RO', {
+  timeZone:'Europe/Bucharest', dateStyle:'medium', timeStyle:'short'
+});
+const DATA_CHEIE_RO = new Intl.DateTimeFormat('sv-SE', {
+  timeZone:'Europe/Bucharest', year:'numeric', month:'2-digit', day:'2-digit'
+});
+const ORA_RO = new Intl.DateTimeFormat('en-GB', {
+  timeZone:'Europe/Bucharest', hour:'numeric', hourCycle:'h23'
+});
+const LUNI_RAPORT = ['ian','feb','mar','apr','mai','iun','iul','aug','sept','oct','noi','dec'];
+const ziInMs = 86400000;
+
+function dataCalendarValida(iso){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
+  const d = new Date(iso+'T00:00:00Z');
+  return Number.isFinite(d.getTime()) && d.toISOString().slice(0,10)===iso ? d : null;
+}
+
+function dataRaportDimineata(raport, azi){
+  const titlu = raport?.split(/\r?\n/).find(l=>/^#\s/.test(l));
+  if (!titlu) return null;
+  const iso = titlu.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
+  if (iso) return dataCalendarValida(iso) && iso <= azi ? iso : null;
+  const m = titlu.match(/\b(\d{1,2})\s+([a-zăâîșț]+)\.?(?:\s+(\d{4}))?/i);
+  if (!m) return null;
+  const nume = m[2].toLowerCase();
+  const luna = nume==='nov' ? 11 : LUNI_RAPORT.findIndex(l=>nume.startsWith(l))+1;
+  if (!luna) return null;
+  const an = Number(m[3] || azi.slice(0,4));
+  const construieste = an => an+'-'+String(luna).padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  let zi = construieste(an);
+  if (!m[3] && zi > azi) zi = construieste(an-1);
+  return dataCalendarValida(zi) && zi <= azi ? zi : null;
+}
+
+function ultimaDimineataProgramata(azi, ora){
+  const d = dataCalendarValida(azi);
+  if (ora < 9) d.setUTCDate(d.getUTCDate()-1);
+  while ([0,6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate()-1);
+  return d.toISOString().slice(0,10);
+}
+
+function stareaDatelorHTML(acum = new Date()){
+  const azi = DATA_CHEIE_RO.format(acum);
+  const completa = Date.parse(SNAP.generat);
+  const incercare = Date.parse(SNAP.ultimaIncercare);
+  const partial = Boolean(SNAP.incomplet);
+  const ziPret = SNAP.ora?.preturi;
+  const pretSalvat = dataCalendarValida(ziPret);
+  const intraday = intraValid() ? Date.parse(INTRA.generat) : NaN;
+  const datePret = Number.isFinite(intraday) ? DATA_ORA_RO.format(intraday)
+    : pretSalvat ? ziRo(ziPret) : 'Data indisponibilă';
+  const vechiPret = Number.isFinite(intraday) ? bursaDeschisa(acum) && acum-intraday > 90*60000
+    : pretSalvat && dataCalendarValida(azi)-pretSalvat >= 4*ziInMs;
+  const raport = dataRaportDimineata(RAP, azi);
+  const asteptat = ultimaDimineataProgramata(azi, Number(ORA_RO.format(acum)));
+  const rand = (eticheta, data, stare, ton) =>
+    `<div><dt>${eticheta}</dt><dd><strong>${esc(data)}</strong><small class="${ton}">${stare}</small></dd></div>`;
+  const stareAnaliza = !Number.isFinite(completa) ? 'Indisponibilă' : partial ? 'Ultima analiză completă'
+    : acum-completa >= 4*ziInMs ? 'Date vechi' : 'Completă';
+  const starePret = Number.isFinite(intraday)||pretSalvat ? vechiPret ? 'Date vechi' : Number.isFinite(intraday) ? 'Intraday' : 'Din analiza completă' : 'Indisponibile';
+  const stareRaport = !raport ? RAP ? 'Dată nedeterminată' : 'Indisponibil'
+    : raport < asteptat ? 'Raport vechi' : 'Disponibil';
+  return `<section class="card stare-date" aria-label="Starea datelor"><h2>Starea datelor</h2><dl>
+    ${rand('Analiză completă', Number.isFinite(completa) ? DATA_ORA_RO.format(completa) : 'Data indisponibilă', stareAnaliza, partial||stareAnaliza==='Date vechi'?'warn':'sub')}
+    ${rand('Prețuri', datePret, starePret, vechiPret?'warn':'sub')}
+    ${rand('Raport de dimineață', raport ? ziRo(raport) : 'Data indisponibilă', stareRaport, stareRaport==='Raport vechi'?'warn':'sub')}
+    </dl>${partial ? `<p class="warn">Actualizare parțială. Portofoliul folosește ultima analiză completă.${Number.isFinite(incercare) ? ' Ultima încercare: '+esc(DATA_ORA_RO.format(incercare))+'.' : ''}</p>` : ''}
+    ${OFFLINE ? '<p class="warn">Sincronizarea este indisponibilă. Vezi datele salvate pe acest dispozitiv.</p>' : ''}
+    </section>`;
+}
+
 function vAzi(){
   const C = CONTURI.some(([k])=>k===S.cont) ? S.cont : 'toate', VC = vedereCont(C);
   const pnl = VC.total - VC.cost, pc = VC.cost ? pnl/VC.cost*100 : 0;
@@ -2313,6 +2386,7 @@ function vAzi(){
   // v0.49: cât rulează, progresul e doar în antet. Banda apare numai dacă durează peste un minut.
   if (RULEAZA && PROGRES_LENT === true) h += bandaIlustrata('ruleaza', 'Durează mai mult ca de obicei', 'GitHub e aglomerat acum. Poți închide aplicația: primești notificare când analiza e gata.', 'rulc');
   else if (OFFLINE) h += bandaIlustrata('offline', 'Fără internet', `Vezi datele din ${esc(cand(SNAP.generat))}. Se actualizează singur când revine conexiunea.`);
+  h += stareaDatelorHTML();
   // 1) Portofoliul: totalul, ziua, câștigul, luna
   h += `<div class="cel-home"><div class="card hcard erou ${t}"><h1 class="cel-title">Portofoliul tău</h1>${galaxieMica()}
     <div class="row cel-accounts"><div class="seg mini" role="group" aria-label="Conturi de brokeraj" data-noswipe>${CONTURI.map(([k,tt])=>`<button class="${C===k?'on':''}" aria-pressed="${C===k}" data-c="${A('setCont',k)}">${tt}</button>`).join('')}</div>

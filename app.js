@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.70.0';
+const APP_VER = '0.71.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -347,7 +347,7 @@ aplicaTema();
 // ===== Glosar: explicații scurte pentru termeni și semnale =====
 const GLOS = {
   harta:['Harta zilei','Fiecare dreptunghi e o poziție. Mărimea arată cât din portofoliu ocupă, culoarea arată mișcarea zilei: verde crește, roșu scade, gri stă pe loc (sub 0,3%). Cu cât culoarea e mai intensă, cu atât mișcarea e mai mare. Atinge un dreptunghi ca să deschizi acțiunea.'],
-  orbita:['Galaxia ta','Portofoliul tău ca un sistem solar, în mijlocul unei galaxii. Soarele e ETF-ul de bază: crește odată cu ponderea ETF-urilor și ajunge la cercul punctat când atingi ținta (cercul devine verde). Orbitele sunt sectoarele; o orbită roșie înseamnă că sectorul a trecut de plafonul tău. Planetele sunt acțiunile, fiecare cu numele ei: suprafața planetei e proporțională cu banii din ea, deci când investești într-o acțiune, planeta ei crește. Un inel înseamnă că acțiunea trece de plafonul pe acțiune. Fiecare sector are o familie de planete (giganți gazoși, planete ca Saturn, Neptun, Pământul sau Marte), iar în sector fiecare acțiune arată altfel. Lunile sunt dividendele: câte una pentru fiecare plată pe an (luna aurie: plată luna asta sau luna viitoare). O acțiune cumpărată de curând, care încă nu ți-a plătit, primește lunile estimate după bursă (SUA: 4 pe an, Europa: 1). Companiile care nu plătesc dividende (de exemplu AMD sau Take-Two) n-au luni. RSI-ul îl vezi când atingi planeta, în rândul de sub galaxie; pe planetă apare o aură doar la extreme: portocalie peste 70 (a urcat repede), albastră sub 30 (a scăzut repede). Aura roșie care pulsează înseamnă că prețul e sub nivelul de alertă. În ziua în care investești, stele căzătoare zboară spre ce ai cumpărat. Glisează lateral ca s-o rotești. Cu mouse-ul poți schimba și înclinarea. Atinge o planetă sau simbolul ei pentru detalii, apoi încă o dată pentru fișă. „Ultimul an” arată cum s-au schimbat mărimile în ultimele 12 luni. Galaxia din spate e doar decor.','O acțiune cu 25% din portofoliu e o planetă mare, cu inel; una cu 2% e o planetă mică. Dacă pui încă o dată banii din ea, suprafața i se dublează.','pondere tema rsi dividende'],
+  orbita:['Cum citești galaxia','Soarele reprezintă ETF-urile, planetele reprezintă acțiunile, iar orbitele grupează sectoarele. Roșu pe orbită înseamnă un sector peste plafon. Mărimea planetei urmează suma investită, iar de la 1.500 lei apare un inel. Lunile indică plățile de dividend, uneori estimate. Aura portocalie sau albastră semnalează un RSI la extremă. Aura roșie indică un preț sub nivelul de alertă. Alege din hartă sau din lista de sub ea, apoi deschide fișa pentru graficul complet. „Ultimul an” simulează ponderile pe baza prețurilor istorice și a deținerilor de azi.','','pondere tema rsi dividende'],
   proiectie:['Unde poți ajunge','Trei scenarii pentru valoarea portofoliului la orizontul tău: 3%, 6% și 9% pe an, în lei, înainte de inflație. Linia punctată e doar ce depui. Diferența până la scenarii e dobânda compusă: câștigurile fac la rândul lor câștiguri. Anii reali vor fi neregulați, cu scăderi de 20–30% pe drum. Nu e o promisiune, e un ordin de mărime.'],
   agitatie:['Cât de mult se mișcă portofoliul','Agitația (volatilitatea) arată cât urcă și coboară valoarea într-un an obișnuit, calculată din prețurile ultimelor până la 12 luni, cu ponderile de azi. VWCE e reperul. Cea mai mare scădere e de la un vârf la minimul de după. O lună proastă apare cam o dată la 20 de luni. Testele de stres arată cât ai pierde în scenarii plauzibile. Scăderile de felul ăsta sunt normale pe termen lung. Întrebarea e dacă le-ai privi liniștit, fără să vinzi.'],
   castigAcum:['Câștig pe poziții','Cât au câștigat sau pierdut, în lei, pozițiile pe care le ai acum: valoarea de azi minus cât ai plătit pe ele. La eToro, ce ai plătit în dolari e socotit cu cursul BNR din ziua fiecărei cumpărări, deci intră și câștigul sau pierderea din curs. Nu intră dividendele încasate și câștigurile din ce ai vândut: pe acelea le vezi în Analiză → Randamentul tău, care le socotește pe toate.'],
@@ -3636,10 +3636,26 @@ const tile = (k, ico, titlu, val, sub, viz='', lat='') => `<button class="tile $
 // dinspre soare, atmosferă); fiecare sector are o familie de planete reale, iar în sector fiecare acțiune arată altfel.
 // Fundalul rămâne fix. Atingerea alege o poziție; „Ultimul an” redă variația ponderilor istorice.
 const GX = { on:false, raf:0 };
+// Soarele rămâne o singură selecție în hartă și în listă.
+function gxOptiuni(){
+  const reale = (SNAP.pozitii||[]).filter(p=>!p.virtual);
+  const etf = reale.filter(p=>p.etf);
+  const pozitii = reale.filter(p=>!p.etf).sort((a,b)=>b.pondere-a.pondere);
+  return [...(etf.length?[{id:'ETF',text:etf.length===1?etf[0].symbol:'ETF-uri',etf:true}]:[]),
+    ...pozitii.map(p=>({id:p.symbol,text:p.symbol}))];
+}
+function gxSelectie(optiuni, preferata){
+  return optiuni.some(p=>p.id===preferata) ? preferata : (optiuni.find(p=>!p.etf)||optiuni[0])?.id ?? null;
+}
 function galaxieHTML(){
-  return `<div class="gx" data-noswipe><canvas id="gxc" aria-label="Portofoliul ca sistem solar: soarele e ETF-ul de bază, planetele sunt acțiunile, orbitele sunt sectoarele"></canvas>
-    <div class="gxtop"><span class="gxd" id="gxd"></span><button class="gxb" id="gxp" data-c="${A('gxReluare')}">${ic('play')}<span>Ultimul an</span></button></div>
-    </div><aside class="gxinfo cel-detail" id="gxi" aria-live="polite"></aside>`;
+  const optiuni = gxOptiuni(), sel = GX.sel = gxSelectie(optiuni,GX.sel);
+  return `<div class="gx" data-noswipe>
+    <div class="gxtop"><span class="gxd" id="gxd"></span><button class="gxb" id="gxp" data-c="${A('gxReluare')}" aria-pressed="false">${ic('play')}<span>Ultimul an</span></button></div>
+    <canvas id="gxc" aria-label="Harta portofoliului. Pozițiile pot fi selectate și din lista de sub hartă."></canvas>
+    ${optiuni.length?`<ul class="gxpozitii" id="gxpozitii" aria-label="Poziții în galaxie">${optiuni.map(p=>`
+      <li><button type="button" data-gx-simbol="${esc(p.id)}" aria-pressed="${sel===p.id}"
+        data-c="${A('gxAlege',p.id)}">${esc(p.text)}</button></li>`).join('')}</ul>`:''}
+    </div><aside class="gxinfo cel-detail" id="gxi" aria-label="Poziția selectată" aria-live="polite">${gxDetaliiHTML(sel)}</aside>`;
 }
 function gxCul(n){ return cssv(n) || '#5aa2ff'; }
 const gxRng = seed => { let s = (seed * 48271 + 12345) % 2147483647 || 7; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; };
@@ -3771,12 +3787,12 @@ function gxDate(){
 const GX_LIN = matchMedia('(pointer:fine)').matches && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 const SHEET_ON = () => document.getElementById('sheet')?.classList.contains('on');
 function galaxie(){
-  const cv = $('gxc'); if (!cv) return;
+  const cv = $('gxc'); if (!cv || VIEW!=='analiza') return;
   cancelAnimationFrame(GX.raf);
   const D = gxDate(), calm = miscareRedusa() || S.fx === 'redus';
   const st = { yaw: GX.yaw ?? 0.6, tilt: GX.tilt ?? 0.58, vy: 0, t0: performance.now(), sel: GX.sel ?? null, drag: null, rel: null, met: null };
   if (D.dep?.tinte.length && S.gxDep !== D.dep.cheie && !calm) { st.met = { t0: performance.now()+900, tinte: D.dep.tinte }; S.gxDep = D.dep.cheie; save(); }
-  Object.assign(GX, { on:true, D, st }); GX.sfere = GX.sfere || new Map();
+  Object.assign(GX, { on:true, D, st, cv, cadru:[], etichete:[], stea:null }); GX.sfere = GX.sfere || new Map();
   const ctx = cv.getContext('2d');
   let W=0, H=0, dpr=1;
   const rS = gxRng(90001), stele = Array.from({length:220},()=>({ x:rS(), y:rS(), r:rS()*0.7+0.15, f:rS()*6.28, c: rS()<0.15?'#ffd9b8':rS()<0.2?'#c9dbff':'#ffffff' }));
@@ -3799,9 +3815,9 @@ function galaxie(){
     const t = calm ? 0 : (now - st.t0)/1000;
     if (!st.drag) { st.yaw += st.vy*pas; st.vy *= Math.pow(0.94, pas); if (!calm && Math.abs(st.vy)<0.0004) st.yaw += 0.0012*pas; }
     GX.yaw = st.yaw; GX.tilt = st.tilt;
-    let zi = null; if (st.rel && D.istoric.zile.length) { const f = Math.max(0, Math.min((now-st.rel.t0)/9000, 1)); zi = Math.min(D.istoric.zile.length-1, Math.max(0, Math.round(f*(D.istoric.zile.length-1)))); if (f>=1) { st.rel=null; $('gxp')?.classList.remove('on'); setTimeout(()=>{ if($('gxd')) $('gxd').textContent=''; }, 1600); } }
+    let zi = null; if (st.rel && D.istoric.zile.length) { const f = Math.max(0, Math.min((now-st.rel.t0)/9000, 1)); zi = Math.min(D.istoric.zile.length-1, Math.max(0, Math.round(f*(D.istoric.zile.length-1)))); if (f>=1) { gxOpresteReluare(); zi=null; } }
     const pond = p => zi==null ? p.pondere : D.istoric.w[SNAP.pozitii.indexOf(p)][zi];
-    if (zi!=null && $('gxd')) { const tz=D.istoric.tot, ch=(tz[zi]/tz[0]-1)*100; $('gxd').innerHTML = `${ziRo(D.istoric.zile[zi])} <b class="${ch>=0?'pos':'neg'}">${sg(ch,1)}%</b>`; }
+    if (zi!=null && st.rel && $('gxd')) { const tz=D.istoric.tot, ch=(tz[zi]/tz[0]-1)*100; $('gxd').innerHTML = `${ziRo(D.istoric.zile[zi])} <b class="${ch>=0?'pos':'neg'}">${sg(ch,1)}%</b>`; }
     // mărimea sistemului: cât să încapă și planeta cea mai de margine, cu inelul ei, plus numele dedesubt
     const cx = W/2, cy = H/2, inc = st.tilt, S0 = Math.min((W/2-6)/D.reach, (H/2-26)/(D.reach*inc+0.08)), k0 = S0/170;
     ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height);
@@ -3871,15 +3887,15 @@ function galaxie(){
     ctx.textBaseline = 'alphabetic';
     ctx.globalAlpha = 1;
     GX.cadru = P_;
-    if (!calm && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
+    if ((!calm || st.rel) && !document.hidden) GX.raf = requestAnimationFrame(cadru); else GX.on=false;
   }
   cv.onclick = e => { GX.atins = performance.now(); gxAtinge(e); };
   GX.cadruF = cadru;
   GX.io?.disconnect(); GX.viz = true; GX.atins = performance.now(); GX.ult = 0;
   GX.io = new IntersectionObserver(([e])=>{ GX.viz = e.isIntersecting; if (GX.viz && !GX.on && cv.isConnected && VIEW==='analiza' && !document.hidden) { GX.on=true; GX.ult=0; GX.atins=performance.now(); GX.raf=requestAnimationFrame(cadru); } });
   GX.io.observe(cv);
+  gxMarcheazaSelectia();
   GX.raf = requestAnimationFrame(cadru);
-  gxInfo();
 }
 function gxPozitieLa(x, y, planete, etichete, stea){
   const dist = p => Math.hypot(p.q.x-x, p.q.y-y);
@@ -3890,37 +3906,90 @@ function gxPozitieLa(x, y, planete, etichete, stea){
   const et = etichete.find(e=>Math.abs(e.x-x) <= e.w && Math.abs(e.y-y) <= e.h);
   return (et && planete.find(p=>p.p.symbol===et.sym)) || apropiate.find(p=>dist(p) <= p.r+10);
 }
+function gxMarcheazaSelectia(){
+  const lista = $('gxpozitii');
+  if (!lista) return;
+  const r = lista.getBoundingClientRect();
+  for (const b of lista.querySelectorAll('button')){
+    const ales = b.dataset.gxSimbol===GX.sel;
+    b.setAttribute('aria-pressed',String(ales));
+    if (ales){
+      const t = b.getBoundingClientRect();
+      if (t.left<r.left || t.right>r.right) lista.scrollLeft+=t.left-(r.left+(r.width-t.width)/2);
+    }
+  }
+}
+function gxAlege(simbol){
+  const optiuni = gxOptiuni();
+  if (!optiuni.some(p=>p.id===simbol) || GX.sel===simbol) return;
+  GX.sel = simbol;
+  const cv = $('gxc');
+  if (GX.st && GX.cv===cv) GX.st.sel = simbol;
+  gxMarcheazaSelectia();
+  gxInfo();
+  if (GX.cv===cv && !GX.on && GX.viz!==false) GX.cadruF?.(performance.now());
+  vib();
+}
 function gxAtinge(e){
-  const cv=$('gxc'), r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top, st=GX.st;
-  st.alegere = true;
+  const cv=$('gxc');
+  if (GX.cv!==cv) return;
+  const r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   const hit = gxPozitieLa(x, y, GX.cadru || [], GX.etichete || [], GX.stea);
-  if (hit) { st.sel = GX.sel = hit.p.symbol; vib(); }
-  else if (GX.stea && Math.hypot(x-GX.stea.x,y-GX.stea.y) <= GX.stea.r+5) { st.sel = GX.sel = 'ETF'; vib(); }
-  else st.sel = GX.sel = null;
-  gxInfo(); if (!GX.on) GX.cadruF?.(performance.now());
+  if (hit) gxAlege(hit.p.symbol);
+  else if (GX.stea && Math.hypot(x-GX.stea.x,y-GX.stea.y) <= GX.stea.r+5) gxAlege('ETF');
+}
+function gxDetaliiHTML(s){
+  const pozitii = (SNAP.pozitii||[]).filter(p=>!p.virtual);
+  const etf = s==='ETF', grup = etf ? pozitii.filter(p=>p.etf) : pozitii.filter(p=>p.symbol===s && !p.etf);
+  if (!grup.length) return '<p class="sub">Pozițiile apar după ce analiza găsește dețineri în cont.</p>';
+  const p = grup[0], individuala = grup.length===1, pr=P();
+  const pondere = grup.reduce((s,p)=>s+p.pondere,0);
+  const sector = SNAP.teme?.[p.tema], masura = etf?pondere:sector, reper = etf?pr.tintaETF:pr.maxTema;
+  const serie = individuala ? p.serie?.c?.slice(-40).filter(Number.isFinite) : null;
+  const m = individuala ? MISC(p) : null;
+  const chip = etf ? '' : `<span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span>`;
+  return `<div class="cel-detail-top">${individuala?avatar(p,'mic'):''}
+      <div class="gxidentitate"><h2>${individuala?esc(p.symbol):'ETF-uri'}</h2><p class="sub">${individuala?esc(p.name||p.tema||''):'Selecția reprezentată de soare'}</p></div>
+      ${chip}</div>
+    <dl class="gxrezumat">
+      <div><dt>${etf?'ETF-uri acum':'Pondere acum'}</dt><dd>${nf(pondere,1)}%</dd></div>
+      ${etf? `<div><dt>Țintă ETF</dt><dd>${nf(reper,0)}%</dd></div>` :
+      m!=null?`<div><dt>${esc(momentPoz(p))}</dt><dd class="${cls(m)}">${sg(m,1)}%</dd></div>`:''}
+    </dl>
+    ${!etf && Number.isFinite(masura)?`<p class="gx-risc ${masura>reper?'peste':''}">
+      <b>${esc(p.tema)} · ${nf(masura,1)}%</b><span>Plafon sector ${nf(reper,0)}%${masura>reper?' · Depășit':''}</span></p>`:''}
+    ${serie?.length>1?`<div class="cel-stock-chart"><span>Preț · ultimele ${serie.length} ședințe</span>${spark(serie)}</div>`:''}
+    <div class="gxactiuni">${grup.map(x=>`<button class="link" data-c="${A('detaliu',x.symbol)}">${individuala?'Deschide fișa':esc(x.symbol)} ›</button>`).join('')}</div>`;
 }
 function gxInfo(){
-  const el=$('gxi'); if (!el) return; const s=GX.st?.sel;
-  if (!s) { const prim = SNAP.pozitii.find(p=>!p.virtual && !p.etf); if (prim && GX.st && !GX.st.alegere) { GX.st.sel = GX.sel = prim.symbol; gxInfo(); return; } el.innerHTML = `<span class="sub">${gxEchilibru()} Atinge o planetă sau simbolul ei pentru detalii.</span>`; return; }
-  if (s==='ETF') { const e=SNAP.pozitii.filter(p=>p.etf), w=e.reduce((a,p)=>a+p.pondere,0), D=GX.D; el.innerHTML = `<b>Soarele: ETF-ul de bază</b><span class="sub"> ${S.privat?'•••':nf(SNAP.totalRON,0)} lei · azi <span class="${cls(D?.ziP)}">${sg(D?.ziP,1)}%</span> · ETF-uri ${nf(w,1)}%, ținta ta e ${P().tintaETF}%</span>`; return; }
-  const p = SNAP.pozitii.find(x=>x.symbol===s); if (!p) return;
-  const m = MISC(p), u = sem(p);
-  const rsi = p.ind?.rsi, nl = SNAP.dividende?.luni?.[p.symbol]?.length || 0, sp = p.etf ? null : SNAP.teme?.[p.tema];
-  const gp = GX.D?.pl.find(x=>x.p.symbol===p.symbol), nd = gp ? gp.luni : nl;
-  // RSI-ul se vede mereu aici, la planeta atinsă; aura apare pe planetă doar la extreme (peste 70 sau sub 30)
-  const extra = [rsi != null ? `RSI ${nf(rsi,0)}${rsi >= 70 ? ', supraîncălzită' : rsi <= 30 ? ', răcită' : ', normal'}` : '', p.ind?.subProtectie ? '<span class="neg">sub nivelul de alertă</span>' : '', nd ? `${nd} ${nd===1?'dividend':'dividende'} pe an${gp?.luniEst?' (estimat)':''}` : (p.etf ? '' : 'fără dividende')].filter(Boolean).join(' · ');
-  const seriePret = p.serie?.c?.slice(-40).filter(Number.isFinite);
-  const evolutie = seriePret?.length > 1 ? `<div class="cel-stock-chart"><span>Evoluția prețului</span>${spark(seriePret)}</div>` : '';
-  el.innerHTML = `<div class="cel-detail-top">${avatar(p,'mic')}<div style="flex:1;min-width:0"><b>${esc(p.symbol)}</b> <span class="pill2" style="--k:var(${semCol(p)})">${semTxt(p)}</span><div class="sub">${esc(p.tema)}${sp!=null?` <span class="${sp>P().maxTema?'neg':''}">${nf(sp,0)}%</span>`:''} · ${nf(p.pondere,1)}% din portofoliu${m!=null?` · azi <span class="${cls(m)}">${sg(m,1)}%</span>`:''}</div>${extra?`<div class="sub">${extra}</div>`:''}</div><button class="link" data-c="${A('deschideDetaliu',p.symbol)}">Fișa ›</button></div>${evolutie}`;
+  const el=$('gxi');
+  if (el) el.innerHTML = gxDetaliiHTML(GX.sel);
 }
-// v0.50: ce spune sistemul dintr-o privire: orbitele roșii (sectoare peste plafon) și cât din țintă are soarele (ETF-urile)
-function gxEchilibru(){
-  const pr = P(), peste = Object.entries(SNAP.teme||{}).filter(([k,v])=>!/^ETF/.test(k) && v > pr.maxTema).sort((a,b)=>b[1]-a[1]), etf = SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.pondere,0);
-  const o = peste.length ? `Orbita <b class="ink2">${esc(peste[0][0])}</b> e roșie: ${nf(peste[0][1],0)}%, plafonul tău e ${pr.maxTema}%${peste.length>1?` (încă ${peste.length-1} peste plafon)`:''}.` : 'Nicio orbită peste plafon.';
-  return `${o} Soarele (ETF-urile) are ${nf(etf,0)}% din portofoliu, ținta ta e ${pr.tintaETF}%.`;
+function gxOpresteReluare(){
+  GX.st.rel = null;
+  $('gxp')?.classList.remove('on');
+  $('gxp')?.setAttribute('aria-pressed','false');
+  if ($('gxd')) $('gxd').textContent='';
 }
-function gxReluare(){ if (!GX.st) return; vib(); GX.st.rel = { t0: performance.now() }; GX.atins = performance.now(); $('gxp')?.classList.add('on'); if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(GX.cadruF); } }
-addEventListener('resize', ()=>{ if (GX.on && $('gxc')) GX.marime?.(); });
+function gxReluare(){
+  if (GX.cv!==$('gxc') || !GX.D?.istoric.zile.length) return;
+  vib();
+  if (GX.st.rel){
+    gxOpresteReluare();
+    return;
+  }
+  GX.atins = performance.now();
+  GX.st.rel = { t0:GX.atins };
+  $('gxp')?.classList.add('on');
+  $('gxp')?.setAttribute('aria-pressed','true');
+  if (!GX.on) { GX.on=true; GX.raf=requestAnimationFrame(GX.cadruF); }
+}
+addEventListener('resize', ()=>{
+  const cv = $('gxc');
+  if (!cv || GX.cv!==cv) return;
+  GX.marime?.();
+  if (!GX.on && GX.viz!==false) GX.cadruF?.(performance.now());
+});
 document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && VIEW==='analiza' && $('gxc') && !GX.on) galaxie(); });
 
 function vAnaliza(){
@@ -3938,17 +4007,7 @@ function vAnaliza(){
     <div><span>Expunere USD</span><strong>${SNAP.valute?.USD == null?'—':nf(SNAP.valute.USD,1)+'%'}</strong></div>
     ${sector?`<div><span>Sectorul principal</span><strong>${nf(sector[1],1)}%</strong><small>${esc(sector[0])}</small></div>`:''}
   </aside>
-  <div class="card gxc">${galaxieHTML()}
-    <div class="cel-legend-wrap"><details><summary>Cum citești harta</summary><div class="gxleg" data-c="${A('termen','orbita')}">${(()=>{ const ps = SNAP.pozitii, pr = P(), it = (svg, t) => `<span class="gxl">${svg}<span>${t}</span></span>`, h = [];
-      const pl = (c1, c2, extra = '') => `<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="g${c1.slice(1)}" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></radialGradient></defs>${extra}<circle cx="14" cy="14" r="7" fill="url(#g${c1.slice(1)})"/></svg>`;
-      h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gS" cx="40%" cy="40%" r="60%"><stop offset="0" stop-color="#fffbe8"/><stop offset=".55" stop-color="#ffd36b"/><stop offset="1" stop-color="#ff8f30"/></radialGradient><radialGradient id="gC"><stop offset=".45" stop-color="#ffcf80" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf80" stop-opacity="0"/></radialGradient></defs><circle cx="14" cy="14" r="13" fill="url(#gC)"/><circle cx="14" cy="14" r="7" fill="url(#gS)"/></svg>`, 'Soarele: ETF-ul de bază'));
-      h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><defs><radialGradient id="gM" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#e8d6b4"/><stop offset="1" stop-color="#6b4a30"/></radialGradient></defs><circle cx="7" cy="18" r="3.5" fill="url(#gM)"/><circle cx="18" cy="12" r="8" fill="url(#gM)"/></svg>`, 'Mărime după suma investită'));
-      h.push(it(pl('#efe2c4','#7a5a34', '<ellipse cx="14" cy="14" rx="13" ry="4" fill="none" stroke="#e3cfa6" stroke-width="2" transform="rotate(-14 14 14)"/>'), 'Inel de la 1.500 lei investiți'));
-      if (Object.entries(SNAP.teme||{}).some(([k,v])=>!/^ETF/.test(k) && v>pr.maxTema)) h.push(it(`<svg class="gxs" viewBox="0 0 28 28" aria-hidden="true"><ellipse cx="14" cy="14" rx="12.5" ry="6" fill="none" stroke="#ff7a5f" stroke-width="1.8"/><circle cx="25" cy="15" r="2.6" fill="#c9a47c"/><circle cx="14" cy="14" r="2.6" fill="#ffd36b"/></svg>`, 'Orbită roșie: sector peste plafon'));
-      h.push(it(pl('#9ec4ff','#2a4a8c', '<circle cx="24" cy="10" r="2" fill="#dfe3ea"/><circle cx="5" cy="19" r="2" fill="#fbbf24"/>'), 'Lunile: plăți de dividend pe an'));
-      h.push(it(pl('#d9c6a6','#5e4630', '<circle cx="14" cy="14" r="12.5" fill="#ff8a3d" opacity=".35"/><path d="M14 1.5a12.5 12.5 0 0 0 0 25z" fill="#7dd3fc" opacity=".55"/>'), 'Aura: RSI peste 70 / sub 30'));
-      if (ps.some(p=>p.ind?.subProtectie)) h.push(it(pl('#d9c6a6','#5e4630', '<circle cx="14" cy="14" r="12.5" fill="#ff4664" opacity=".4"/>'), 'Aură roșie: sub nivelul de alertă'));
-      return h.join(''); })()}</div></details></div></div></div>`;
+  <div class="card gxc">${galaxieHTML()}</div></div>`;
   }
   // 2) Sănătatea, pe scurt
   h += sanatateOrbita(sn);
@@ -5156,7 +5215,7 @@ const CMD = Object.freeze(Object.assign(Object.create(null), {
   deblocheaza, deblocheazaAmprenta, uitatParola, stergeSeif, schimbaParola, aratăCheia, cheieNoua, cheieExistenta,
   activeazaAmprenta, dezactiveazaAmprenta, deconecteaza, copiaza, importJurnal, exportJurnal, jurnalTot, stergeJ, notaJurnal,
   adaugaAlerta, stergeAlerta, sincronizeazaProfil, salveazaProfil, planFacut, glosar, refuzuri, decideETF, comutaPlan, comutaEtfToate, arataVerdict,
-  deschideLectie, arataModul, quiz, cautaTermen, deschideSect, gxReluare, avErr,
+  deschideLectie, arataModul, quiz, cautaTermen, deschideSect, gxReluare, gxAlege, avErr,
   blocheazaAcum, blocheazaAnim, enterDeblocheaza, setCont, setPerioada, detaliiGrafic, hartaRest, laboratorT212, t212Dom, t212Metoda, drepturiAutor, confirmaOprire, opresteUrgenta, pasiOprire, pornesteDinNou, alarmeVazute, activitateConfirmata, codConfirmat, pazaDetalii, t212Verificat, comutaPrivat, setViz, setSort, setTema, comutaPas,
   detComuta, detNota, detAd, setFx, sumaPas, setSuma, orizontLive, setOrizont, tintaLive, setTinta, setImpartire, setAnaTab, comutaNout, comutaPastila, sanPlaneta, renuntaProfil,
   dupaInchidere, inchideSiRedeseneaza, quizAlege, quizUrm, alegeFisier, stergeJConfirmat,

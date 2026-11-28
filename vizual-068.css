@@ -207,3 +207,60 @@ html.fx-redus :is(#actualizare-panou,.cel-detail-top,.semn-grafic,.ni,.toarta,.n
   .plan-impact > div { display: flex; min-height: 0; }
   .plan-impact dd { text-align: end; }
 }
+
+.cel-atlas .cel-detail {
+  align-self: start;
+  min-height: 0;
+}
+.cel-atlas .gx .gxpozitii {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border-top: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+.gxpozitii li { flex: none; min-width: 0; }
+.gxpozitii button {
+  min-width: 50px;
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: var(--panel2);
+  color: var(--ink2);
+  font: inherit;
+  font-weight: 650;
+  font-size: var(--t1);
+  cursor: pointer;
+}
+.gxpozitii button[aria-pressed="true"] {
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 16%, var(--panel2));
+  color: var(--ink);
+}
+.gxpozitii button:focus-visible { outline-offset: -2px; }
+.gxidentitate { flex: 1; min-width: 0; }
+.gxidentitate h2, .gxidentitate p { margin: 0; overflow-wrap: anywhere; }
+.gxidentitate h2 { font-size: var(--t4); }
+.gxrezumat {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  border-block: 1px solid var(--line);
+  padding: 8px 0;
+}
+.gxrezumat dt { font-size: var(--t1); color: var(--ink2); }
+.gxrezumat dd { margin: 2px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gx-risc { display: grid; gap: 2px; margin: 0; }
+.gx-risc span { color: var(--ink2); font-size: var(--t1); }
+.gx-risc.peste span { color: var(--warn); }
+.cel-atlas .cel-detail .cel-stock-chart { width: 100%; margin-top: 0; padding-top: 8px; }
+.gxactiuni { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.gxactiuni .link { min-height: 44px; text-align: start; }

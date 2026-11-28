@@ -124,7 +124,7 @@ jobs:
               vazute.add(x.link);vazute.add(x.titlu);peCompanie.add(x.symbol);alese.push(x);
               if(alese.length===8)break;
             }
-            if(alese.length) raport.push(...alese.map(x=>'- **'+x.symbol+'.** '+x.titlu+' ['+x.sursa+']('+x.link+')'));
+            if(alese.length) raport.push(...alese.map(x=>'- **'+x.symbol+'.** '+x.titlu+' · '+new Date(x.t*1000).toISOString().slice(0,10)+' · ['+x.sursa+']('+x.link+')'));
             else raport.push('- '+(!cheie?'Cheia sursei de știri nu este disponibilă.':!eligibile.length?'Nu există simboluri acoperite de această sursă.':esecuri.length?'Sursa de știri nu a oferit suficiente date verificabile.':'Sursa nu a returnat știri în intervalul verificat.'));
             raport.push('Acoperire: companii listate în SUA. Titlurile sunt din sursă, fără o evaluare automată a impactului asupra semnalelor.');
             if(esecuri.length) raport.push('Date de știri indisponibile pentru '+esecuri.length+' companii.');

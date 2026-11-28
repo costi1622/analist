@@ -2,7 +2,7 @@
 // © 2026 Constantin Enache. Toate drepturile rezervate. Fără licență pentru terți: copierea, publicarea sau modificarea
 // fără acordul scris al autorului sunt interzise (Legea nr. 8/1996 privind dreptul de autor și drepturile conexe).
 if (window.ANALIST_COPIE) throw new Error('Copie neautorizată a aplicației Analist');
-const APP_VER = '0.69.0';
+const APP_VER = '0.70.0';
 const DUPA_SPLASH = []; // vezi dupaSplash()
 // v0.41: notificările directe din aplicația Android. La pornire, aplicația Analist pune în adresă „#nativ=…”: tokenul Firebase
 // (adresa telefonului la Google) și cheia publică a telefonului. Le păstrăm doar dacă pagina e deschisă chiar de aplicația Analist
@@ -1948,10 +1948,12 @@ function ceFac(){
 // v0.57: „Am cumpărat” ștampilează bonurile și închide orbita lunii pe loc; confirmarea reală vine din cont a doua zi.
 // Bifa ține doar luna (nu simbolurile), ca înainte.
 let STAMPILA = false;
-function planFacut(){ vib();
-  const luna = new Date().toISOString().slice(0,7), s = sumaPlan();
-  for (const l of SNAP.planuri[s]) { const p=SNAP.pozitii.find(x=>x.symbol===l.symbol), e=SNAP.pozitii.find(x=>x.etf);
-    J.unshift({id:Date.now()+Math.random(),data:new Date().toISOString().slice(0,10),symbol:l.symbol,actiune:'cumparat',semnal:p?.semnal||'adauga',pret:p?.ind?.pret??null,pretETF:e?.ind?.pret??null,nota:`Planul lunii: ${l.suma} lei`}); }
+function planFacut(){
+  const acum = new Date(), data = acum.toISOString().slice(0,10), luna = LUNA(), plan = SNAP.planuri?.[sumaPlan()];
+  if (!plan?.length || lunaFacuta(luna)) return;
+  vib();
+  for (const l of plan) { const p=SNAP.pozitii.find(x=>x.symbol===l.symbol), e=SNAP.pozitii.find(x=>x.etf);
+    J.unshift({id:Date.now()+Math.random(),data,symbol:l.symbol,planLuna:{luna,id:acum.getTime(),broker:l.broker,suma:l.suma},actiune:'cumparat',semnal:p?.semnal||'adauga',pret:p?.ind?.pret??null,pretETF:e?.ind?.pret??null,nota:`Planul lunii: ${l.suma} lei`}); }
   saveJ(); S.planFacut=luna; S.luniFacute=[...new Set([...(S.luniFacute||[]),luna])].slice(-120); save(); STAMPILA = true; render(); STAMPILA = false; toast('Notat. Confirmarea din cont apare a doua zi.');
 }
 
@@ -2680,6 +2682,100 @@ const SUME = [50,100,200,350,500,1000];
 function editeaza(o){ ED = {...(ED||profilUser()), ...o}; ED.suma = Math.min(Math.max(Math.round(+ED.suma||0),10),100000); aplicaProfil(); vib(); render(); }
 let PROF_DESCHIS = false;
 function profDeschide(){ PROF_DESCHIS = true; vib(); render(); requestAnimationFrame(()=>{ const input=$('psuma'); input?.focus({preventScroll:true}); input?.scrollIntoView({block:'center',behavior:miscareRedusa()?'auto':'smooth'}); }); }
+// Comparația folosește aceeași bază de prețuri și aceeași sumă pentru ambele reguli.
+const MODURI_PLAN = [['echilibrat','Echilibrat'],['tinte','Doar spre ținte']];
+function efectPlan(linii, pozitii, total){
+  const sume = new Map();
+  for (const l of linii) sume.set(l.symbol,(sume.get(l.symbol)||0)+l.suma);
+  const alocat = linii.reduce((s,l)=>s+l.suma,0), baza = total+alocat;
+  const sectoare = new Map();
+  let etf=0, actiune=null, comision=0, necunoscute=0;
+  for (const p of pozitii){
+    const valoare = p.valueRON + (sume.get(p.symbol)||0);
+    if (p.etf){ etf+=valoare; continue; }
+    if (valoare>0 && (!actiune || valoare>actiune.valoare)) actiune={nume:p.symbol,valoare};
+    if (p.tema && p.tema!=='Altele') sectoare.set(p.tema,(sectoare.get(p.tema)||0)+valoare);
+  }
+  for (const l of linii){
+    if (Number.isFinite(l.comision)) comision+=l.comision;
+    else if (l.moneda!=='RON') necunoscute++;
+  }
+  const [nume, valoare] = [...sectoare].sort((a,b)=>b[1]-a[1])[0] || [];
+  const pct = valoare => baza>0 ? valoare/baza*100 : null;
+  return {alocat,etf:pct(etf),sector:valoare>0?{nume,pct:pct(valoare)}:null,
+    actiune:actiune?{nume:actiune.nume,pct:pct(actiune.valoare)}:null,comision,necunoscute};
+}
+const sumaPlanUI = (v, semn=false) => S.privat?'•••':(semn?sgL(v,2):nf(v,2))+' lei';
+function comparatiePlanHTML(plan, s, pr){
+  if (!M || !Number.isFinite(SNAP.totalRON) || SNAP.totalRON<0) return '';
+  const pozitii = [...new Map([...SNAP.pozitii,...(SNAP.virtuale||[])].map(p=>[p.symbol,p])).values()];
+  const activ = pr.impartire==='tinte'?'tinte':'echilibrat';
+  const curent = efectPlan([],pozitii,SNAP.totalRON);
+  const pct = x => x==null?'—':nf(x,1)+'%';
+  const concentratie = x => x?`<b>${pct(x.pct)}</b><small>${esc(x.nume)}</small>`:'—';
+  const planuri = MODURI_PLAN.map(([mod,nume])=>{
+    const profil = M.derivaProfil({...(ED || profilUser()),impartire:mod},SNAP.azi || LUNA()+'-01');
+    const linii = mod===activ ? plan : M.planLunar(pozitii,SNAP.totalRON,s,profil)
+      .map(l=>M.planExact(l,pozitii,SNAP.fx));
+    return {mod,nume,linii,efect:efectPlan(linii,pozitii,SNAP.totalRON)};
+  });
+  const amprenta = ({linii}) => JSON.stringify(linii.map(l=>[l.symbol,l.broker,l.suma]).sort());
+  return `<section class="card comparatie-plan" aria-labelledby="titlu-comparatie-plan">
+    <div class="plan-pereche"><div><h2 id="titlu-comparatie-plan">Compară planurile</h2>
+    <p class="sub">Același buget în ambele variante · ${sumaPlanUI(s)}</p></div>
+    <span class="plan-acum">ETF acum <b>${pct(curent.etf)}</b></span></div>
+    ${amprenta(planuri[0])===amprenta(planuri[1])?'<p class="sub plan-identic">Cele două reguli dau aceeași alocare cu bugetul și pozițiile de acum.</p>':''}
+    <div class="plan-scenarii">${planuri.map(({mod,nume,linii,efect:e})=>`<article class="plan-scenariu ${mod===activ?'activ':''}">
+      <div class="plan-pereche"><h3>${nume}</h3>${mod===activ?'<span class="plan-activ">Activ</span>':''}</div>
+      <dl class="plan-impact num">
+        <div><dt>ETF după cumpărări</dt><dd><b>${pct(e.etf)}</b></dd></div>
+        <div><dt>Sectorul cel mai mare</dt><dd>${concentratie(e.sector)}</dd></div>
+        <div><dt>Acțiunea cea mai mare</dt><dd>${concentratie(e.actiune)}</dd></div>
+      </dl>
+      <ul class="plan-alocari">${linii.map(l=>`<li><span><b>${esc(l.symbol)}</b><small>${esc(l.broker)}</small></span><b class="num">${sumaPlanUI(l.suma)}</b></li>`).join('')}
+        ${s-e.alocat>0.005?`<li><span>Nealocat</span><b class="num">${sumaPlanUI(s-e.alocat)}</b></li>`:''}</ul>
+      <div class="plan-cost sub"><span>Cost valutar estimat</span>
+        <strong>${!linii.length?'—':e.necunoscute===linii.length?'Indisponibil':sumaPlanUI(e.comision)}</strong>
+        ${e.necunoscute>0&&e.necunoscute<linii.length?'<small>Estimare parțială</small>':''}</div>
+    </article>`).join('')}</div>
+    <p class="sub plan-ipoteza">Ponderile folosesc valorile din ultima analiză. Simularea presupune prețuri constante. Costurile sunt afișate separat de buget.</p>
+  </section>`;
+}
+function diferentePlan(plan, observate){
+  const randuri = new Map();
+  for (const [lista,camp] of [[plan,'propus'],[observate,'vazut']]){
+    for (const l of lista){
+      const k = JSON.stringify([l.symbol,l.broker]);
+      if (!randuri.has(k)) randuri.set(k,{symbol:l.symbol,broker:l.broker,propus:0,vazut:0});
+      randuri.get(k)[camp] += camp==='propus'?l.suma:l.lei;
+    }
+  }
+  return [...randuri.values()];
+}
+function planNotatLuna(jurnal, luna){
+  const note = jurnal.filter(x=>x.planLuna?.luna===luna &&
+    typeof x.symbol==='string' && typeof x.planLuna.broker==='string' &&
+    Number.isFinite(x.planLuna.suma) && Number.isFinite(x.planLuna.id));
+  const id = note.reduce((max,x)=>Math.max(max,x.planLuna.id),0);
+  return note.filter(x=>x.planLuna.id===id).map(x=>({symbol:x.symbol,...x.planLuna}));
+}
+function executiePlanHTML(plan){
+  const luna=LUNA(), notat=planNotatLuna(J,luna);
+  const cumparate = cumparari().filter(o=>o.data?.slice(0,7)===luna && o.symbol && o.broker && Number.isFinite(o.lei) && o.lei>0);
+  const total = cumparate.reduce((s,o)=>s+o.lei,0);
+  const randuri = diferentePlan(notat.length?notat:plan,cumparate);
+  return `<details class="card executie-plan" ${PLAN_DESC('executie')?'open':''} data-tg="${A('comutaPlan','executie','$el')}">
+    <summary><span><strong>Plan vs. cumpărări observate</strong>
+    <small>${cumparate.length?`${sumaPlanUI(total)} observate luna asta`:'Nicio cumpărare în istoricul disponibil pentru luna asta'}</small></span></summary>
+    ${cumparate.length?`<p class="sub">${notat.length?'Comparat cu planul salvat când ai apăsat „Am cumpărat”.':'Comparat cu propunerea actuală, calculată din starea de acum.'} Sumele estimate provin din diferențele dintre analizele de cont și pot acoperi doar o parte din lună.</p>
+      <table class="plan-executie-tabel num"><thead><tr><th scope="col">Poziție</th><th scope="col">Propus</th><th scope="col">Observat</th><th scope="col">Diferență</th></tr></thead>
+      <tbody>${randuri.map(r=>`<tr><th scope="row">${esc(r.symbol)}<small>${esc(r.broker)}</small></th><td>${sumaPlanUI(r.propus)}</td>
+        <td>${r.vazut?sumaPlanUI(r.vazut):'—'}</td><td>${r.vazut?sumaPlanUI(r.vazut-r.propus,true):'—'}</td></tr>`).join('')}</tbody></table>
+      <p class="sub">Diferența arată suma observată minus suma propusă. O liniuță indică lipsa unei cumpărări în istoricul disponibil.</p>`:
+      '<p class="sub">Diferențele vor apărea după ce analiza va vedea cumpărările la broker.</p>'}
+  </details>`;
+}
+
 function vPlan(){
   const pr = P(), u = profilUser(), e = ED || u, s = pr.contributieTipica, plan = SNAP.planuri?.[s] || [];
   const etf = SNAP.pozitii.filter(p=>p.etf).reduce((a,p)=>a+p.valueRON,0), etfP = etf/SNAP.totalRON*100;
@@ -2703,7 +2799,7 @@ function vPlan(){
     <div class="sub">${pr.tintaETFProprie?`Aleasă de tine. Pentru orizontul tău, recomandarea e <b class="ink2">${pr.tintaETFRecomandat}%</b>. <button class="link" data-c="${A('setTinta',null)}">Revino la recomandat</button>`:`Recomandată pentru orizontul tău. O poți schimba oricând: restul planului se adaptează.`}</div>
     ${pr.tintaETFProprie && pr.tintaETF < pr.tintaETFRecomandat-15 ? `<div class="al" style="margin:8px 0 0">Cu ${pr.tintaETF}% în ETF, portofoliul depinde mai mult de acțiunile alese de tine: crește mai mult în anii buni, dar scade mai tare în crize. Plafoanele pe acțiune și pe sector rămân.</div>`:''}
     <div class="row" style="margin-top:20px"><span class="lbl">Cum împart banii lunii</span></div>
-    <div class="seg" role="group" aria-label="Cum împart banii lunii" style="margin-top:8px">${[['echilibrat','Echilibrat'],['tinte','Doar spre ținte']].map(([k,t])=>`<button class="${(e.impartire||'echilibrat')===k?'on':''}" aria-pressed="${(e.impartire||'echilibrat')===k}" data-c="${A('setImpartire',k)}">${t}</button>`).join('')}</div>
+    <div class="seg" role="group" aria-label="Cum împart banii lunii" style="margin-top:8px">${MODURI_PLAN.map(([k,t])=>`<button class="${(e.impartire||'echilibrat')===k?'on':''}" aria-pressed="${(e.impartire||'echilibrat')===k}" data-c="${A('setImpartire',k)}">${t}</button>`).join('')}</div>
     <div class="sub">${(e.impartire||'echilibrat')==='echilibrat'?'ETF-ul primește ținta lui plus jumătate din cât îi lipsește, iar restul merge la una sau două acțiuni sub țintă. Ajungi mai încet la ținta ETF, dar cumperi și acțiunile tale.':'Toți banii merg la ce e cel mai departe de țintă. Ajungi cel mai repede la ținte, dar de multe ori cumperi un singur lucru pe lună.'}</div>
     <div class="tier num"><div><b>${pr.tintaETF}%</b><span>ETF global</span></div><div><b>${pr.maxActiune}%</b><span>maxim pe acțiune</span></div><div><b>${pr.maxTema}%</b><span>maxim pe sector</span></div></div>
     <div class="sub" style="margin-top:12px;font-size:var(--t2);line-height:1.55;color:var(--ink2)">Orizont ${esc(pr.treapta)}. ${esc(TREPTE_TEXT[pr.treapta]||'')}</div>
@@ -2715,6 +2811,8 @@ function vPlan(){
   h += `<div class="cel-pagehead cel-budget"><h1 class="cel-title">Planul lunii</h1><p>Buget și alocări</p><button class="btn ghost" data-c="${A('profDeschide')}">Schimbă bugetul</button></div><div class="sec"><h2>Alocarea propusă</h2>${lunaFacuta()?`<span class="sub pos">✓ ${investitLuna()>0?'Lună cu investiții':'Bifat manual'}</span>`:`<span class="sub num">${s} lei</span>`}</div>
   ${SNAP.cashNeinvestit?.lei>=20?`<div class="al" style="margin:0 0 12px">Ai deja bani neinvestiți în ${esc(SNAP.cashNeinvestit.broker)}: ${S.privat?'•••':nf(SNAP.cashNeinvestit.lei)} lei. Depui doar diferența.</div>`:''}
   ${misiuneLuna(plan, s)}
+  ${comparatiePlanHTML(plan, s, pr)}
+  ${executiePlanHTML(plan)}
   <div class="sec cel-purchases"><h2>Cumpărări propuse</h2></div><div class="bonuri">${plan.length?plan.map((l,k)=>`<div class="card bon ${bifatManual?'stampilat':''}" style="animation:rise .3s ${k*60}ms both;--k:${bonCuloare(l)}">
     <div class="row bonsus"><span class="bonpl" aria-hidden="true">${ic(sectorInfo(bonPoz(l)?.tema||(bonPoz(l)?.etf?'ETF':'')).ico)}</span><div class="bonid"><div style="font-size:var(--t4);font-weight:800">${esc(l.symbol)}${SNAP.virtuale?.some(v=>v.symbol===l.symbol)?' <span class="eti">ETF nou, ales de tine</span>':''}</div><div class="sub">la ${esc(l.broker)}</div></div><div class="hero num" style="font-size:var(--t5)">${nf(l.suma,0)}<small>lei</small>${bifatManual?`<span class="stampila ${STAMPILA?'nou':''}" style="--d:${k*120}ms">Plan bifat</span>`:''}</div></div>
     <div class="bonec">${ecusonSector(bonPoz(l), 1)}</div>
@@ -2725,7 +2823,7 @@ function vPlan(){
       <div class="bf lat"><small>Pondere după cumpărare</small>${bonPondere(l)}</div></div>
     ${l.orar?`<div class="sub" style="margin-top:8px">De ce atunci: ${esc(l.orar.motiv)}.</div>`:''}
     ${l.nota?`<div class="al" style="margin:8px 0 0">${esc(l.nota)}</div>`:''}</div>`).join(''):`<div class="card sub">Nicio poziție nu are nevoie de bani noi luna asta.</div>`}</div>
-  ${!ED?`${butoaneBrokeri()}${!lunaFacuta()?`<button class="btn" style="margin-top:12px" data-c="${A('planFacut')}">${ic('portofel')}Am cumpărat</button><div class="sub" style="margin-top:8px">Apasă după ce ai cumpărat la broker. Luna se închide acum, iar confirmarea din cont apare a doua zi.</div>`:''}`:''}
+  ${!ED?`${butoaneBrokeri()}${plan.length&&!lunaFacuta()?`<button class="btn" style="margin-top:12px" data-c="${A('planFacut')}">${ic('portofel')}Am cumpărat</button><div class="sub" style="margin-top:8px">Apasă după ce ai cumpărat la broker. Luna se închide acum, iar confirmarea din cont apare a doua zi.</div>`:''}`:''}
   <div class="sub" style="margin:12px 2px 0">${s<100?`Cu ${s} ${de(s)}lei, planul face o singură cumpărare: comisionul și fracțiunile de acțiune ar mânca din sume mai mici. `:''}Planul ține cont de ținte, plafoane, rezultatele trimestriale și acțiunile care au urcat prea repede. Nu presupune vânzări, deci nici impozit.</div>`;
   h += (ED || PROF_DESCHIS) ? prof : `<div class="sec"><h2>Profilul tău</h2></div><button class="card profr" data-c="${A('profDeschide')}"><span class="tx"><b class="num">${e.suma} lei pe lună · ${pr.orizontAni} ${de(pr.orizontAni)}${pr.orizontAni===1?'an':'ani'}</b><small class="num">${pr.tintaETF}% în ETF global · maxim ${pr.maxActiune}% pe acțiune · ${pr.maxTema}% pe sector</small></span><span class="profm">Modifică</span></button>${pr.orizontAni < 3 ? prof.slice(prof.indexOf('<div class="al err">')) : ''}`;
   // Acțiunile tale: care pot primi bani noi

@@ -121,3 +121,89 @@ html.fx-redus :is(#actualizare-panou,.cel-detail-top,.semn-grafic,.ni,.toarta,.n
 @media (max-width: 600px) {
   .rezumat-acasa-grila { grid-template-columns: 1fr; }
 }
+
+.comparatie-plan, .executie-plan { margin-top: 14px; }
+.comparatie-plan { padding: clamp(12px, 2vw, 22px); }
+.plan-pereche { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.plan-pereche :is(h2,h3,p) { margin: 0; }
+.plan-pereche p { margin-top: 5px; }
+.plan-acum, .plan-activ {
+  flex: none;
+  font-size: var(--t1);
+  color: var(--ink2);
+}
+.plan-acum b { color: var(--ink); }
+.plan-activ {
+  color: var(--acc);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+.plan-scenarii {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.plan-scenariu {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: clamp(10px, 2vw, 16px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel2);
+}
+.plan-scenariu.activ { border-color: var(--acc); }
+.plan-impact { display: grid; gap: 8px; margin: 12px 0; }
+.plan-impact > div { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.plan-impact dt { color: var(--ink2); font-size: var(--t1); }
+.plan-impact dd { margin: 0; text-align: end; }
+.plan-impact b { white-space: nowrap; }
+.plan-impact small, .plan-alocari small, .plan-executie-tabel small {
+  display: block;
+  color: var(--ink2);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+  font-size: var(--t1);
+}
+.plan-alocari {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.plan-alocari li { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 6px 0; }
+.plan-alocari li > b { white-space: nowrap; }
+.plan-cost {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.plan-cost strong { color: var(--ink); }
+.plan-cost small { width: 100%; }
+.plan-ipoteza { margin: 10px 0 0; }
+.plan-identic { margin: 10px 0 0; }
+.executie-plan summary { cursor: pointer; min-height: 44px; }
+.executie-plan summary span { display: inline-grid; gap: 4px; vertical-align: top; }
+.executie-plan summary small { color: var(--ink2); }
+.plan-executie-tabel { width: 100%; border-collapse: collapse; font-size: var(--t1); }
+.plan-executie-tabel :is(th,td) { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: end; }
+.plan-executie-tabel th:first-child { text-align: start; }
+@media (max-width: 560px) {
+  .plan-scenariu > .plan-pereche { align-items: flex-start; flex-direction: column; min-height: 4.3em; }
+  .plan-impact > div { display: grid; grid-template-rows: auto 1fr; gap: 2px; min-height: 4.1em; }
+  .plan-impact dd { text-align: start; align-self: start; }
+  .plan-alocari li { flex-wrap: wrap; }
+}
+@media (max-width: 360px) {
+  .plan-scenarii { grid-template-columns: 1fr; }
+  .plan-scenariu > .plan-pereche { align-items: baseline; flex-direction: row; min-height: 0; }
+  .plan-impact > div { display: flex; min-height: 0; }
+  .plan-impact dd { text-align: end; }
+}

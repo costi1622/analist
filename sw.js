@@ -2,7 +2,7 @@
 // Analist service worker: aplicația pornește instant și fără rețea.
 // Cache versionat: o versiune nouă se instalează în fundal și așteaptă până apeși „Reîncarcă”.
 // Datele din GitHub NU trec pe aici (alt domeniu); aplicația le ține singură, cu ETag.
-const CACHE = 'analist-0.69.0';
+const CACHE = 'analist-0.70.0';
 const SHELL = ['./', 'index.html', 'galaxie-celesta.jpg', 'app.js', 'garda.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'badge-96.png', 'motor/engine.js', 'motor/config.js', 'font/space-grotesk-latin-500-normal.woff2', 'font/space-grotesk-latin-700-normal.woff2', 'font/space-grotesk-latin-ext-500-normal.woff2', 'font/space-grotesk-latin-ext-700-normal.woff2'];
 SHELL.push('vizual-068.css', 'nebuloasa.jpg');
 self.addEventListener('install', e => {
